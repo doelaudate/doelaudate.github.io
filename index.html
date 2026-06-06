@@ -1431,6 +1431,13 @@ async function renderUserVerwaltung() {
     el.innerHTML = '<div class="empty">Noch keine Nutzerkonten erstellt.</div>';
     return;
   }
+
+  // "Allen senden"-Button oben
+  const allEmails = users.map(u=>u.email).filter(Boolean);
+  el.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;padding:10px 14px;background:#fff8f0;border:1.5px solid #f39c12;border-radius:8px">
+    <div style="font-size:.84rem;color:#7d6608">📧 Passwort-Reset-Mail an alle ${allEmails.length} Nutzer senden</div>
+    <button class="btn btn-sm" style="background:#f39c12;color:white;font-weight:600" onclick="sendResetAll()">📧 Allen senden</button>
+  </div>`;
   
   const permLabels = {proben:'📅 Proben',termine:'📆 Termine',mitglieder:'👥 Mitglieder',kommentare:'💬 Kommentare',lieder:'🎵 Lieder'};
   el.innerHTML = users.map(u => {
@@ -1459,8 +1466,9 @@ async function renderUserVerwaltung() {
             <input type="checkbox" id="perm-${uid}-${key}" ${chk(key)} style="accent-color:#2980b9"> ${label}
           </label>`).join('')}
         </div>
-        <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <button class="btn btn-success btn-sm" onclick="saveUserPerms('${uid}')">💾 Speichern</button>
+          <button class="btn btn-sm" style="background:#f39c12;color:white" onclick="sendResetForUser('${esc(u.email||'')}','${uid}')">📧 Reset-Mail</button>
           <span id="perm-result-${uid}" style="font-size:.8rem"></span>
         </div>
       </div>
@@ -1933,6 +1941,28 @@ async function saveEditUser(){
   
   closeModal();
   renderUserVerwaltung();
+}
+
+async function sendResetForUser(email, uid){
+  if(!email){alert('Keine E-Mail-Adresse für diesen Nutzer.');return;}
+  try{
+    await window._fbResetPassword(window._fbAuth, email);
+    const res = document.getElementById('perm-result-'+uid);
+    if(res){res.style.color='#f39c12';res.textContent='📧 Reset-Mail gesendet!';setTimeout(()=>{res.textContent='';},3000);}
+  }catch(e){alert('Fehler: '+e.message);}
+}
+
+async function sendResetAll(){
+  const profiles = await loadUserProfiles();
+  const users = Object.values(profiles).filter(u=>u.email);
+  if(!users.length){alert('Keine Nutzer mit E-Mail gefunden.');return;}
+  if(!confirm(`Reset-Mail an alle ${users.length} Nutzer senden?\n\n${users.map(u=>u.email).join('\n')}`))return;
+  let ok=0, err=0;
+  for(const u of users){
+    try{await window._fbResetPassword(window._fbAuth, u.email);ok++;}
+    catch(e){err++;}
+  }
+  alert(`✅ ${ok} Reset-Mails gesendet${err?`, ❌ ${err} Fehler`:''}.`);
 }
 
 async function sendResetFromModal(){
