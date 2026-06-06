@@ -1,0 +1,2075 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Chor Dölau</title>
+<meta name="description" content="Chorproben-Übersicht für den Chor Dölau">
+<meta name="theme-color" content="#2c3e50">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Chor Dölau">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<style>
+:root{color-scheme:light}*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:#1a1a1a;padding-bottom:env(safe-area-inset-bottom)}
+.header{background:#2c3e50;color:white;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.header h1{font-size:1.1rem;font-weight:700}
+.header-right{display:flex;align-items:center;gap:10px;font-size:.78rem;opacity:.8}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;animation:pulse 2s infinite;display:inline-block}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.admin-badge{background:rgba(231,76,60,.8);color:white;padding:3px 10px;border-radius:10px;font-size:.75rem;font-weight:600}
+.notice{background:#eaf3fb;border-bottom:2px solid #aed6f1;padding:8px 20px;font-size:.8rem;color:#1a5276}
+.main-tabs{background:white;border-bottom:2px solid #e0e0e0;display:flex;overflow-x:auto}
+.mtab{padding:10px 14px;cursor:pointer;font-size:.85rem;font-weight:500;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:all .15s}
+.mtab:hover{color:#2c3e50}.mtab.active{color:#2980b9;border-bottom-color:#2980b9}
+.mtab.admin-tab{color:#c0392b}.mtab.admin-tab.active{color:#c0392b;border-bottom-color:#c0392b}
+.sub-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.stab{padding:5px 12px;border-radius:20px;border:1.5px solid #ddd;background:white;font-size:.8rem;font-weight:500;cursor:pointer;color:#555;transition:all .15s}
+.stab:hover{border-color:#2980b9;color:#2980b9}.stab.active{background:#2980b9;color:white;border-color:#2980b9}
+.stab.sommer.active{background:#e67e22;border-color:#e67e22}
+.stab.weihnachten.active{background:#1a6fa8;border-color:#1a6fa8}
+.stab.repertoire.active{background:#7f8c8d;border-color:#7f8c8d}
+.content{padding:18px;max-width:960px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+.card{background:white;border-radius:10px;padding:16px 20px;box-shadow:0 1px 4px rgba(0,0,0,.07);margin-bottom:12px}
+.card-title{font-size:.95rem;font-weight:600;color:#2c3e50;margin-bottom:12px}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.stat{background:white;border-radius:8px;padding:10px 14px;flex:1;min-width:90px;box-shadow:0 1px 3px rgba(0,0,0,.07);text-align:center}
+.stat-n{font-size:1.4rem;font-weight:700;color:#2c3e50}.stat-l{font-size:.7rem;color:#888;margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th{text-align:left;padding:8px 10px;background:#f4f6f8;color:#555;font-weight:600;border-bottom:2px solid #ddd;font-size:.76rem;text-transform:uppercase;letter-spacing:.04em}
+td{padding:8px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+tr:hover td{background:#fafbfc}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.74rem;font-weight:600}
+.probe-item{border-left:3px solid #2980b9;padding:10px 14px;margin-bottom:10px;background:#f8fbfe;border-radius:0 7px 7px 0;position:relative}
+.probe-date{font-weight:600;font-size:.88rem;color:#2c3e50;margin-bottom:3px}
+.probe-songs{font-size:.8rem;color:#555}.probe-notes{font-size:.8rem;color:#888;font-style:italic;margin-top:3px}
+.plan-item{border-left:4px solid #27ae60;padding:10px 14px;margin-bottom:10px;background:#f0fff4;border-radius:0 7px 7px 0;position:relative}
+.termin-card{background:white;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:10px;border-left:5px solid #ccc;position:relative}
+.t-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:600;color:white;margin-bottom:5px}
+.t-title{font-weight:700;font-size:.95rem;color:#2c3e50;margin-bottom:2px}
+.t-meta{font-size:.8rem;color:#777;margin-bottom:6px}
+.vote-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.vote-name{padding:6px 10px;border:1.5px solid #ddd;border-radius:6px;font-size:.82rem;flex:1;min-width:110px;font-family:inherit}
+.vote-name:focus{outline:none;border-color:#2980b9}
+.vbtn{padding:6px 12px;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:500;transition:all .15s}
+.vbtn-ja{background:#d5f5e3;color:#1a7a40}.vbtn-ja:hover{background:#27ae60;color:white}
+.vbtn-nein{background:#fdecea;color:#922b21}.vbtn-nein:hover{background:#e74c3c;color:white}
+.vbtn-vl{background:#fef9e7;color:#9a6b00}.vbtn-vl:hover{background:#f39c12;color:white}
+.tally{font-size:.76rem;color:#888;margin-top:5px;line-height:1.6}
+.section-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#aaa;margin:12px 0 6px}
+.kal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.kal-nav button{padding:4px 12px;border:1.5px solid #ddd;border-radius:6px;background:white;cursor:pointer;font-size:.9rem}
+.kal-nav button:hover{background:#f0f0f0}
+.kal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.kal-head{font-size:.7rem;font-weight:700;color:#999;text-align:center;padding:3px 0}
+.kal-day{border-radius:5px;padding:3px 2px;min-height:42px;text-align:center;cursor:default;font-size:.8rem}
+.kal-day.has-ev{cursor:pointer;background:#eaf3fb;border:1px solid #aed6f1}
+.kal-day.has-probe{cursor:pointer;background:#f0fff4;border:1px solid #a9dfbf}
+.kal-day.has-both{cursor:pointer;background:#fef9e7;border:1px solid #f9ca8b}
+.kal-day.today{background:#2980b9!important;border-color:#2980b9!important;color:white}
+.kal-day.selected{outline:2px solid #2980b9}
+.kal-day-num{font-weight:500}
+.kal-ev-dot{font-size:.56rem;color:white;border-radius:3px;padding:1px 2px;margin-top:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.kal-detail{margin-top:12px;border-top:2px solid #e0e0e0;padding-top:10px}
+.kommentar{border-left:3px solid #9b59b6;padding:10px 14px;margin-bottom:10px;background:#fdf9ff;border-radius:0 7px 7px 0;position:relative}
+.k-name{font-weight:600;font-size:.86rem;color:#6c3483}
+.k-meta{font-size:.73rem;color:#aaa}
+.k-lied{display:inline-block;background:#f0e6f6;color:#6c3483;padding:1px 7px;border-radius:10px;font-size:.73rem;margin-bottom:3px}
+.k-text{font-size:.84rem;color:#444;line-height:1.4;margin-top:3px}
+.k-form-wrap{background:#f9f9f9;border-radius:8px;padding:14px;margin-bottom:14px}
+.form-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.form-row input,.form-row select{flex:1;min-width:130px;padding:7px 10px;border:1.5px solid #ddd;border-radius:6px;font-size:.86rem;font-family:inherit}
+.form-row input:focus,.form-row select:focus{outline:none;border-color:#2980b9}
+.fl-input{width:100%;padding:7px 10px;border:1.5px solid #ddd;border-radius:6px;font-size:.86rem;font-family:inherit;margin-bottom:8px}
+.fl-input:focus{outline:none;border-color:#2980b9}
+textarea{width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:6px;font-size:.88rem;resize:vertical;font-family:inherit}
+textarea:focus{outline:none;border-color:#2980b9}
+.btn{padding:7px 16px;border:none;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:500;transition:all .15s}
+.btn-primary{background:#2980b9;color:white}.btn-primary:hover{background:#2471a3}
+.btn-success{background:#27ae60;color:white}.btn-success:hover{background:#219a52}
+.btn-danger{background:#e74c3c;color:white}.btn-danger:hover{background:#c0392b}
+.btn-gray{background:#ecf0f1;color:#555}.btn-gray:hover{background:#dde1e3}
+.btn-sm{padding:4px 9px;font-size:.76rem;border-radius:5px}
+.btn-purple{background:#8e44ad;color:white}.btn-purple:hover{background:#7d3c98}
+.del-btn{position:absolute;top:8px;right:8px;opacity:0;transition:opacity .15s}
+.probe-item:hover .del-btn,.termin-card:hover .del-btn,.kommentar:hover .del-btn,.plan-item:hover .del-btn{opacity:1}
+.admin-section{background:#fff8f8;border:1.5px dashed #e74c3c;border-radius:8px;padding:14px;margin-bottom:12px}
+.admin-section .admin-label{font-size:.72rem;font-weight:700;text-transform:uppercase;color:#e74c3c;letter-spacing:.06em;margin-bottom:8px}
+.loading{text-align:center;padding:40px;color:#aaa;font-size:.9rem}
+.empty{text-align:center;padding:30px;color:#bbb}
+.search-box{width:100%;padding:8px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:.9rem;margin-bottom:14px;font-family:inherit}
+.search-box:focus{outline:none;border-color:#2980b9}
+.mitglied-card{background:white;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.07);margin-bottom:8px;display:flex;align-items:flex-start;gap:12px;position:relative}
+.mitglied-avatar{width:38px;height:38px;border-radius:50%;background:#2c3e50;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;flex-shrink:0}
+.mitglied-info{flex:1;min-width:0}
+.mitglied-name{font-weight:600;font-size:.9rem;color:#2c3e50}
+.mitglied-detail{font-size:.78rem;color:#777;margin-top:2px}
+.mitglied-detail a{color:#2980b9;text-decoration:none}
+.mitglied-detail a:hover{text-decoration:underline}
+.konsole-section{border:1px solid #e0e0e0;border-radius:8px;padding:14px;margin-bottom:12px}
+.konsole-title{font-weight:600;font-size:.9rem;color:#2c3e50;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:white;border-radius:12px;padding:22px;max-width:480px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto}
+.modal h3{font-size:1rem;margin-bottom:16px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+input[type=checkbox]{accent-color:#2980b9}
+
+/* AUTH */
+.login-overlay{position:fixed;inset:0;background:#2c3e50;z-index:1000;display:flex;align-items:center;justify-content:center}
+.login-box{overflow-y:auto;max-height:95vh}
+.login-box{background:white;border-radius:16px;padding:32px 28px;max-width:380px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.login-logo{text-align:center;font-size:2.5rem;margin-bottom:6px}
+.login-title{text-align:center;font-size:1.2rem;font-weight:700;color:#2c3e50;margin-bottom:4px}
+.login-sub{text-align:center;font-size:.82rem;color:#aaa;margin-bottom:22px}
+.login-input{width:100%;padding:11px 14px;border:1.5px solid #ddd;border-radius:8px;font-size:.9rem;margin-bottom:12px;font-family:inherit;transition:border-color .15s}
+.login-input:focus{outline:none;border-color:#2980b9}
+.login-btn{width:100%;padding:12px;background:#2980b9;color:white;border:none;border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .15s}
+.login-btn:hover{background:#2471a3}
+.login-err{color:#e74c3c;font-size:.82rem;text-align:center;margin-top:8px;min-height:18px}
+.user-chip{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;padding:4px 12px;border-radius:20px;font-size:.8rem;cursor:pointer;display:flex;align-items:center;gap:6px}
+.user-chip:hover{background:rgba(255,255,255,.25)}
+
+</style>
+</head>
+
+<!-- Firebase v8 compat (synchronous load) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script>
+  firebase.initializeApp({
+    apiKey: "AIzaSyDtiIn1UzexFOmjBgr12SAerbjw_n8_pLo",
+    authDomain: "chor-doelau.firebaseapp.com",
+    databaseURL: "https://chor-doelau-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "chor-doelau",
+    storageBucket: "chor-doelau.firebasestorage.app",
+    messagingSenderId: "101731142906",
+    appId: "1:101731142906:web:ab0956daba734143f5cd43"
+  });
+  const _auth = firebase.auth();
+  // Map to window globals used by the app
+  window._fbAuth = _auth;
+  window._fbSignIn = (auth, email, pw) => auth.signInWithEmailAndPassword(email, pw);
+  window._fbCreateUser = (auth, email, pw) => auth.createUserWithEmailAndPassword(email, pw);
+  window._fbSignOut = (auth) => auth.signOut();
+  window._fbUpdatePassword = (user, pw) => user.updatePassword(pw);
+  window._fbResetPassword = (auth, email) => auth.sendPasswordResetEmail(email);
+  _auth.onAuthStateChanged((user) => {
+    if(window.onAuthChange) window.onAuthChange(user);
+  });
+</script>
+<body>
+
+
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay" class="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">🎵</div>
+    <div class="login-title">Chor Dölau</div>
+    <!-- Tabs -->
+    <div style="display:flex;border-bottom:2px solid #eee;margin-bottom:18px">
+      <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;background:none;border:none;padding:8px;font-size:.88rem;font-weight:600;color:#2980b9;border-bottom:2px solid #2980b9;margin-bottom:-2px;cursor:pointer">Anmelden</button>
+      <button id="tab-register" onclick="switchAuthTab('register')" style="flex:1;background:none;border:none;padding:8px;font-size:.88rem;font-weight:500;color:#aaa;cursor:pointer">Registrieren</button>
+    </div>
+    <!-- Login Form -->
+    <div id="form-login">
+      <input type="text" id="login-input" class="login-input" placeholder="Benutzername oder E-Mail" autocomplete="username" autocapitalize="none">
+      <input type="password" id="login-pw" class="login-input" placeholder="Passwort" autocomplete="current-password">
+      <button id="btn-login-submit" class="login-btn" onclick="doLogin()">Anmelden</button>
+      <button onclick="showResetPw()" style="width:100%;background:none;border:none;color:#aaa;font-size:.8rem;margin-top:10px;cursor:pointer;text-decoration:underline">Passwort vergessen?</button>
+    </div>
+    <div id="pwa-install-wrap" style="display:block;margin-top:14px;border-top:1px solid #f0f0f0;padding-top:12px;text-align:center">
+      <button id="pwa-install-btn" onclick="installPWA()" style="background:#27ae60;color:white;border:none;border-radius:8px;padding:10px 20px;font-size:.88rem;font-weight:600;cursor:pointer;width:100%">📱 Als App installieren</button>
+      <div style="font-size:.72rem;color:#aaa;margin-top:5px">Auf Startbildschirm hinzufügen</div>
+    </div>
+    <!-- Register Form -->
+    <div id="form-register" style="display:none">
+      <div style="font-size:.8rem;color:#888;margin-bottom:12px;line-height:1.4">Gib deine E-Mail-Adresse und ein eigenes Passwort ein. Dein Benutzername wird automatisch anhand der Mitgliederliste vergeben.</div>
+      <input type="email" id="reg-email" class="login-input" placeholder="E-Mail-Adresse" autocomplete="email">
+      <input type="password" id="reg-pw" class="login-input" placeholder="Passwort (mind. 6 Zeichen)" autocomplete="new-password">
+      <input type="password" id="reg-pw2" class="login-input" placeholder="Passwort wiederholen" autocomplete="new-password">
+      <button id="btn-register-submit" class="login-btn" onclick="doRegister()" style="background:#27ae60">Konto erstellen</button>
+    </div>
+    <div id="login-err" class="login-err"></div>
+  </div>
+</div>
+
+<div class="header">
+  <div>
+    <h1>🎵 Chor Dölau</h1>
+    <div id="stand" style="font-size:.72rem;opacity:.6;margin-top:1px">Wird geladen…</div>
+  </div>
+  <div class="header-right">
+    <span id="admin-badge" class="admin-badge" style="display:none">🔑 Admin</span>
+    <div id="user-chip" class="user-chip" onclick="showUserMenu()" style="display:none">
+      <span id="user-display">👤</span>
+      <span style="font-size:.7rem;opacity:.7">▾</span>
+    </div>
+    <button onclick="doLogout()" title="Abmelden" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.8rem;display:none" id="logout-btn">⇤</button>
+  </div>
+</div>
+<div class="notice" id="notice-bar">ℹ️ Diese Seite wird von der Chorleitung gepflegt und lädt Änderungen automatisch.</div>
+
+<div class="main-tabs">
+  <div class="mtab active" onclick="showPage('lieder',this)">🎵 Lieder</div>
+  <div class="mtab" onclick="showPage('proben',this)">📅 Proben</div>
+  <div class="mtab" onclick="showPage('termine',this)">📆 Termine</div>
+  <div class="mtab" onclick="showPage('mitglieder',this)">👥 Mitglieder</div>
+  <div class="mtab" onclick="showPage('kommentare',this)">💬 Kommentare <span id="k-count" style="background:rgba(41,128,185,.15);color:#2980b9;padding:1px 6px;border-radius:10px;font-size:.72rem;margin-left:3px"></span></div>
+  <div class="mtab user-only" id="tab-einstellungen" style="display:none" onclick="showPage('einstellungen',this)">⚙️ Einstellungen</div>
+  <div class="mtab admin-tab admin-only" onclick="showPage('konsole',this)">⚙️ Konsole</div>
+</div>
+
+<div class="content">
+
+<div class="page active" id="p-lieder">
+  <div class="stats" id="stats"></div>
+  <div class="card">
+    <div class="sub-tabs" id="saison-tabs"></div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <select id="sort-sel" onchange="renderLieder()" style="padding:5px 10px;border:1.5px solid #ddd;border-radius:6px;font-size:.82rem">
+        <option value="last">Letzte Probe zuerst</option>
+        <option value="name">Name A–Z</option>
+        <option value="count">Häufigkeit</option>
+      </select>
+    </div>
+    <div id="lieder-list"></div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <div class="card-title">🎵 Liedwünsche</div>
+    <div class="k-form-wrap" style="margin-bottom:12px">
+      <div class="form-row">
+        <input class="fl-input" type="text" id="lw-titel" placeholder="Liedtitel *" maxlength="100">
+        <input class="fl-input" type="text" id="lw-interpret" placeholder="Interpret / Komponist (optional)" maxlength="80">
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:7px;font-size:.85rem;cursor:pointer;user-select:none">
+          <input type="checkbox" id="lw-chorsatz" style="accent-color:#27ae60;width:16px;height:16px">
+          <span>Chorsatz vorhanden</span>
+        </label>
+        <input class="fl-input" type="text" id="lw-name" placeholder="Dein Name (optional)" maxlength="50" style="flex:1;min-width:140px">
+      </div>
+      <div style="display:flex;justify-content:flex-end">
+        <button class="btn btn-primary" onclick="submitLiedwunsch()">🎵 Wunsch einreichen</button>
+      </div>
+      <div id="lw-result" style="font-size:.82rem;min-height:16px;margin-top:6px"></div>
+    </div>
+    <div id="liedwunsch-list"></div>
+  </div>
+</div>
+
+<div class="page" id="p-proben">
+  <div class="admin-section admin-only" data-perm="proben">
+    <div class="admin-label">🔑 Admin: Probe erfassen / planen</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <div style="flex:1;min-width:150px">
+        <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:3px;color:#444">Datum</label>
+        <input class="fl-input" type="date" id="probe-datum">
+      </div>
+      <div style="flex:1;min-width:150px">
+        <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:3px;color:#444">Art</label>
+        <select id="probe-art" class="fl-input">
+          <option value="vergangen">📝 Durchgeführte Probe</option>
+          <option value="geplant">📋 Geplante Probe</option>
+        </select>
+      </div>
+    </div>
+    <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:5px;color:#444">Lieder</label>
+    <div id="probe-song-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+    <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:4px;color:#444">Notizen</label>
+    <textarea id="probe-notiz" placeholder="z.B. Sopran bei Takt 12 nochmal üben…" style="min-height:55px;margin-bottom:10px"></textarea>
+    <button class="btn btn-success" onclick="saveProbe()">✅ Speichern</button>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">📋 Geplante Proben</div>
+    <div id="plan-list"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📜 Probenverlauf</div>
+    <div id="verlauf-list"></div>
+  </div>
+</div>
+
+<div class="page" id="p-termine">
+  <div class="admin-section admin-only" data-perm="termine">
+    <div class="admin-label">🔑 Admin: Termin hinzufügen</div>
+    <div class="form-row">
+      <input class="fl-input" type="text" id="t-titel" placeholder="Bezeichnung *" style="flex:2;min-width:160px">
+      <select id="t-typ" class="fl-input" style="flex:1;min-width:120px">
+        <option value="konzert">🎵 Konzert</option>
+        <option value="fest">🎪 Fest</option>
+        <option value="chorlager">🏕️ Chorlager</option>
+        <option value="gottesdienst">⛪ Gottesdienst</option>
+        <option value="probe">🎹 Probe</option>
+        <option value="sonstiges">📌 Sonstiges</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div style="flex:1;min-width:130px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Von</label><input class="fl-input" type="date" id="t-datum"></div>
+      <div style="flex:1;min-width:130px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Bis (optional)</label><input class="fl-input" type="date" id="t-datum-ende"></div>
+      <div style="flex:1;min-width:100px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Uhrzeit</label><input class="fl-input" type="text" id="t-uhrzeit" placeholder="15:00"></div>
+    </div>
+    <input class="fl-input" type="text" id="t-beschreibung" placeholder="Beschreibung (optional)">
+    <button class="btn btn-primary" onclick="addTermin()">＋ Termin hinzufügen</button>
+  </div>
+  <div class="card">
+    <div style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap">
+        <span class="card-title" style="margin-bottom:0">📆 Termine</span>
+        <button onclick="exportAlleTermineICS()" style="padding:5px 13px;background:transparent;border:1.5px solid #8e44ad;color:#8e44ad;border-radius:6px;font-size:.82rem;font-weight:500;cursor:pointer;white-space:nowrap">📥 Alle als .ics</button>
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        <button id="t-btn-anstehend" class="stab active" onclick="setTerminTab('anstehend')">📌 Anstehend</button>
+        <button id="t-btn-kalender" class="stab" onclick="setTerminTab('kalender')">📅 Kalender</button>
+        <button id="t-btn-vergangen" class="stab" onclick="setTerminTab('vergangen')">📜 Vergangen</button>
+        <button id="t-btn-geburtstage" class="stab" onclick="setTerminTab('geburtstage')">🎂 Geburtstage</button>
+      </div>
+    </div>
+    <div id="t-anstehend"></div>
+    <div id="t-kalender" style="display:none"><div id="kal-container"></div></div>
+    <div id="t-vergangen" style="display:none"></div>
+    <div id="t-geburtstage" style="display:none"><div id="geburtstage-list"></div></div>
+  </div>
+</div>
+
+<div class="page" id="p-mitglieder">
+  <div class="admin-section admin-only" data-perm="mitglieder">
+    <div class="admin-label">🔑 Admin: Mitglied hinzufügen</div>
+    <div class="form-row">
+      <input class="fl-input" type="text" id="m-nachname" placeholder="Nachname *">
+      <input class="fl-input" type="text" id="m-vorname" placeholder="Vorname *">
+    </div>
+    <div class="form-row">
+      <input class="fl-input" type="text" id="m-handy" placeholder="Handy">
+      <input class="fl-input" type="text" id="m-telefon" placeholder="Telefon">
+    </div>
+    <div class="form-row">
+      <input class="fl-input" type="text" id="m-email" placeholder="E-Mail">
+      <input class="fl-input" type="text" id="m-geburtstag" placeholder="Geb.tag (TT.MM.JJ)">
+    </div>
+    <div class="form-row">
+      <input class="fl-input" type="text" id="m-adresse" placeholder="Adresse">
+      <input class="fl-input" type="text" id="m-plz" placeholder="PLZ">
+    </div>
+    <button class="btn btn-primary" onclick="addMitglied()">＋ Mitglied hinzufügen</button>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <span class="card-title" style="margin-bottom:0">👥 Mitglieder <span id="m-count" style="color:#aaa;font-weight:400;font-size:.85rem"></span></span>
+    </div>
+    <input type="text" class="search-box" id="m-search" placeholder="🔍 Suchen nach Name, E-Mail, Telefon…" oninput="renderMitglieder()">
+    <div id="mitglieder-list"></div>
+  </div>
+</div>
+
+<div class="page" id="p-kommentare">
+  <div class="card k-form-wrap">
+    <div class="card-title" style="margin-bottom:10px">✍️ Kommentar schreiben</div>
+    <div class="form-row">
+      <input class="fl-input" type="text" id="k-name" placeholder="Dein Name *" maxlength="50">
+      <select id="k-lied" class="fl-input"><option value="">— Allgemeiner Kommentar —</option></select>
+    </div>
+    <textarea id="k-text" placeholder="Dein Kommentar…" maxlength="500" style="min-height:70px;margin-bottom:10px"></textarea>
+    <div style="display:flex;justify-content:flex-end">
+      <button class="btn btn-purple" id="k-btn" onclick="submitKommentar()">💬 Abschicken</button>
+    </div>
+  </div>
+  <div id="kommentare-list"></div>
+</div>
+
+<div class="page admin-only" id="p-konsole">
+  <div class="card">
+    <div class="card-title">⚙️ Admin-Konsole</div>
+    <div class="konsole-section">
+      <div class="konsole-title">📊 Datenübersicht</div>
+      <div id="konsole-stats" style="font-size:.85rem;color:#555;line-height:1.8"></div>
+    </div>
+    <div class="konsole-section">
+      <div class="konsole-title">🗑️ Automatisches Löschen</div>
+      <div style="font-size:.84rem;color:#666;margin-bottom:10px">Kommentare älter als:</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="auto-delete-days" class="fl-input" style="width:auto;min-width:150px">
+          <option value="0">Nie löschen</option>
+          <option value="30">30 Tage</option>
+          <option value="60">60 Tage</option>
+          <option value="90">90 Tage</option>
+          <option value="180">6 Monate</option>
+          <option value="365">1 Jahr</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="applyAutoDelete()">Anwenden & jetzt bereinigen</button>
+      </div>
+      <div id="auto-delete-result" style="font-size:.8rem;color:#27ae60;margin-top:8px"></div>
+    </div>
+    <div class="konsole-section">
+      <div class="konsole-title">💾 Datensicherung</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-gray" onclick="exportData()">⬇️ Alle Daten exportieren (JSON)</button>
+        <button class="btn btn-danger btn-sm" onclick="clearAllKommentare()">🗑️ Alle Kommentare löschen</button>
+      </div>
+    </div>
+    <div class="konsole-section">
+      <div class="konsole-title">⏱️ Auto-Abmeldung</div>
+      <div style="font-size:.84rem;color:#666;margin-bottom:8px">Benutzer nach Inaktivität abmelden:</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="auto-logout-min" class="fl-input" style="width:auto;min-width:160px">
+          <option value="0">Nie abmelden</option>
+          <option value="5">5 Minuten</option>
+          <option value="10">10 Minuten</option>
+          <option value="15">15 Minuten</option>
+          <option value="30">30 Minuten</option>
+          <option value="60">1 Stunde</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="saveAutoLogout()">Speichern</button>
+      </div>
+      <div id="auto-logout-result" style="font-size:.8rem;color:#27ae60;margin-top:6px"></div>
+    </div>
+    <div class="konsole-section">
+      <div class="konsole-title">🔑 Admin-Passwort ändern</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <div><label style="display:block;font-size:.78rem;margin-bottom:3px;color:#666">Neues Passwort</label><input type="password" id="new-pw" class="fl-input" style="width:180px" placeholder="Neues Passwort"></div>
+        <button class="btn btn-primary btn-sm" onclick="changePw()">Speichern</button>
+      </div>
+      <div id="pw-result" style="font-size:.8rem;color:#27ae60;margin-top:6px"></div>
+    </div>
+    <div class="konsole-section">
+      <div class="konsole-title">👥 Benutzerverwaltung</div>
+      <div style="margin-bottom:10px">
+        <button id="create-all-btn" class="btn btn-primary" onclick="createAllAccounts()">👥 Alle Mitglieder-Konten erstellen</button>
+        <div style="font-size:.78rem;color:#aaa;margin-top:4px">Erstellt Konten für alle Mitglieder. Benutzername = 1. Buchstabe Vorname + 1. Buchstabe Nachname + Geburtstag. Initiales Passwort = Benutzername.</div>
+        <div id="create-all-result"></div>
+      </div>
+      <div id="user-verwaltung"></div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="p-einstellungen">
+  <div class="card" style="max-width:480px;margin-bottom:12px">
+    <div class="card-title">⚙️ Mein Konto</div>
+    <div id="einst-info" style="background:#f4f6f8;border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:.88rem;line-height:1.8">
+      <div>👤 <strong id="einst-username"></strong></div>
+      <div>✉️ <span id="einst-email" style="color:#666"></span></div>
+      <div id="einst-perms" style="margin-top:4px;font-size:.8rem;color:#888"></div>
+    </div>
+
+    <div class="card-title" style="margin-bottom:6px">📛 Anzeigename</div>
+    <div style="font-size:.82rem;color:#888;margin-bottom:10px">Wird bei Terminabstimmungen und Kommentaren angezeigt.</div>
+    <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:4px">
+      <div style="flex:1">
+        <label style="display:block;font-size:.82rem;font-weight:500;margin-bottom:4px;color:#444">Anzeigename</label>
+        <input type="text" id="einst-anzeigename" class="fl-input" placeholder="z.B. Maria M." maxlength="50" autocomplete="nickname">
+      </div>
+      <button class="btn btn-primary" style="flex-shrink:0" onclick="saveAnzeigename()">💾 Speichern</button>
+    </div>
+    <div id="einst-name-result" style="font-size:.82rem;min-height:16px;margin-bottom:16px"></div>
+
+    <div class="card-title" style="margin-bottom:10px">🔒 Passwort ändern</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div>
+        <label style="display:block;font-size:.82rem;font-weight:500;margin-bottom:4px;color:#444">Neues Passwort</label>
+        <input type="password" id="einst-pw1" class="fl-input" placeholder="Neues Passwort (min. 6 Zeichen)" autocomplete="new-password">
+      </div>
+      <div>
+        <label style="display:block;font-size:.82rem;font-weight:500;margin-bottom:4px;color:#444">Passwort wiederholen</label>
+        <input type="password" id="einst-pw2" class="fl-input" placeholder="Passwort wiederholen" autocomplete="new-password">
+      </div>
+      <div>
+        <button class="btn btn-primary" onclick="saveEinstellungenPw()">💾 Passwort speichern</button>
+      </div>
+      <div id="einst-result" style="font-size:.83rem;min-height:18px"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<div class="modal-overlay" id="modal-mitglied">
+  <div class="modal">
+    <h3>✏️ Mitglied bearbeiten</h3>
+    <input type="hidden" id="edit-m-id">
+    <div class="form-row"><input class="fl-input" type="text" id="edit-m-nachname" placeholder="Nachname *"><input class="fl-input" type="text" id="edit-m-vorname" placeholder="Vorname *"></div>
+    <div class="form-row"><input class="fl-input" type="text" id="edit-m-handy" placeholder="Handy"><input class="fl-input" type="text" id="edit-m-telefon" placeholder="Telefon"></div>
+    <div class="form-row"><input class="fl-input" type="text" id="edit-m-email" placeholder="E-Mail"><input class="fl-input" type="text" id="edit-m-geburtstag" placeholder="Geb.tag"></div>
+    <div class="form-row">
+      <input class="fl-input" type="text" id="edit-m-adresse" placeholder="Adresse" style="flex:2">
+      <input class="fl-input" type="text" id="edit-m-plz" placeholder="PLZ" style="flex:1;min-width:80px">
+      <select id="edit-m-stimme" class="fl-input" style="flex:1;min-width:90px">
+        <option value="">Stimme</option>
+        <option value="Sopran">Sopran</option>
+        <option value="Alt">Alt</option>
+        <option value="Tenor">Tenor</option>
+        <option value="Bass">Bass</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-success" onclick="saveMitglied()">💾 Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETLISTE MODAL -->
+<div class="modal-overlay" id="modal-setliste">
+  <div class="modal" style="max-width:540px">
+    <h3>🎵 Setliste bearbeiten</h3>
+    <p style="font-size:.82rem;color:#888;margin-bottom:12px">Wähle Lieder aus der Saison oder gib eigene Titel ein:</p>
+    <div id="setliste-song-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;max-height:180px;overflow-y:auto;border:1px solid #eee;border-radius:6px;padding:8px"></div>
+    <div id="setliste-custom-list" style="margin-bottom:10px"></div>
+    <div style="display:flex;gap:6px;margin-bottom:10px">
+      <input type="text" id="setliste-custom-input" class="fl-input" placeholder="Eigenen Titel hinzufügen…" style="flex:1">
+      <button class="btn btn-primary btn-sm" onclick="addCustomSetlisteSong()">＋</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-success" onclick="saveSetliste()">💾 Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- HAUSAUFGABEN MODAL -->
+<div class="modal-overlay" id="modal-hausaufgaben">
+  <div class="modal" style="max-width:500px">
+    <h3>📝 Hausaufgaben eintragen</h3>
+    <p style="font-size:.82rem;color:#888;margin-bottom:14px">Aufgaben pro Stimmgruppe (leer = keine Aufgabe):</p>
+    <div style="display:grid;gap:10px">
+      <div><label style="display:block;font-size:.82rem;font-weight:600;color:#e67e22;margin-bottom:4px">🎵 Sopran</label><textarea id="ha-sopran" placeholder="z.B. Takt 12-20 üben…" style="min-height:60px"></textarea></div>
+      <div><label style="display:block;font-size:.82rem;font-weight:600;color:#2980b9;margin-bottom:4px">🎵 Alt</label><textarea id="ha-alt" placeholder="z.B. Einsatz bei Refrain beachten…" style="min-height:60px"></textarea></div>
+      <div><label style="display:block;font-size:.82rem;font-weight:600;color:#27ae60;margin-bottom:4px">🎵 Tenor</label><textarea id="ha-tenor" placeholder="z.B. Melodie auswendig lernen…" style="min-height:60px"></textarea></div>
+      <div><label style="display:block;font-size:.82rem;font-weight:600;color:#8e44ad;margin-bottom:4px">🎵 Bass</label><textarea id="ha-bass" placeholder="z.B. Rhythmus Strophe 2…" style="min-height:60px"></textarea></div>
+    </div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn btn-gray" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-success" onclick="saveHausaufgaben()">💾 Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT USER MODAL -->
+<div class="modal-overlay" id="modal-edit-user">
+  <div class="modal" style="max-width:480px">
+    <h3>✏️ Benutzer bearbeiten</h3>
+    <input type="hidden" id="eu-uid">
+    <div style="display:grid;gap:10px;margin-bottom:14px">
+      <div><label style="display:block;font-size:.82rem;font-weight:500;margin-bottom:4px;color:#444">👤 Benutzername</label><input type="text" id="eu-username" class="fl-input" placeholder="Benutzername"></div>
+      <div><label style="display:block;font-size:.82rem;font-weight:500;margin-bottom:4px;color:#444">✉️ E-Mail</label><input type="text" id="eu-email" class="fl-input" placeholder="E-Mail" readonly style="background:#f8f8f8;color:#888"></div>
+      <div><label style="display:block;font-size:.82rem;font-weight:500;margin-bottom:4px;color:#444">🔑 Passwort zurücksetzen</label>
+        <button class="btn btn-sm" style="background:#f39c12;color:white" onclick="sendResetFromModal()">📧 Reset-E-Mail senden</button>
+        <div id="eu-reset-result" style="font-size:.78rem;color:#27ae60;margin-top:4px"></div>
+      </div>
+      <div>
+        <label style="display:block;font-size:.82rem;font-weight:500;margin-bottom:6px;color:#444">🛡️ Berechtigungen</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="perm-termine" style="accent-color:#2980b9"> Termine verwalten</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="perm-mitglieder" style="accent-color:#2980b9"> Mitglieder verwalten</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="perm-proben" style="accent-color:#2980b9"> Proben verwalten</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="perm-kommentare" style="accent-color:#2980b9"> Kommentare löschen</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="perm-lieder" style="accent-color:#2980b9"> Lieder verwalten</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-success" onclick="saveEditUser()">💾 Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- USER MENU -->
+<div class="modal-overlay" id="modal-user-menu">
+  <div class="modal" style="max-width:320px">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:2rem;margin-bottom:6px">👤</div>
+      <div id="menu-username" style="font-weight:700;font-size:1rem;color:#2c3e50"></div>
+      <div id="menu-email" style="font-size:.8rem;color:#aaa"></div>
+    </div>
+    <div style="border-top:1px solid #eee;padding-top:12px">
+      <div style="font-size:.82rem;font-weight:600;color:#555;margin-bottom:8px">Passwort ändern</div>
+      <input type="password" id="new-user-pw" class="fl-input" placeholder="Neues Passwort (min. 6 Zeichen)">
+      <button class="btn btn-primary btn-sm" onclick="changeUserPw()" style="margin-bottom:12px">Passwort ändern</button>
+    </div>
+    <div id="admin-toggle-section" style="border-top:1px solid #eee;padding-top:12px;margin-bottom:12px;display:none">
+      <button class="btn btn-sm" id="admin-toggle-btn" onclick="toggleAdmin()" style="width:100%">🔑 Admin-Modus aktivieren</button>
+    </div>
+    <div class="modal-actions" style="margin-top:0">
+      <button class="btn btn-gray" onclick="closeModal()">Schließen</button>
+      <button class="btn btn-danger" onclick="doLogout()">Abmelden</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const DB='https://chor-doelau-default-rtdb.europe-west1.firebasedatabase.app';
+const ADMIN_PW='Asf06217';
+const TYP_LABEL={"konzert": "🎵 Konzert", "fest": "🎪 Fest", "chorlager": "🏕️ Chorlager", "gottesdienst": "⛪ Gottesdienst", "probe": "🎹 Probe", "sonstiges": "📌 Sonstiges"};
+const TYP_COLOR={"konzert": "#2980b9", "fest": "#e67e22", "chorlager": "#27ae60", "gottesdienst": "#8e44ad", "probe": "#c0392b", "sonstiges": "#7f8c8d"};
+const INIT_MITGLIEDER=[{"nr": 1, "nachname": "Arnold", "vorname": "Christiane", "telefon": "0345/6801481", "handy": "0175/5369335", "email": "nck_arnold@t-online.de", "geburtstag": "11.07.58", "adresse": "Ellen-Weber-Str. 97", "plz": "06120", "username": "CA110758"}, {"nr": 2, "nachname": "Balbach", "vorname": "Jochen", "telefon": "0345/6802913", "handy": "0151/15336411", "email": "jochen.balbach@physik.uni-halle.de", "geburtstag": "17.05.66", "adresse": "Otto-Kanning-Str. 30", "plz": "", "username": "JB170566"}, {"nr": 3, "nachname": "Balbach", "vorname": "Petra", "telefon": "0345/6802913", "handy": "0151/12811946", "email": "felixaustria@gmx.de", "geburtstag": "04.09.64", "adresse": "Otto-Kanning-Str. 30", "plz": "", "username": "PB040964"}, {"nr": 4, "nachname": "Bromann", "vorname": "Birte", "telefon": "", "handy": "0163/5039756", "email": "birte.bromann@t-online.de", "geburtstag": "25.05.88", "adresse": "", "plz": "", "username": "BB250588"}, {"nr": 5, "nachname": "Dicty", "vorname": "Hannah", "telefon": "", "handy": "0176/94960900", "email": "hannah.dicty@gmail.com", "geburtstag": "16.03.01", "adresse": "Adolph-von-Harnack-Str. 4", "plz": "06114", "username": "HD160301"}, {"nr": 6, "nachname": "Durka", "vorname": "Walter", "telefon": "0345/5321345", "handy": "0170/9489446", "email": "walter.durka@ufz.de", "geburtstag": "20.12.62", "adresse": "Edmund-Husserl-Str. 4", "plz": "06120", "username": "WD201262"}, {"nr": 7, "nachname": "Engel", "vorname": "Jeanette", "telefon": "", "handy": "0171/2134188", "email": "jeanette.engel@gmx.de", "geburtstag": "29.01.87", "adresse": "Brüderstr. 13", "plz": "06108", "username": "JE290187"}, {"nr": 8, "nachname": "Fliegner", "vorname": "Antje", "telefon": "", "handy": "0176/51970719", "email": "antjefliegner@web.de", "geburtstag": "03.07.70", "adresse": "", "plz": "", "username": "AF030770"}, {"nr": 9, "nachname": "Göricke", "vorname": "Petra", "telefon": "", "handy": "0170/6047997", "email": "petra-goericke@web.de", "geburtstag": "31.01.61", "adresse": "Ellen-Weber-Str. 10", "plz": "06120", "username": "PG310161"}, {"nr": 10, "nachname": "Hähndel", "vorname": "Ursula", "telefon": "", "handy": "0176/62432938", "email": "ursula.haehndel@tele2.de", "geburtstag": "20.05.57", "adresse": "Lunzbergring 3", "plz": "06120", "username": "UH200557"}, {"nr": 11, "nachname": "Herrmann", "vorname": "Doris", "telefon": "", "handy": "0176/55243597", "email": "dorisherrmann4@gmail.com", "geburtstag": "", "adresse": "Angerweg 8b", "plz": "06120", "username": "DH"}, {"nr": 12, "nachname": "Heise", "vorname": "Matthias", "telefon": "", "handy": "0162/33865177", "email": "tjhm.heise@arcor.de", "geburtstag": "29.05.66", "adresse": "Bergschenkenweg 52a", "plz": "06118", "username": "MH290566"}, {"nr": 13, "nachname": "Jäckel", "vorname": "Eckhard", "telefon": "", "handy": "0173/9140294", "email": "ecki.jaeckel@gmail.com", "geburtstag": "", "adresse": "Waldmeisterstr. 5", "plz": "06120", "username": "EJ"}, {"nr": 14, "nachname": "Koser", "vorname": "Susanne", "telefon": "0345/6829880", "handy": "0152/34551426", "email": "susannekoser@web.de", "geburtstag": "29.09.69", "adresse": "Otto-Kanning-Str. 53", "plz": "06120", "username": "SK290969"}, {"nr": 15, "nachname": "Krause", "vorname": "Bianca", "telefon": "", "handy": "0157/54146071", "email": "krause.beibei@gmail.com", "geburtstag": "07.01.82", "adresse": "", "plz": "", "username": "BK070182"}, {"nr": 16, "nachname": "Kühn", "vorname": "Elisabeth", "telefon": "0345/6802868", "handy": "0170/2249383", "email": "Elisabeth@spa-house.de", "geburtstag": "04.02.66", "adresse": "Otto-Kanning-Str. 49", "plz": "06120", "username": "EK040266"}, {"nr": 17, "nachname": "Kühn", "vorname": "Ingolf", "telefon": "0345/6802868", "handy": "0176/51248157", "email": "Ingolf@spa-house.de", "geburtstag": "21.01.67", "adresse": "Otto-Kanning-Str. 49", "plz": "06120", "username": "IK210167"}, {"nr": 18, "nachname": "Kulig", "vorname": "Nadja", "telefon": "0345/6856196", "handy": "0151/44556194", "email": "nadja.kulig@gmx.de", "geburtstag": "30.04.76", "adresse": "Brandbergweg 29", "plz": "06120", "username": "NK300476"}, {"nr": 19, "nachname": "Kull", "vorname": "Eberhard", "telefon": "0345/5504206", "handy": "", "email": "ekk38@gmx.de", "geburtstag": "11.03.38", "adresse": "Alfred-Oelsner-Str. 15", "plz": "06120", "username": "EK110338"}, {"nr": 20, "nachname": "Kursawe", "vorname": "Josephiene", "telefon": "", "handy": "0176/84507517", "email": "josephiene.kursawe@mailbox.org", "geburtstag": "19.01.87", "adresse": "", "plz": "", "username": "JK190187"}, {"nr": 21, "nachname": "Lamm", "vorname": "Marco", "telefon": "0345/6800536", "handy": "0160/93147286", "email": "mclamm@t-online.de", "geburtstag": "", "adresse": "Otto-Kanning-Str. 45", "plz": "06120", "username": "ML"}, {"nr": 22, "nachname": "Linke", "vorname": "Susanne", "telefon": "", "handy": "0152/03866999", "email": "susanne-linke@gmx.de", "geburtstag": "27.04.91", "adresse": "Ellen-Weber-Str. 131", "plz": "", "username": "SL270491"}, {"nr": 23, "nachname": "Moeller", "vorname": "Regina", "telefon": "", "handy": "0173/3494549", "email": "regina.moeller.halle@freenet.de", "geburtstag": "", "adresse": "Blumenau 25", "plz": "06120", "username": "RM"}, {"nr": 24, "nachname": "Mothes", "vorname": "Rosi", "telefon": "", "handy": "0151/23952005", "email": "rosi.mothes@web.de", "geburtstag": "09.07.69", "adresse": "W.-v.-Kügelgen-Str. 7", "plz": "06120", "username": "RM090769"}, {"nr": 25, "nachname": "Niebuhr", "vorname": "Sören", "telefon": "0345/6140672", "handy": "0173/5660181", "email": "snh@gmx.de", "geburtstag": "13.07.71", "adresse": "", "plz": "06198", "username": "SN130771"}, {"nr": 26, "nachname": "Ortlieb", "vorname": "Stefanie", "telefon": "", "handy": "0152/28616121", "email": "stef94.ortlieb@web.de", "geburtstag": "19.07.94", "adresse": "Aalweg 15", "plz": "06120", "username": "SO190794"}, {"nr": 27, "nachname": "Rödel", "vorname": "Klaus", "telefon": "0345/5508505", "handy": "0178/3095264", "email": "ledeor.klaus@gmail.com", "geburtstag": "", "adresse": "Franz-Mehring-Str. 6", "plz": "06120", "username": "KR"}, {"nr": 28, "nachname": "Rohde", "vorname": "Ida", "telefon": "", "handy": "0178/6841991", "email": "ida.rohde@outlook.de", "geburtstag": "10.07.01", "adresse": "Hoher Weg 6", "plz": "06120", "username": "IR100701"}, {"nr": 29, "nachname": "Schild von Spannenberg", "vorname": "Ulrike", "telefon": "", "handy": "0171/9985650", "email": "SVShome@gmx.de", "geburtstag": "04.11.62", "adresse": "Ellen-Weber-Str. 98", "plz": "06120", "username": "US041162"}, {"nr": 30, "nachname": "Skaliks", "vorname": "Ulrike", "telefon": "", "handy": "0177/8999020", "email": "uljoe@gmx.de", "geburtstag": "09.07.73", "adresse": "Smaragdweg 21", "plz": "06120", "username": "US090773"}, {"nr": 31, "nachname": "Steinborn", "vorname": "Danny", "telefon": "", "handy": "0177/5776157", "email": "dannysteinborn@gmail.com", "geburtstag": "05.02.02", "adresse": "Heideweg 21", "plz": "06120", "username": "DS050202"}, {"nr": 32, "nachname": "Stubbs", "vorname": "Milton", "telefon": "", "handy": "0176/32715256", "email": "stubbs@biochemtech.uni-halle.de", "geburtstag": "15.05.62", "adresse": "Ammernweg 2", "plz": "", "username": "MS150562"}, {"nr": 33, "nachname": "von Borell", "vorname": "Susanne", "telefon": "0345/5500330", "handy": "0176/56809120", "email": "svbdv@posteo.de", "geburtstag": "", "adresse": "Schwedenweg 9", "plz": "06120", "username": "SV"}, {"nr": 34, "nachname": "von Nessen", "vorname": "Rita", "telefon": "", "handy": "0172/3741626", "email": "eselsmilch@web.de", "geburtstag": "18.12.69", "adresse": "Irisweg 5", "plz": "06118", "username": "RV181269"}, {"nr": 35, "nachname": "Werge", "vorname": "Kerstin", "telefon": "0345/5503231", "handy": "0160/1202414", "email": "werge@t-online.de", "geburtstag": "14.01.68", "adresse": "Fichtenstr. 10", "plz": "06198", "username": "KW140168"}, {"nr": 36, "nachname": "Wolff", "vorname": "Martin", "telefon": "", "handy": "0176/54482520", "email": "Doelaudate@martinwolff-tenor.de", "geburtstag": "29.04.98", "adresse": "Geiststr. 21", "plz": "06108", "username": "MW290498"}];
+const INIT_TERMINE=[{"id": "23r7du2kk", "titel": "4 Chöre Konzert", "datum": "2026-06-07", "datum_ende": "", "uhrzeit": "15:00", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "8vfz808c1", "titel": "Lieskauer Sommerfest", "datum": "2026-06-21", "datum_ende": "", "uhrzeit": "11:00", "typ": "fest", "beschreibung": "", "abstimmungen": {}}, {"id": "79976fwpi", "titel": "Sommerkonzert", "datum": "2026-06-28", "datum_ende": "", "uhrzeit": "15:00", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "fympt3vrg", "titel": "Gemeindefest", "datum": "2026-09-20", "datum_ende": "", "uhrzeit": "14:00 / 15:00 / 16:00", "typ": "fest", "beschreibung": "Uhrzeit noch nicht festgelegt", "abstimmungen": {}}, {"id": "ru26ly3p6", "titel": "Chorlager Schierke", "datum": "2026-11-06", "datum_ende": "2026-11-08", "uhrzeit": "", "typ": "chorlager", "beschreibung": "", "abstimmungen": {}}, {"id": "c81poy77r", "titel": "Lichtergottesdienst", "datum": "2026-11-29", "datum_ende": "", "uhrzeit": "", "typ": "gottesdienst", "beschreibung": "", "abstimmungen": {}}, {"id": "fwktqtez8", "titel": "Weihnachtskonzert", "datum": "2026-12-05", "datum_ende": "", "uhrzeit": "", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "h5k00tkj8", "titel": "Chorlager", "datum": "2027-10-14", "datum_ende": "2027-10-16", "uhrzeit": "", "typ": "chorlager", "beschreibung": "", "abstimmungen": {}}];
+
+let D=null, termine=[], kommentare=[], probenplan=[], mitglieder=[], liedwuensche=[];
+let adminMode = sessionStorage.getItem('chor_admin')==='1';
+let aktiveSaison='__all__', aktiveTerminTab='anstehend';
+let kalMonat=new Date().getMonth(), kalJahr=new Date().getFullYear(), kalSel=null;
+let adminPw = localStorage.getItem('chor_admin_pw') || ADMIN_PW;
+
+// UTILS
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function fmt(iso){if(!iso)return'—';return new Date(iso+'T12:00:00').toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})}
+function dSince(iso){if(!iso)return null;return Math.floor((Date.now()-new Date(iso+'T12:00:00'))/86400000)}
+function dotC(iso){const d=dSince(iso);if(d===null)return'#bdc3c7';if(d<=14)return'#27ae60';if(d<=28)return'#f39c12';return'#e74c3c'}
+function bdgS(iso){const d=dSince(iso);if(d===null)return'background:#f0f0f0;color:#888';if(d<=14)return'background:#d5f5e3;color:#1a7a40';if(d<=28)return'background:#fef9e7;color:#9a6b00';return'background:#fdecea;color:#922b21'}
+function bdgT(iso){const d=dSince(iso);if(d===null)return'Noch nie';if(d===0)return'Heute';if(d===1)return'Gestern';return'vor '+d+'d'}
+function getStat(id){if(!D)return{last:null,count:0};const ps=(D.proben||[]).filter(p=>p.songIds&&p.songIds.includes(id)).sort((a,b)=>b.datum.localeCompare(a.datum));return{last:ps[0]?.datum||null,count:ps.length}}
+function uid(){return Math.random().toString(36).substr(2,9)}
+
+// ADMIN
+function toggleAdmin(){
+  if(adminMode){
+    adminMode=false;
+    sessionStorage.removeItem('chor_admin');
+    applyAdminMode();
+    return;
+  }
+  const pw=prompt('Admin-Passwort:');
+  if(pw===adminPw){
+    adminMode=true;
+    sessionStorage.setItem('chor_admin','1');
+    applyAdminMode();
+    alert('✅ Admin-Modus aktiviert');
+  } else if(pw!==null){
+    alert('❌ Falsches Passwort');
+  }
+}
+function applyAdminMode(){
+  document.querySelectorAll('.admin-only').forEach(el=>{
+    const perm = el.getAttribute('data-perm');
+    const inTabs = el.closest('.main-tabs');
+    let show = false;
+    if(perm) show = adminMode || hasPermission(perm);
+    else show = adminMode;
+    el.style.display = show ? (inTabs ? '' : 'block') : 'none';
+  });
+  const _b=document.getElementById('admin-badge');if(_b)_b.style.display=adminMode?'':'none';
+  const _n=document.getElementById('notice-bar');if(_n)_n.style.display=adminMode?'none':'block';
+  if(adminMode||hasPermission('proben')){renderSongPicker();}
+  if(adminMode){renderKonsole();}
+  renderProben();
+}
+
+// PAGE
+function showPage(id,tab){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.mtab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('p-'+id).classList.add('active');
+  if(tab) tab.classList.add('active');
+  if(id==='proben'){renderProben();renderSongPicker();}
+  if(id==='termine') renderTermine();
+  if(id==='mitglieder') renderMitglieder();
+  if(id==='konsole') renderKonsole();
+  if(id==='einstellungen') renderEinstellungen();
+  if(id==='lieder') renderLiedwuensche();
+}
+
+// LIEDER
+function renderStats(){
+  if(!D)return;
+  const all=D.seasons.flatMap(s=>s.songs||[]);
+  const never=all.filter(s=>!getStat(s.id).last).length;
+  const fresh=all.filter(s=>{const d=dSince(getStat(s.id).last);return d!==null&&d<=14}).length;
+  document.getElementById('stats').innerHTML=`<div class="stat"><div class="stat-n">${all.length}</div><div class="stat-l">Lieder</div></div><div class="stat"><div class="stat-n" style="color:#27ae60">${fresh}</div><div class="stat-l">Frisch</div></div><div class="stat"><div class="stat-n" style="color:#e74c3c">${never}</div><div class="stat-l">Nie geprobt</div></div><div class="stat"><div class="stat-n">${(D.proben||[]).length}</div><div class="stat-l">Proben</div></div>`;
+}
+function renderSaisonTabs(){
+  if(!D)return;
+  const tabs=[{id:'__all__',label:'Alle',type:'all'},...D.seasons.map(s=>({id:s.id,label:s.name,type:s.type}))];
+  document.getElementById('saison-tabs').innerHTML=tabs.map(t=>{const tc={sommer:'sommer',weihnachten:'weihnachten',repertoire:'repertoire'}[t.type]||'';const ic={sommer:'☀️ ',weihnachten:'🎄 ',repertoire:'📚 ',all:'🎵 '}[t.type]||'🎵 ';return`<button class="stab ${tc} ${aktiveSaison===t.id?'active':''}" onclick="setSaison('${t.id}')">${ic}${esc(t.label)}</button>`;}).join('');
+}
+function setSaison(id){aktiveSaison=id;renderLieder();}
+function renderLieder(){
+  if(!D)return; renderStats(); renderSaisonTabs();
+  let songs=D.seasons.flatMap(s=>(s.songs||[]).map(song=>Object.assign({},song,{seasonId:s.id,seasonName:s.name,seasonType:s.type})));
+  if(aktiveSaison!=='__all__') songs=songs.filter(s=>s.seasonId===aktiveSaison);
+  const sort=document.getElementById('sort-sel')?.value||'last';
+  songs=songs.map(s=>Object.assign({},s,getStat(s.id)));
+  if(sort==='last') songs.sort((a,b)=>{if(!a.last&&!b.last)return a.name.localeCompare(b.name);if(!a.last)return-1;if(!b.last)return 1;return a.last.localeCompare(b.last)});
+  else if(sort==='name') songs.sort((a,b)=>a.name.localeCompare(b.name));
+  else songs.sort((a,b)=>a.count-b.count);
+  const el=document.getElementById('lieder-list');if(!el)return;
+  if(!songs.length){el.innerHTML='<div class="empty">Keine Lieder vorhanden.</div>';return;}
+  let html='';
+  if(aktiveSaison==='__all__'){D.seasons.forEach(s=>{const ss=songs.filter(x=>x.seasonId===s.id);if(!ss.length)return;const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'}[s.type]||'🎵';html+=`<div class="section-label">${ic} ${esc(s.name)}</div>`+buildTbl(ss);});}
+  else html=buildTbl(songs);
+  el.innerHTML=html;
+}
+function buildTbl(songs){return'<table><thead><tr><th>Lied</th><th>Letzte Probe</th><th style="text-align:center">Anzahl</th><th>Status</th></tr></thead><tbody>'+songs.map(s=>`<tr><td><strong>${esc(s.name)}</strong></td><td>${fmt(s.last)}</td><td style="text-align:center;color:#666">${s.count}×</td><td><span class="dot" style="background:${dotC(s.last)}"></span><span class="badge" style="${bdgS(s.last)}">${bdgT(s.last)}</span></td></tr>`).join('')+'</tbody></table>';}
+
+// SONG PICKER
+function renderSongPicker(){
+  if(!D)return;
+  const el=document.getElementById('probe-song-picker');if(!el)return;
+  el.innerHTML='';
+  D.seasons.forEach(s=>{
+    if(!(s.songs||[]).length)return;
+    const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'}[s.type]||'🎵';
+    el.innerHTML+=`<div style="width:100%;font-size:.7rem;font-weight:700;text-transform:uppercase;color:#999;margin:5px 0 3px">${ic} ${esc(s.name)}</div>`;
+    s.songs.forEach(song=>{
+      const cid='psp-'+song.id;
+      el.innerHTML+=`<label id="${cid}" style="display:inline-flex;align-items:center;gap:5px;background:#f0f4f8;border-radius:20px;padding:4px 11px;cursor:pointer;border:1.5px solid transparent;font-size:.82rem;user-select:none;margin-bottom:3px">
+        <input type="checkbox" value="${song.id}" onchange="this.parentElement.style.background=this.checked?'#d6eaf8':'#f0f4f8';this.parentElement.style.borderColor=this.checked?'#2980b9':'transparent'">
+        ${esc(song.name)}</label>`;
+    });
+  });
+}
+function getCheckedSongs(){const el=document.getElementById('probe-song-picker');if(!el)return[];return[...el.querySelectorAll('input:checked')].map(x=>x.value);}
+function clearSongPicker(){const el=document.getElementById('probe-song-picker');if(!el)return;el.querySelectorAll('input').forEach(x=>{x.checked=false;x.parentElement.style.background='#f0f4f8';x.parentElement.style.borderColor='transparent';});}
+
+// PROBEN
+async function saveProbe(){
+  const datum=document.getElementById('probe-datum').value;
+  if(!datum){alert('Bitte Datum eingeben.');return;}
+  const art=document.getElementById('probe-art').value;
+  const songIds=getCheckedSongs();
+  const notiz=document.getElementById('probe-notiz').value.trim();
+  const entry={id:uid(),datum,songIds,notiz};
+  if(art==='vergangen'){
+    if(!songIds.length){alert('Bitte mindestens ein Lied auswählen.');return;}
+    if(!D.proben) D.proben=[];
+    D.proben.push(entry);
+    await fetch(DB+'/chorproben.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seasons:D.seasons,proben:D.proben})});
+  } else {
+    probenplan.push(entry);
+    await fetch(DB+'/probenplan.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(probenplan)});
+  }
+  document.getElementById('probe-datum').value='';
+  document.getElementById('probe-notiz').value='';
+  clearSongPicker();
+  renderProben(); renderLieder();
+  alert('✅ Gespeichert!');
+}
+
+async function deleteProbe(id,geplant=false){
+  if(!confirm('Probe löschen?'))return;
+  if(geplant){
+    probenplan=probenplan.filter(p=>p.id!==id);
+    await fetch(DB+'/probenplan.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(probenplan)});
+  } else {
+    D.proben=D.proben.filter(p=>p.id!==id);
+    await fetch(DB+'/chorproben.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seasons:D.seasons,proben:D.proben})});
+  }
+  renderProben(); renderLieder();
+}
+
+function renderProben(){
+  if(!D)return;
+  const allS=D.seasons.flatMap(s=>s.songs||[]);
+  const today=new Date().toISOString().split('T')[0];
+  const planEl=document.getElementById('plan-list');
+  if(planEl){
+    const up=(probenplan||[]).filter(p=>p.datum>=today).sort((a,b)=>a.datum.localeCompare(b.datum));
+    if(!up.length) planEl.innerHTML='<div class="empty" style="padding:16px">Keine Proben geplant.</div>';
+    else planEl.innerHTML=up.map(p=>{
+      const songs=(p.songIds||[]).map(id=>{const s=allS.find(x=>x.id===id);return s?s.name:'?'}).join(', ');
+      return`<div class="plan-item"><div style="font-weight:600;color:#1e8449;margin-bottom:2px">🎹 ${fmt(p.datum)}</div>${songs?`<div style="font-size:.8rem;color:#555">🎵 ${esc(songs)}</div>`:''}${p.notiz?`<div style="font-size:.8rem;color:#888;font-style:italic">💬 ${esc(p.notiz)}</div>`:''}${hasPermission('proben')?`<button class="btn btn-danger btn-sm del-btn" onclick="deleteProbe('${p.id}',true)">✕</button>`:''}</div>`;
+    }).join('');
+  }
+  const verlEl=document.getElementById('verlauf-list');
+  if(verlEl){
+    const today=new Date().toISOString().split('T')[0];
+    // Past planned rehearsals (date passed but not logged)
+    const pastPlan=(probenplan||[]).filter(p=>p.datum<today).sort((a,b)=>b.datum.localeCompare(a.datum));
+    const past=(D.proben||[]).sort((a,b)=>b.datum.localeCompare(a.datum));
+    if(!past.length && !pastPlan.length){verlEl.innerHTML='<div class="empty" style="padding:16px">Noch keine Proben erfasst.</div>';}
+    else {
+      // Merge and sort by date
+      const allPast=[
+        ...past.map(p=>({...p,_type:'erfasst'})),
+        ...pastPlan.map(p=>({...p,_type:'geplant_abgelaufen'}))
+      ].sort((a,b)=>b.datum.localeCompare(a.datum));
+      verlEl.innerHTML=allPast.map(p=>{
+        const names=(p.songIds||[]).map(id=>{const s=allS.find(x=>x.id===id);return s?s.name:'?'}).join(', ');
+        if(p._type==='geplant_abgelaufen'){
+          return`<div class="probe-item" style="border-left-color:#f39c12;background:#fffbf0;opacity:.8">
+            <div style="font-size:.72rem;font-weight:700;color:#f39c12;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Geplant (nicht erfasst)</div>
+            <div class="probe-date">📋 ${fmt(p.datum)}</div>
+            ${names?`<div class="probe-songs">🎵 ${esc(names)}</div>`:''}
+            ${p.notiz?`<div class="probe-notes">💬 ${esc(p.notiz)}</div>`:''}
+            ${hasPermission('proben')?`<button class="btn btn-danger btn-sm del-btn" onclick="deleteProbe('${p.id}',true)">✕</button>`:''}
+          </div>`;
+        }
+        const hw=p.hausaufgaben||{};
+        const hwHtml=Object.entries(hw).filter(([,v])=>v).map(([g,t])=>`<div style="font-size:.76rem;margin-top:2px"><strong>${esc(g)}:</strong> ${esc(t)}</div>`).join('');
+        return`<div class="probe-item">
+          <div class="probe-date">📅 ${fmt(p.datum)}</div>
+          <div class="probe-songs">🎵 ${esc(names)}</div>
+          ${p.notiz?`<div class="probe-notes">💬 ${esc(p.notiz)}</div>`:''}
+          ${hwHtml?`<div style="background:#fff8e7;border-radius:5px;padding:6px 8px;margin-top:6px;font-size:.78rem;color:#7d6608"><strong>📝 Hausaufgaben:</strong>${hwHtml}</div>`:''}
+          ${hasPermission('proben')?`<div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap">
+            <button class="btn btn-sm" style="background:#f39c12;color:white;font-size:.72rem" onclick="editHausaufgaben('${p.id}')">📝 HA</button>
+            <button class="btn btn-danger btn-sm del-btn" onclick="deleteProbe('${p.id}',false)">✕</button>
+          </div>`:''}
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
+// TERMINE
+function setTerminTab(v){
+  aktiveTerminTab=v;
+  ['anstehend','kalender','vergangen','geburtstage'].forEach(id=>{
+    const el=document.getElementById('t-'+id);
+    if(el) el.style.display=v===id?'block':'none';
+    const b=document.getElementById('t-btn-'+id);
+    if(b) b.className='stab'+(v===id?' active':'');
+  });
+  if(v==='kalender') renderKalender();
+  if(v==='geburtstage') renderGeburtstage();
+}
+function renderTermine(){
+  const today=new Date().toISOString().split('T')[0];
+  const sorted=[...termine].sort((a,b)=>a.datum.localeCompare(b.datum));
+  const upcoming=sorted.filter(t=>(t.datum_ende||t.datum)>=today);
+  const past=sorted.filter(t=>(t.datum_ende||t.datum)<today);
+  const upEl=document.getElementById('t-anstehend');
+  const pastEl=document.getElementById('t-vergangen');
+  if(upEl) upEl.innerHTML=upcoming.length?upcoming.map(t=>terminHtml(t)).join(''):'<div class="empty">Keine bevorstehenden Termine.</div>';
+  if(pastEl) pastEl.innerHTML=past.length?[...past].reverse().map(t=>terminHtml(t,true)).join(''):'<div class="empty">Keine vergangenen Termine.</div>';
+}
+function terminHtml(t,past=false){
+  const color=TYP_COLOR[t.typ]||'#888';
+  const label=TYP_LABEL[t.typ]||t.typ;
+  const dateStr=t.datum_ende?fmt(t.datum)+' – '+fmt(t.datum_ende):fmt(t.datum);
+  const abs=t.abstimmungen||{};
+  const jaL=Object.entries(abs).filter(([,v])=>v==='ja').map(([k])=>k);
+  const nL=Object.entries(abs).filter(([,v])=>v==='nein').map(([k])=>k);
+  const vL=Object.entries(abs).filter(([,v])=>v==='vielleicht').map(([k])=>k);
+  return`<div class="termin-card" style="border-left-color:${color};${past?'opacity:.6':''}">
+    <span class="t-badge" style="background:${color}">${label}</span>
+    <div class="t-title">${esc(t.titel)}</div>
+    <div class="t-meta">📅 ${dateStr}${t.uhrzeit?' &nbsp;🕐 '+esc(t.uhrzeit):''}</div>
+    ${t.beschreibung?`<div style="font-size:.78rem;color:#888;margin-bottom:5px">ℹ️ ${esc(t.beschreibung)}</div>`:''}
+    ${t.setliste&&t.setliste.length?`<div style="margin-bottom:8px"><div style="font-size:.76rem;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:3px">Setliste</div>${t.setliste.map((s,i)=>`<div style="font-size:.82rem;color:#555">🎵 ${i+1}. ${esc(s)}</div>`).join('')}</div>`:''}
+    ${jaL.length||nL.length||vL.length?`<div class="tally">${jaL.length?`<span style="color:#27ae60">✅ ${jaL.length}: ${jaL.join(', ')}</span><br>`:''}${nL.length?`<span style="color:#e74c3c">❌ ${nL.length}: ${nL.join(', ')}</span><br>`:''}${vL.length?`<span style="color:#f39c12">❓ ${vL.length}: ${vL.join(', ')}</span>`:''}</div>`:''}
+    ${!past?`<div class="vote-row" id="vrow-${t.id}">${buildVoteRow(t)}</div>`:''}
+    <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-sm" style="background:transparent;border:1px solid #8e44ad;color:#8e44ad;font-size:.72rem" onclick="exportTerminICS('${t.id}')">📥 .ics</button>
+      ${hasPermission('termine')?`
+        ${(t.typ==='konzert'||t.typ==='fest')?`<button class="btn btn-sm" style="background:#3498db;color:white;font-size:.72rem" onclick="editSetliste('${t.id}')">🎵 Setliste</button>`:''}
+        <button class="btn btn-danger btn-sm del-btn" style="opacity:1;position:static" onclick="deleteTermin('${t.id}')">✕</button>
+      `:''}
+    </div>
+  </div>`;
+}
+function getUserVoteName(){
+  if(currentUserProfile?.anzeigename) return currentUserProfile.anzeigename;
+  if(currentUserProfile?.username) return currentUserProfile.username;
+  if(currentUser?.email) return currentUser.email.split('@')[0];
+  return null;
+}
+
+function buildVoteRow(t){
+  const userName = getUserVoteName();
+  const abs = t.abstimmungen||{};
+  const myVote = userName ? (abs[userName]||null) : null;
+  
+  if(userName){
+    // Logged-in user: show their current vote and allow change
+    const voteLabel = {ja:'✅ Ich komme',nein:'❌ Komme nicht',vielleicht:'❓ Vielleicht'}[myVote];
+    return`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font-size:.8rem;color:#555;font-weight:500">Meine Stimme:</span>
+      <button class="vbtn ${myVote==='ja'?'vbtn-ja':'vbtn-ja'}" style="${myVote==='ja'?'background:#27ae60;color:white':''}" onclick="abstimmen('${t.id}','ja')">✅ Komme</button>
+      <button class="vbtn vbtn-nein" style="${myVote==='nein'?'background:#e74c3c;color:white':''}" onclick="abstimmen('${t.id}','nein')">❌ Komme nicht</button>
+      <button class="vbtn vbtn-vl" style="${myVote==='vielleicht'?'background:#f39c12;color:white':''}" onclick="abstimmen('${t.id}','vielleicht')">❓ Vielleicht</button>
+      ${myVote?`<span style="font-size:.76rem;color:#aaa">Aktuell: <strong>${voteLabel}</strong></span>`:''}
+    </div>`;
+  } else {
+    // Not logged in: name input required
+    return`<input class="vote-name" type="text" placeholder="Dein Name" id="vn-${t.id}" maxlength="40">
+      <button class="vbtn vbtn-ja" onclick="abstimmen('${t.id}','ja')">✅ Komme</button>
+      <button class="vbtn vbtn-nein" onclick="abstimmen('${t.id}','nein')">❌ Komme nicht</button>
+      <button class="vbtn vbtn-vl" onclick="abstimmen('${t.id}','vielleicht')">❓ Vielleicht</button>`;
+  }
+}
+
+async function abstimmen(id,antwort){
+  const t=termine.find(x=>x.id===id);if(!t)return;
+  if(!t.abstimmungen) t.abstimmungen={};
+  
+  let name = getUserVoteName();
+  if(!name){
+    const nameEl=document.getElementById('vn-'+id);
+    name=nameEl?nameEl.value.trim():'';
+    if(!name){alert('Bitte deinen Namen eingeben.');nameEl&&nameEl.focus();return;}
+  }
+  
+  t.abstimmungen[name]=antwort;
+  await fetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
+  // Update just this vote row for instant feedback
+  const vrow=document.getElementById('vrow-'+id);
+  if(vrow) vrow.innerHTML=buildVoteRow(t);
+  // Also refresh tally
+  renderTermine();
+}
+async function addTermin(){
+  const titel=document.getElementById('t-titel').value.trim();
+  const datum=document.getElementById('t-datum').value;
+  if(!titel||!datum){alert('Bezeichnung und Datum erforderlich.');return;}
+  termine.push({id:uid(),titel,datum,datum_ende:document.getElementById('t-datum-ende').value||'',uhrzeit:document.getElementById('t-uhrzeit').value.trim(),typ:document.getElementById('t-typ').value,beschreibung:document.getElementById('t-beschreibung').value.trim(),abstimmungen:{}});
+  await fetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
+  ['t-titel','t-datum','t-datum-ende','t-uhrzeit','t-beschreibung'].forEach(id=>document.getElementById(id).value='');
+  renderTermine(); renderKalender();
+  alert('✅ Termin gespeichert!');
+}
+async function deleteTermin(id){
+  if(!confirm('Termin löschen?'))return;
+  termine=termine.filter(t=>t.id!==id);
+  await fetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
+  renderTermine(); renderKalender();
+}
+
+// KALENDER (Termine + Proben)
+function renderKalender(){
+  const el=document.getElementById('kal-container');if(!el)return;
+  const today=new Date().toISOString().split('T')[0];
+  const year=kalJahr,month=kalMonat;
+  const firstDay=new Date(year,month,1),lastDay=new Date(year,month+1,0);
+  const startDow=(firstDay.getDay()+6)%7;
+  const monatName=firstDay.toLocaleDateString('de-DE',{month:'long',year:'numeric'});
+  const WTAGE=['Mo','Di','Mi','Do','Fr','Sa','So'];
+  // Build event map (termine)
+  const evMap={};
+  termine.forEach(t=>{
+    let d=new Date(t.datum+'T12:00:00');
+    const end=new Date((t.datum_ende||t.datum)+'T12:00:00');
+    while(d<=end){const k=d.toISOString().split('T')[0];if(!evMap[k])evMap[k]={ev:[],pr:[]};evMap[k].ev.push(t);d.setDate(d.getDate()+1);}
+  });
+  // Add proben (geplant + vergangen)
+  const allProben=[...(D?.proben||[]),...(probenplan||[])];
+  allProben.forEach(p=>{
+    if(!evMap[p.datum]) evMap[p.datum]={ev:[],pr:[]};
+    evMap[p.datum].pr.push(p);
+  });
+  let html=`<div class="kal-nav"><button onclick="kalVor(-1)">‹</button><strong>${monatName}</strong><button onclick="kalVor(1)">›</button></div>`;
+  // Legend
+  html+=`<div style="display:flex;gap:10px;font-size:.72rem;color:#777;margin-bottom:8px;flex-wrap:wrap">
+    <span><span style="display:inline-block;width:10px;height:10px;background:#eaf3fb;border:1px solid #aed6f1;border-radius:2px;margin-right:3px"></span>Termin</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#f0fff4;border:1px solid #a9dfbf;border-radius:2px;margin-right:3px"></span>Probe</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#fef9e7;border:1px solid #f9ca8b;border-radius:2px;margin-right:3px"></span>Beides</span>
+  </div>`;
+  html+=`<div class="kal-grid">`;
+  WTAGE.forEach(d=>html+=`<div class="kal-head">${d}</div>`);
+  for(let i=0;i<startDow;i++) html+='<div></div>';
+  for(let day=1;day<=lastDay.getDate();day++){
+    const iso=year+'-'+String(month+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+    const isToday=iso===today,sel=kalSel===iso;
+    const data=evMap[iso];
+    const hasEv=data&&data.ev.length>0,hasPr=data&&data.pr.length>0;
+    const cls='kal-day'+(hasEv&&hasPr?' has-both':hasEv?' has-ev':hasPr?' has-probe':'')+(isToday?' today':'')+(sel?' selected':'');
+    html+=`<div class="${cls}" onclick="kalClick('${iso}')">
+      <div class="kal-day-num" style="color:${isToday?'white':''}">${day}</div>
+      ${data?[...data.ev.slice(0,1).map(e=>`<div class="kal-ev-dot" style="background:${TYP_COLOR[e.typ]||'#888'}">${esc(e.titel)}</div>`),...data.pr.slice(0,1).map(p=>`<div class="kal-ev-dot" style="background:#27ae60">🎹 Probe</div>`)].join(''):''}
+    </div>`;
+  }
+  html+='</div>';
+  if(kalSel&&evMap[kalSel]){
+    const selD=new Date(kalSel+'T12:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long'});
+    html+=`<div class="kal-detail"><div class="section-label">${selD}</div>`;
+    evMap[kalSel].ev.forEach(t=>{html+=`<div style="border-left:3px solid ${TYP_COLOR[t.typ]||'#888'};padding:7px 12px;background:#fafafa;border-radius:0 6px 6px 0;margin-bottom:5px"><div style="font-weight:600;font-size:.86rem">${esc(t.titel)}</div>${t.uhrzeit?`<div style="font-size:.76rem;color:#666">🕐 ${esc(t.uhrzeit)}</div>`:''}</div>`;});
+    const allS=D?.seasons.flatMap(s=>s.songs||[])||[];
+    evMap[kalSel].pr.forEach(p=>{
+      const names=(p.songIds||[]).map(id=>{const s=allS.find(x=>x.id===id);return s?s.name:'?'}).join(', ');
+      const isGeplant=probenplan.some(x=>x.id===p.id);
+      html+=`<div style="border-left:3px solid #27ae60;padding:7px 12px;background:#f0fff4;border-radius:0 6px 6px 0;margin-bottom:5px"><div style="font-weight:600;font-size:.86rem;color:#1e8449">${isGeplant?'📋 Geplante Probe':'📝 Probe'}</div>${names?`<div style="font-size:.76rem;color:#555">🎵 ${esc(names)}</div>`:''}</div>`;
+    });
+    html+='</div>';
+  }
+  el.innerHTML=html;
+}
+function kalVor(dir){kalMonat+=dir;if(kalMonat>11){kalMonat=0;kalJahr++;}if(kalMonat<0){kalMonat=11;kalJahr--;}renderKalender();}
+function kalClick(iso){kalSel=kalSel===iso?null:iso;renderKalender();}
+
+// MITGLIEDER
+function renderMitglieder(){
+  const q=(document.getElementById('m-search')?.value||'').toLowerCase();
+  const filtered=mitglieder.filter(m=>{
+    const s=(m.vorname+' '+m.nachname+' '+m.email+' '+m.handy+' '+m.telefon).toLowerCase();
+    return s.includes(q);
+  }).sort((a,b)=>a.nachname.localeCompare(b.nachname));
+  const cnt=document.getElementById('m-count');
+  if(cnt) cnt.textContent='('+filtered.length+' von '+mitglieder.length+')';
+  const el=document.getElementById('mitglieder-list');if(!el)return;
+  if(!filtered.length){el.innerHTML='<div class="empty">Keine Treffer.</div>';return;}
+  el.innerHTML=filtered.map(m=>{
+    const initials=(m.vorname.charAt(0)+(m.nachname.charAt(0)||'')).toUpperCase();
+    const colors=['#2980b9','#27ae60','#8e44ad','#e67e22','#c0392b','#16a085'];
+    const color=colors[(m.vorname.charCodeAt(0)||0)%colors.length];
+    return`<div class="mitglied-card">
+      <div class="mitglied-avatar" style="background:${color}">${initials}</div>
+      <div class="mitglied-info">
+        <div class="mitglied-name">${esc(m.vorname)} ${esc(m.nachname)}</div>
+        <div class="mitglied-detail">
+          ${m.stimme?`<span style="background:${{sopran:'#fdebd0',alt:'#d6eaf8',tenor:'#d5f5e3',bass:'#f9ebea'}[m.stimme.toLowerCase()]||'#f0f0f0'};color:#333;padding:1px 8px;border-radius:8px;font-size:.72rem;font-weight:600;margin-right:5px">${esc(m.stimme)}</span>`:''}
+          ${m.handy?`📱 <a href="tel:${m.handy}">${esc(m.handy)}</a> `:''}
+          ${m.telefon?`☎️ <a href="tel:${m.telefon}">${esc(m.telefon)}</a> `:''}
+          ${m.email?`✉️ <a href="mailto:${m.email}">${esc(m.email)}</a> `:''}
+        </div>
+        ${m.adresse||m.plz?`<div class="mitglied-detail">📍 ${esc(m.adresse||'')} ${esc(m.plz||'')}</div>`:''}
+        ${m.geburtstag?`<div class="mitglied-detail">🎂 ${esc(m.geburtstag)}</div>`:''}
+      </div>
+      ${hasPermission('mitglieder')?`<div style="display:flex;flex-direction:column;gap:4px"><button class="btn btn-gray btn-sm" onclick="openEditMitglied('${m.nr||m.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="deleteMitglied('${m.nr||m.id}')">✕</button></div>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function addMitglied(){
+  const nachname=document.getElementById('m-nachname').value.trim();
+  const vorname=document.getElementById('m-vorname').value.trim();
+  if(!nachname||!vorname){alert('Vor- und Nachname erforderlich.');return;}
+  const newM={id:uid(),nr:mitglieder.length+1,nachname,vorname,handy:document.getElementById('m-handy').value.trim(),telefon:document.getElementById('m-telefon').value.trim(),email:document.getElementById('m-email').value.trim(),geburtstag:document.getElementById('m-geburtstag').value.trim(),adresse:document.getElementById('m-adresse').value.trim(),plz:document.getElementById('m-plz').value.trim(),stimme:document.getElementById('m-stimme')?.value||''};
+  mitglieder.push(newM);
+  await saveMitgliederToFB();
+  ['m-nachname','m-vorname','m-handy','m-telefon','m-email','m-geburtstag','m-adresse','m-plz'].forEach(id=>document.getElementById(id).value='');
+  renderMitglieder();
+}
+
+async function deleteMitglied(id){
+  if(!confirm('Mitglied wirklich löschen?'))return;
+  mitglieder=mitglieder.filter(m=>(m.nr||m.id)!=id);
+  await saveMitgliederToFB();
+  renderMitglieder();
+}
+
+function openEditMitglied(id){
+  const m=mitglieder.find(x=>(x.nr||x.id)==id);if(!m)return;
+  document.getElementById('edit-m-id').value=id;
+  ['nachname','vorname','handy','telefon','email','geburtstag','adresse','plz','stimme'].forEach(f=>{const el=document.getElementById('edit-m-'+f);if(el)el.value=m[f]||'';});
+  document.getElementById('modal-mitglied').classList.add('open');
+}
+
+async function saveMitglied(){
+  const id=document.getElementById('edit-m-id').value;
+  const m=mitglieder.find(x=>(x.nr||x.id)==id);if(!m)return;
+  ['nachname','vorname','handy','telefon','email','geburtstag','adresse','plz','stimme'].forEach(f=>{const el=document.getElementById('edit-m-'+f);if(el)m[f]=el.value.trim();});
+  await saveMitgliederToFB();
+  closeModal();
+  renderMitglieder();
+}
+
+async function saveMitgliederToFB(){
+  await fetch(DB+'/mitglieder.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(mitglieder)}).catch(e=>console.warn(e));
+}
+
+function closeModal(){document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('open'));}
+
+// KOMMENTARE
+function populateLiedSelect(){
+  if(!D)return;
+  const sel=document.getElementById('k-lied');if(!sel)return;
+  sel.innerHTML='<option value="">— Allgemeiner Kommentar —</option>';
+  D.seasons.flatMap(s=>s.songs||[]).forEach(song=>{const opt=document.createElement('option');opt.value=song.name;opt.textContent='🎵 '+song.name;sel.appendChild(opt);});
+}
+async function loadKommentare(){
+  try{const res=await fetch(DB+'/kommentare.json');if(!res.ok)return;const d=await res.json();kommentare=d?Object.entries(d).map(([k,v])=>Object.assign({},v,{_key:k})).sort((a,b)=>b.datum.localeCompare(a.datum)):[];renderKommentare();const cnt=document.getElementById('k-count');if(cnt)cnt.textContent=kommentare.length||'';}catch(e){console.warn(e);}
+}
+async function deleteKommentar(key){
+  if(!confirm('Kommentar löschen?'))return;
+  await fetch(DB+'/kommentare/'+key+'.json',{method:'DELETE'}).catch(e=>console.warn(e));
+  await loadKommentare();
+}
+function renderKommentare(){
+  const el=document.getElementById('kommentare-list');if(!el)return;
+  if(!kommentare.length){el.innerHTML='<div class="empty">Noch keine Kommentare.</div>';return;}
+  el.innerHTML=kommentare.map(k=>{
+    const d=new Date(k.datum);
+    const ds=d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+    return`<div class="kommentar"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span class="k-name">👤 ${esc(k.name)}</span><span class="k-meta">${ds}</span></div>${k.lied?`<div class="k-lied">🎵 ${esc(k.lied)}</div>`:''}<div class="k-text">${esc(k.text)}</div>${hasPermission('kommentare')&&k._key?`<button class="btn btn-danger btn-sm del-btn" onclick="deleteKommentar('${k._key}')">✕</button>`:''}</div>`;
+  }).join('');
+}
+async function submitKommentar(){
+  const name=document.getElementById('k-name').value.trim();
+  const text=document.getElementById('k-text').value.trim();
+  const lied=document.getElementById('k-lied').value;
+  if(!name){alert('Bitte deinen Namen eingeben.');return;}
+  if(!text){alert('Bitte einen Kommentar schreiben.');return;}
+  const btn=document.getElementById('k-btn');btn.textContent='⏳';btn.disabled=true;
+  try{await fetch(DB+'/kommentare.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,text,lied:lied||'',datum:new Date().toISOString()})});document.getElementById('k-text').value='';document.getElementById('k-lied').value='';await loadKommentare();btn.textContent='✅ Gesendet!';setTimeout(()=>{btn.textContent='💬 Abschicken';btn.disabled=false;},2000);}
+  catch(e){alert('Fehler: '+e.message);btn.textContent='💬 Abschicken';btn.disabled=false;}
+}
+
+// ADMIN KONSOLE
+function renderKonsole(){
+  // Restore saved settings
+  const alMin = document.getElementById('auto-logout-min');
+  if(alMin) alMin.value = localStorage.getItem('auto_logout_min')||'0';
+
+  renderUserVerwaltung();
+
+  const el=document.getElementById('konsole-stats');if(!el)return;
+  const today=new Date().toISOString().split('T')[0];
+  el.innerHTML=`
+    🎵 Lieder: <strong>${D?D.seasons.flatMap(s=>s.songs||[]).length:0}</strong><br>
+    📅 Durchgeführte Proben: <strong>${D?(D.proben||[]).length:0}</strong><br>
+    📋 Geplante Proben: <strong>${probenplan.length}</strong><br>
+    📆 Termine: <strong>${termine.length}</strong> (${termine.filter(t=>(t.datum_ende||t.datum)>=today).length} anstehend)<br>
+    👥 Mitglieder: <strong>${mitglieder.length}</strong><br>
+    💬 Kommentare: <strong>${kommentare.length}</strong>
+  `;
+  const saved=localStorage.getItem('auto_delete_days')||'0';
+  document.getElementById('auto-delete-days').value=saved;
+}
+function applyAutoDelete(){
+  const days=parseInt(document.getElementById('auto-delete-days').value)||0;
+  localStorage.setItem('auto_delete_days',days);
+  if(!days){document.getElementById('auto-delete-result').textContent='Automatisches Löschen deaktiviert.';return;}
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-days);
+  const before=kommentare.length;
+  const toDelete=kommentare.filter(k=>new Date(k.datum)<cutoff);
+  if(!toDelete.length){document.getElementById('auto-delete-result').textContent='Keine alten Kommentare gefunden.';return;}
+  Promise.all(toDelete.map(k=>k._key?fetch(DB+'/kommentare/'+k._key+'.json',{method:'DELETE'}):Promise.resolve())).then(()=>{loadKommentare();document.getElementById('auto-delete-result').textContent=`${toDelete.length} Kommentar(e) gelöscht.`;renderKonsole();});
+}
+async function clearAllKommentare(){
+  if(!confirm('ALLE Kommentare löschen? Das kann nicht rückgängig gemacht werden!'))return;
+  await fetch(DB+'/kommentare.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:'null'}).catch(e=>console.warn(e));
+  kommentare=[];renderKommentare();renderKonsole();
+}
+function exportData(){
+  const data={chorproben:D,termine,probenplan,mitglieder,kommentare,exportiert:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='chor-doelau-backup-'+new Date().toISOString().split('T')[0]+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+function changePw(){
+  const nw=document.getElementById('new-pw').value;
+  if(!nw||nw.length<4){alert('Passwort zu kurz (min. 4 Zeichen).');return;}
+  localStorage.setItem('chor_admin_pw',nw);
+  adminPw=nw;
+  document.getElementById('pw-result').textContent='✅ Passwort geändert!';
+  document.getElementById('new-pw').value='';
+}
+
+
+// ===== FIREBASE AUTH =====
+const FIREBASE_CONFIG_PRESENT = true;
+let currentUser = null;
+let currentUserProfile = null;
+
+function onAuthChange(user) {
+  currentUser = user;
+  if(user) {
+    document.getElementById('login-overlay').style.display = 'none';
+    loadUserProfile(user.uid, user.email);
+  } else {
+    document.getElementById('login-overlay').style.display = 'flex';
+    document.getElementById('user-chip').style.display = 'none';
+    document.querySelectorAll('.user-only').forEach(el=>el.style.display='none');
+  }
+}
+
+async function loadUserProfile(uid, email) {
+  try {
+    const res = await fetch(DB+'/userprofiles/'+uid+'.json');
+    const profile = res.ok ? await res.json() : null;
+    currentUserProfile = profile;
+    const displayName = profile?.anzeigename || profile?.username || email.split('@')[0];
+    document.getElementById('user-display').textContent = '👤 ' + displayName;
+    document.getElementById('user-chip').style.display = 'flex';
+    document.querySelectorAll('.user-only').forEach(el=>el.style.removeProperty('display'));
+    // Pre-fill comment name with display name
+    const kn = document.getElementById('k-name');
+    if(kn && displayName) kn.value = displayName;
+    // Check if admin
+    const isAdmin = profile?.isAdmin || false;
+    if(isAdmin) {
+      adminMode = true;
+      sessionStorage.setItem('chor_admin','1');
+    }
+    applyAdminMode();
+    loadAll();
+  } catch(e) {
+    document.getElementById('user-display').textContent = '👤 ' + email.split('@')[0];
+    document.getElementById('user-chip').style.display = 'flex';
+    const lb=document.getElementById('logout-btn');if(lb)lb.style.display='block';
+    loadAll();
+  }
+}
+
+function switchAuthTab(tab) {
+  document.getElementById('form-login').style.display = tab==='login' ? 'block' : 'none';
+  document.getElementById('form-register').style.display = tab==='register' ? 'block' : 'none';
+  document.getElementById('tab-login').style.cssText = tab==='login' ? 'flex:1;background:none;border:none;padding:8px;font-size:.88rem;font-weight:600;color:#2980b9;border-bottom:2px solid #2980b9;margin-bottom:-2px;cursor:pointer' : 'flex:1;background:none;border:none;padding:8px;font-size:.88rem;font-weight:500;color:#aaa;cursor:pointer';
+  document.getElementById('tab-register').style.cssText = tab==='register' ? 'flex:1;background:none;border:none;padding:8px;font-size:.88rem;font-weight:600;color:#27ae60;border-bottom:2px solid #27ae60;margin-bottom:-2px;cursor:pointer' : 'flex:1;background:none;border:none;padding:8px;font-size:.88rem;font-weight:500;color:#aaa;cursor:pointer';
+  document.getElementById('login-err').textContent = '';
+}
+
+async function doLogin() {
+  const input = document.getElementById('login-input').value.trim();
+  const pw = document.getElementById('login-pw').value;
+  const errEl = document.getElementById('login-err');
+  errEl.textContent = '';
+  if(!input || !pw) { errEl.textContent = 'Bitte alle Felder ausfüllen.'; return; }
+  
+  // Special admin bypass: username "admin" with admin password
+  if(input.toLowerCase() === 'admin' && pw === adminPw) {
+    adminMode = true;
+    sessionStorage.setItem('chor_admin','1');
+    currentUser = {email:'admin@local',uid:'admin'};
+    document.getElementById('login-overlay').style.display = 'none';
+    document.getElementById('user-display').textContent = '🔑 Admin';
+    document.getElementById('user-chip').style.display = 'flex';
+    const _lb=document.getElementById('logout-btn');if(_lb)_lb.style.display='block';
+    applyAdminMode();
+    loadAll();
+    return;
+  }
+  
+  let email = input;
+  if(!input.includes('@')) {
+    try {
+      const res = await fetch(DB+'/usernames/'+input.toLowerCase()+'.json');
+      if(res.ok) {
+        const data = await res.json();
+        if(data && data.email) email = data.email;
+        else { errEl.textContent = 'Benutzername nicht gefunden.'; return; }
+      } else { errEl.textContent = 'Benutzername nicht gefunden.'; return; }
+    } catch(e) { errEl.textContent = 'Verbindungsfehler.'; return; }
+  }
+  
+  const btn = document.getElementById('btn-login-submit');
+  if(btn){btn.textContent = '⏳'; btn.disabled = true;}
+  try {
+    await window._fbSignIn(window._fbAuth, email, pw);
+  } catch(e) {
+    let msg = 'E-Mail oder Passwort falsch.';
+    if(e.code==='auth/too-many-requests') msg = 'Zu viele Versuche. Bitte warte kurz.';
+    errEl.textContent = msg;
+  }
+  if(btn){btn.textContent = 'Anmelden'; btn.disabled = false;}
+}
+
+async function doRegister() {
+  const email = document.getElementById('reg-email').value.trim().toLowerCase();
+  const pw = document.getElementById('reg-pw').value;
+  const pw2 = document.getElementById('reg-pw2').value;
+  const errEl = document.getElementById('login-err');
+  errEl.textContent = '';
+  
+  if(!email || !pw) { errEl.textContent = 'Bitte E-Mail und Passwort eingeben.'; return; }
+  if(!email.includes('@')) { errEl.textContent = 'Bitte gültige E-Mail eingeben.'; return; }
+  if(pw.length < 6) { errEl.textContent = 'Passwort muss mind. 6 Zeichen haben.'; return; }
+  if(pw !== pw2) { errEl.textContent = 'Passwörter stimmen nicht überein.'; return; }
+  
+  const btn = document.getElementById('btn-register-submit');
+  if(btn){btn.textContent = '⏳'; btn.disabled = true;}
+  
+  try {
+    // Create Firebase account
+    const cred = await window._fbCreateUser(window._fbAuth, email, pw);
+    const uid = cred.user.uid;
+    
+    // Find matching Mitglied by email to assign username
+    const mitgl = INIT_MITGLIEDER.find(m => m.email && m.email.toLowerCase() === email);
+    
+    let username, vorname='', nachname='', geburtstag='';
+    if(mitgl) {
+      username = mitgl.username;
+      vorname = mitgl.vorname;
+      nachname = mitgl.nachname;
+      geburtstag = mitgl.geburtstag || '';
+    } else {
+      // Not in member list: use email prefix as base
+      const base = email.split('@')[0].replace(/[^a-z0-9]/gi,'').toUpperCase();
+      username = base.substring(0,8) || 'USER' + Date.now().toString().slice(-4);
+    }
+    
+    // Store profile
+    const profile = { uid, username, email, vorname, nachname, geburtstag, isAdmin:false, erstellt:new Date().toISOString() };
+    await fetch(DB+'/userprofiles/'+uid+'.json', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(profile)});
+    // Store username lookup
+    await fetch(DB+'/usernames/'+username.toLowerCase()+'.json', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,uid})});
+    
+    // onAuthChange handles the rest
+  } catch(e) {
+    let msg = 'Fehler bei der Registrierung.';
+    if(e.code==='auth/email-already-in-use') msg = 'Diese E-Mail ist bereits registriert. Bitte anmelden.';
+    else if(e.code==='auth/invalid-email') msg = 'Ungültige E-Mail-Adresse.';
+    errEl.textContent = msg;
+    if(btn){btn.textContent = 'Konto erstellen'; btn.disabled = false;}
+  }
+}
+
+document.getElementById('login-pw')?.addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+document.getElementById('login-input')?.addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-pw').focus(); });
+document.getElementById('reg-pw2')?.addEventListener('keydown', e => { if(e.key==='Enter') doRegister(); });
+
+async function doLogout() {
+  await window._fbSignOut(window._fbAuth);
+  currentUser = null; currentUserProfile = null;
+  adminMode = false; sessionStorage.removeItem('chor_admin');
+  closeModal();
+  document.getElementById('login-overlay').style.display = 'flex';
+  document.getElementById('login-input').value = '';
+  document.getElementById('login-pw').value = '';
+}
+
+async function showResetPw() {
+  const input = document.getElementById('login-input').value.trim();
+  if(!input.includes('@')) { document.getElementById('login-err').textContent = 'Bitte erst E-Mail-Adresse eingeben.'; return; }
+  await window._fbResetPassword(window._fbAuth, input);
+  document.getElementById('login-err').textContent = '';
+  alert('✅ Passwort-Reset-E-Mail gesendet an: '+input);
+}
+
+function showUserMenu() {
+  const profile = currentUserProfile;
+  const email = currentUser?.email || '';
+  const username = profile?.username || email.split('@')[0];
+  const displayName = profile ? (profile.vorname+' '+profile.nachname) : username;
+  document.getElementById('menu-username').textContent = profile?.username ? profile.username + ' – ' + displayName : username;
+  document.getElementById('menu-email').textContent = email;
+  // Show admin toggle
+  const adminSection = document.getElementById('admin-toggle-section');
+  if(adminSection) {
+    adminSection.style.display = 'block';
+    const btn = document.getElementById('admin-toggle-btn');
+    if(btn) btn.textContent = adminMode ? '🔓 Admin-Modus deaktivieren' : '🔑 Admin-Modus aktivieren';
+  }
+  document.getElementById('modal-user-menu').classList.add('open');
+}
+
+async function changeUserPw() {
+  const newPw = document.getElementById('new-user-pw').value;
+  if(!newPw || newPw.length < 6) { alert('Passwort muss mindestens 6 Zeichen haben.'); return; }
+  try {
+    await window._fbUpdatePassword(currentUser, newPw);
+    alert('✅ Passwort geändert!');
+    document.getElementById('new-user-pw').value = '';
+  } catch(e) {
+    alert('Fehler: '+e.message);
+  }
+}
+
+// Override toggleAdmin to use user menu
+function toggleAdmin() {
+  if(adminMode) {
+    adminMode = false;
+    sessionStorage.removeItem('chor_admin');
+    applyAdminMode();
+    closeModal();
+    return;
+  }
+  const pw = prompt('Admin-Passwort:');
+  if(pw === adminPw) {
+    adminMode = true;
+    sessionStorage.setItem('chor_admin','1');
+    applyAdminMode();
+    closeModal();
+    alert('✅ Admin-Modus aktiviert');
+  } else if(pw !== null) {
+    alert('❌ Falsches Passwort');
+  }
+}
+
+
+// ===== USER MANAGEMENT (ADMIN) =====
+async function createUserAccount(mitglied) {
+  // Create Firebase Auth account
+  const email = mitglied.email;
+  const username = mitglied.username;
+  if(!email) return {error: 'Keine E-Mail'};
+  
+  // Default password: username (user should change it)
+  const defaultPw = username;
+  try {
+    const userCred = await window._fbCreateUser(window._fbAuth, email, defaultPw);
+    const uid = userCred.user.uid;
+    
+    // Store profile
+    const profile = {
+      uid, username, email,
+      vorname: mitglied.vorname,
+      nachname: mitglied.nachname,
+      geburtstag: mitglied.geburtstag || '',
+      isAdmin: false,
+      erstellt: new Date().toISOString()
+    };
+    
+    await fetch(DB+'/userprofiles/'+uid+'.json', {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(profile)
+    });
+    
+    // Store username->email mapping
+    await fetch(DB+'/usernames/'+username.toLowerCase()+'.json', {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email, uid})
+    });
+    
+    return {success: true, username, defaultPw};
+  } catch(e) {
+    if(e.code === 'auth/email-already-in-use') return {error: 'E-Mail bereits registriert'};
+    return {error: e.message};
+  }
+}
+
+async function loadUserProfiles() {
+  const res = await fetch(DB+'/userprofiles.json');
+  if(!res.ok) return {};
+  return await res.json() || {};
+}
+
+async function renderUserVerwaltung() {
+  const el = document.getElementById('user-verwaltung');
+  if(!el) return;
+  el.innerHTML = '<div style="color:#aaa;font-size:.85rem">Lade Nutzer…</div>';
+  
+  const profiles = await loadUserProfiles();
+  const users = Object.values(profiles).sort((a,b) => a.nachname?.localeCompare(b.nachname||'')||0);
+  
+  if(!users.length) {
+    el.innerHTML = '<div class="empty">Noch keine Nutzerkonten erstellt.</div>';
+    return;
+  }
+  
+  const permLabels = {proben:'📅 Proben',termine:'📆 Termine',mitglieder:'👥 Mitglieder',kommentare:'💬 Kommentare',lieder:'🎵 Lieder'};
+  el.innerHTML = users.map(u => {
+    const perms = u.permissions||[];
+    const uid = u.uid;
+    const chk = (key) => perms.includes(key) ? 'checked' : '';
+    return `
+    <div style="background:white;border-radius:8px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.07);overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
+        <div>
+          <div style="font-weight:600;font-size:.9rem">${esc(u.vorname||'')} ${esc(u.nachname||'')}
+            ${u.isAdmin?'<span style="background:#e74c3c;color:white;font-size:.68rem;padding:1px 6px;border-radius:8px;margin-left:4px">Admin</span>':''}
+          </div>
+          <div style="font-size:.78rem;color:#888">👤 ${esc(u.username||'')} &nbsp;·&nbsp; ✉️ ${esc(u.email||'')}</div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="deleteUserAccount('${uid}','${esc(u.username||'')}')">✕</button>
+      </div>
+      <div style="border-top:1px solid #f0f0f0;padding:10px 14px;background:#fafafa">
+        <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#999;margin-bottom:8px">🛡️ Berechtigungen</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer;padding:5px 8px;border-radius:5px;background:white;border:1.5px solid ${u.isAdmin?'#e74c3c':'#eee'}">
+            <input type="checkbox" id="perm-${uid}-admin" ${u.isAdmin?'checked':''} style="accent-color:#e74c3c"> 🔑 Voller Admin
+          </label>
+          ${Object.entries(permLabels).map(([key,label])=>`
+          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer;padding:5px 8px;border-radius:5px;background:white;border:1.5px solid ${perms.includes(key)?'#2980b9':'#eee'}">
+            <input type="checkbox" id="perm-${uid}-${key}" ${chk(key)} style="accent-color:#2980b9"> ${label}
+          </label>`).join('')}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="btn btn-success btn-sm" onclick="saveUserPerms('${uid}')">💾 Speichern</button>
+          <span id="perm-result-${uid}" style="font-size:.8rem"></span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function saveUserPerms(uid) {
+  const isAdmin = document.getElementById('perm-'+uid+'-admin')?.checked||false;
+  const perms = ['proben','termine','mitglieder','kommentare','lieder'].filter(p=>document.getElementById('perm-'+uid+'-'+p)?.checked);
+  await fetch(DB+'/userprofiles/'+uid+'/isAdmin.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(isAdmin)});
+  await fetch(DB+'/userprofiles/'+uid+'/permissions.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(perms)});
+  const res = document.getElementById('perm-result-'+uid);
+  if(res){res.style.color='#27ae60';res.textContent='✅ Gespeichert!';setTimeout(()=>{if(res)res.textContent='';},2500);}
+  renderUserVerwaltung();
+}
+
+async function deleteUserAccount(uid, username) {
+  if(!confirm('Nutzerkonto wirklich löschen?')) return;
+  await fetch(DB+'/userprofiles/'+uid+'.json', {method:'DELETE'});
+  await fetch(DB+'/usernames/'+username.toLowerCase()+'.json', {method:'DELETE'});
+  renderUserVerwaltung();
+}
+
+async function createAllAccounts() {
+  const btn = document.getElementById('create-all-btn');
+  btn.disabled = true; btn.textContent = '⏳ Erstelle Konten…';
+  const results = [];
+  for(const m of INIT_MITGLIEDER) {
+    if(!m.email) { results.push({name: m.vorname+' '+m.nachname, error:'Keine E-Mail'}); continue; }
+    const r = await createUserAccount(m);
+    results.push({name: m.vorname+' '+m.nachname, username: m.username, ...r});
+  }
+  const ok = results.filter(r=>r.success).length;
+  const err = results.filter(r=>r.error).length;
+  document.getElementById('create-all-result').innerHTML = 
+    '<div style="font-size:.82rem;margin-top:8px">'+
+    '<strong>'+ok+' Konten erstellt</strong>, '+err+' Fehler<br>'+
+    '<details style="margin-top:6px"><summary style="cursor:pointer;color:#2980b9">Details anzeigen</summary>'+
+    '<div style="margin-top:4px">'+results.map(r=>`<div>${r.name}: ${r.success?'✅ '+r.username+' / PW: '+r.defaultPw:'❌ '+r.error}</div>`).join('')+'</div></details></div>';
+  btn.disabled = false; btn.textContent = '👥 Alle Mitglieder-Konten erstellen';
+  renderUserVerwaltung();
+}
+
+
+// ===== PWA INSTALL =====
+let _pwaPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _pwaPrompt = e;
+  const w = document.getElementById('pwa-install-wrap');
+  if(w) w.style.display = 'block';
+});
+function installPWA(){
+  if(_pwaPrompt){_pwaPrompt.prompt();_pwaPrompt.userChoice.then(()=>{_pwaPrompt=null;const w=document.getElementById('pwa-install-wrap');if(w)w.style.display='none';});}
+  else alert('Öffne diese Seite in Chrome/Safari und nutze "Zum Startbildschirm hinzufügen".');
+}
+
+// ===== AUTO-LOGOUT =====
+let _autoLogoutTimer = null;
+let _autoLogoutMin = parseInt(localStorage.getItem('auto_logout_min')||'0');
+function resetActivityTimer(){
+  if(_autoLogoutTimer) clearTimeout(_autoLogoutTimer);
+  if(_autoLogoutMin > 0 && currentUser){
+    _autoLogoutTimer = setTimeout(()=>{
+      alert('Du wurdest wegen Inaktivität abgemeldet.');
+      doLogout();
+    }, _autoLogoutMin * 60000);
+  }
+}
+['click','keydown','mousemove','touchstart'].forEach(ev=>document.addEventListener(ev, resetActivityTimer));
+
+function saveAutoLogout(){
+  const val = parseInt(document.getElementById('auto-logout-min')?.value||'0');
+  localStorage.setItem('auto_logout_min', val);
+  _autoLogoutMin = val;
+  resetActivityTimer();
+  const res = document.getElementById('auto-logout-result');
+  if(res) res.textContent = val > 0 ? `✅ Automatische Abmeldung nach ${val} Minuten.` : '✅ Auto-Abmeldung deaktiviert.';
+}
+
+// ===== ICS KALENDER-EXPORT =====
+function toICSDate(dateStr, timeStr){
+  // dateStr: "2026-06-15", timeStr: "15:00" or ""
+  const d = dateStr.replace(/-/g,'');
+  if(timeStr){
+    const t = timeStr.replace(':','')+'00';
+    return d+'T'+t;
+  }
+  return d;
+}
+function terminToVEVENT(t){
+  const uid = t.id+'@chor-doelau';
+  const now = new Date().toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  const isAllDay = !t.uhrzeit;
+  let dtStart, dtEnd;
+  if(isAllDay){
+    dtStart = 'DTSTART;VALUE=DATE:'+toICSDate(t.datum,'');
+    const endDate = t.datum_ende || t.datum;
+    // ICS all-day end = day after last day
+    const ed = new Date(endDate+'T00:00:00');
+    ed.setDate(ed.getDate()+1);
+    dtEnd = 'DTEND;VALUE=DATE:'+ed.toISOString().split('T')[0].replace(/-/g,'');
+  } else {
+    dtStart = 'DTSTART:'+toICSDate(t.datum, t.uhrzeit);
+    // Default duration 2h if no end time
+    const [h,m] = t.uhrzeit.split(':').map(Number);
+    const sd = new Date(t.datum+'T'+t.uhrzeit+':00');
+    sd.setHours(sd.getHours()+2);
+    const endT = sd.getHours().toString().padStart(2,'0')+sd.getMinutes().toString().padStart(2,'0')+'00';
+    dtEnd = 'DTEND:'+toICSDate(t.datum,'')+t.datum.replace(/-/g,'')+endT;
+    // Fix: rebuild properly
+    dtEnd = 'DTEND:'+toICSDate(t.datum, sd.getHours().toString().padStart(2,'0')+':'+sd.getMinutes().toString().padStart(2,'0'));
+  }
+  const typLabels = {konzert:'🎵 Konzert',fest:'🎪 Fest',chorlager:'🏕️ Chorlager',gottesdienst:'⛪ Gottesdienst',probe:'🎹 Probe',sonstiges:'📌 Sonstiges'};
+  const summary = (typLabels[t.typ]||'') + ' – ' + t.titel + ' (Chor Dölau)';
+  const desc = [t.beschreibung, t.uhrzeit?'Uhrzeit: '+t.uhrzeit:'', t.setliste?.length?'Setliste: '+t.setliste.join(', '):''].filter(Boolean).join('\\n');
+  return [
+    'BEGIN:VEVENT',
+    'UID:'+uid,
+    'DTSTAMP:'+now,
+    dtStart,
+    dtEnd,
+    'SUMMARY:'+summary,
+    desc?'DESCRIPTION:'+desc:'',
+    'END:VEVENT'
+  ].filter(Boolean).join('\r\n');
+}
+function buildICS(events){
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Chor Dölau//DE',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    ...events,
+    'END:VCALENDAR'
+  ].join('\r\n');
+}
+function downloadICS(content, filename){
+  const blob = new Blob([content],{type:'text/calendar;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+function exportTerminICS(id){
+  const t = termine.find(x=>x.id===id);
+  if(!t) return;
+  downloadICS(buildICS([terminToVEVENT(t)]), 'chor-doelau-'+t.datum+'-'+t.titel.replace(/[^a-zA-Z0-9]/g,'-').toLowerCase()+'.ics');
+}
+function exportAlleTermineICS(){
+  if(!termine.length){alert('Keine Termine vorhanden.');return;}
+  const today = new Date().toISOString().split('T')[0];
+  const upcoming = termine.filter(t=>t.datum>=today).sort((a,b)=>a.datum.localeCompare(b.datum));
+  const evts = (upcoming.length ? upcoming : termine).map(terminToVEVENT);
+  downloadICS(buildICS(evts), 'chor-doelau-termine-'+today+'.ics');
+}
+
+// ===== LIEDWÜNSCHE =====
+async function loadLiedwuensche(){
+  try{
+    const res=await fetch(DB+'/liedwuensche.json');
+    if(!res.ok)return;
+    const d=await res.json();
+    liedwuensche=d?Object.entries(d).map(([k,v])=>Object.assign({},v,{_key:k})).sort((a,b)=>b.datum.localeCompare(a.datum)):[];
+    renderLiedwuensche();
+  }catch(e){console.warn(e);}
+}
+
+async function submitLiedwunsch(){
+  const titel=document.getElementById('lw-titel').value.trim();
+  const interpret=document.getElementById('lw-interpret').value.trim();
+  const chorsatz=document.getElementById('lw-chorsatz').checked;
+  const name=document.getElementById('lw-name').value.trim()||currentUserProfile?.username||'Anonym';
+  const res=document.getElementById('lw-result');
+  if(!titel){res.style.color='#e74c3c';res.textContent='❌ Bitte Liedtitel eingeben.';return;}
+  const btn=event.target; btn.disabled=true;
+  try{
+    await fetch(DB+'/liedwuensche.json',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({titel,interpret,chorsatz,name,datum:new Date().toISOString(),erledigt:false})});
+    document.getElementById('lw-titel').value='';
+    document.getElementById('lw-interpret').value='';
+    document.getElementById('lw-chorsatz').checked=false;
+    res.style.color='#27ae60'; res.textContent='✅ Liedwunsch eingereicht!';
+    setTimeout(()=>{res.textContent='';},2500);
+    await loadLiedwuensche();
+  }catch(e){res.style.color='#e74c3c';res.textContent='❌ Fehler beim Speichern.';}
+  btn.disabled=false;
+}
+
+async function toggleLiedwunschErledigt(key, current){
+  await fetch(DB+'/liedwuensche/'+key+'/erledigt.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(!current)});
+  await loadLiedwuensche();
+}
+
+async function deleteLiedwunsch(key){
+  if(!confirm('Liedwunsch löschen?'))return;
+  await fetch(DB+'/liedwuensche/'+key+'.json',{method:'DELETE'});
+  await loadLiedwuensche();
+}
+
+function renderLiedwuensche(){
+  const el=document.getElementById('liedwunsch-list');
+  if(!el)return;
+  if(!liedwuensche.length){el.innerHTML='<div class="empty" style="padding:20px">Noch keine Liedwünsche eingetragen.</div>';return;}
+  const offen=liedwuensche.filter(w=>!w.erledigt);
+  const erledigt=liedwuensche.filter(w=>w.erledigt);
+  function card(w){
+    const d=new Date(w.datum);
+    const ds=d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+    return`<div style="border-left:3px solid ${w.erledigt?'#27ae60':'#2980b9'};padding:10px 14px;margin-bottom:8px;background:${w.erledigt?'#f0fff4':'#f8fbfe'};border-radius:0 7px 7px 0;position:relative;opacity:${w.erledigt?'.7':'1'}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:.9rem;color:#2c3e50">${esc(w.titel)}
+            ${w.erledigt?'<span style="background:#27ae60;color:white;font-size:.68rem;padding:1px 6px;border-radius:8px;margin-left:6px">✓ Erledigt</span>':''}
+          </div>
+          ${w.interpret?`<div style="font-size:.8rem;color:#666;margin-top:1px">🎤 ${esc(w.interpret)}</div>`:''}
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;align-items:center">
+            <span style="font-size:.76rem;padding:2px 8px;border-radius:10px;background:${w.chorsatz?'#d5f5e3':'#fdecea'};color:${w.chorsatz?'#1a7a40':'#922b21'};font-weight:500">${w.chorsatz?'✅ Chorsatz vorhanden':'❌ Kein Chorsatz'}</span>
+            <span style="font-size:.74rem;color:#aaa">👤 ${esc(w.name)} · ${ds}</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+          ${hasPermission('lieder')||currentUserProfile?.isAdmin?`<button class="btn btn-sm" style="background:${w.erledigt?'#ecf0f1':'#d5f5e3'};color:${w.erledigt?'#555':'#1a7a40'};font-size:.72rem" onclick="toggleLiedwunschErledigt('${w._key}',${w.erledigt})">${w.erledigt?'↩ Wieder öffnen':'✓ Erledigt'}</button>
+          <button class="btn btn-danger btn-sm del-btn" style="opacity:1;position:static" onclick="deleteLiedwunsch('${w._key}')">✕</button>`:''}
+        </div>
+      </div>
+    </div>`;
+  }
+  let html='';
+  if(offen.length){
+    html+=`<div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#2980b9;margin-bottom:7px">Offen (${offen.length})</div>`;
+    html+=offen.map(card).join('');
+  }
+  if(erledigt.length){
+    html+=`<div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#27ae60;margin:12px 0 7px">Erledigt (${erledigt.length})</div>`;
+    html+=erledigt.map(card).join('');
+  }
+  el.innerHTML=html;
+}
+
+// ===== GEBURTSTAGE IN TERMINE =====
+function renderGeburtstage(){
+  const el = document.getElementById('geburtstage-list');
+  if(!el) return;
+
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // Find next rehearsal date
+  const todayStr = today.toISOString().split('T')[0];
+  const nextProbe = (probenplan||[])
+    .filter(p => p.datum >= todayStr)
+    .sort((a,b) => a.datum.localeCompare(b.datum))[0];
+  const nextProbeDate = nextProbe ? new Date(nextProbe.datum+'T00:00:00') : null;
+
+  // Days until next rehearsal (fallback 30 days)
+  const windowDays = nextProbeDate ? Math.ceil((nextProbeDate - today) / 86400000) : 30;
+  const windowEnd  = nextProbeDate || new Date(today.getTime() + 30*86400000);
+
+  function bday(m){
+    const parts = m.geburtstag.split('.');
+    if(parts.length < 2) return null;
+    const d = parseInt(parts[0]), mo = parseInt(parts[1])-1;
+    let bd = new Date(today.getFullYear(), mo, d);
+    if(bd < today) bd = new Date(today.getFullYear()+1, mo, d);
+    const days = Math.ceil((bd - today)/86400000);
+    return {...m, bdDate:bd, daysUntil:days};
+  }
+
+  const all = mitglieder.filter(m=>m.geburtstag).map(bday).filter(Boolean);
+
+  // Split: until next probe / after
+  const untilProbe = all.filter(m => m.bdDate <= windowEnd).sort((a,b)=>a.daysUntil-b.daysUntil);
+  const later      = all.filter(m => m.bdDate >  windowEnd).sort((a,b)=>a.daysUntil-b.daysUntil);
+
+  const stC = s=>({sopran:'#e67e22',alt:'#2980b9',tenor:'#27ae60',bass:'#8e44ad'}[s?.toLowerCase()]||'#95a5a6');
+
+  function card(m){
+    const isToday = m.daysUntil === 0;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${isToday?'#fef9e7':'white'};border-radius:8px;margin-bottom:5px;border:1.5px solid ${isToday?'#f39c12':'#e0e0e0'}">
+      <span style="font-size:1.4rem">${isToday?'🎂':'🎉'}</span>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:.88rem">${esc(m.vorname)} ${esc(m.nachname)}
+          ${m.stimme?`<span style="background:${stC(m.stimme)};color:white;font-size:.68rem;padding:1px 5px;border-radius:6px;margin-left:4px">${esc(m.stimme)}</span>`:''}
+        </div>
+        <div style="font-size:.78rem;color:#777">🗓 ${esc(m.geburtstag)}${isToday?' &nbsp;<strong style="color:#e67e22">– Heute! 🎂</strong>':m.daysUntil===1?' &nbsp;<span style="color:#f39c12">– Morgen!</span>':` &nbsp;– in ${m.daysUntil} Tagen`}</div>
+      </div>
+    </div>`;
+  }
+
+  function smallCard(m){
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fafafa;border-radius:7px;margin-bottom:4px;border:1px solid #eee">
+      <span style="font-size:1rem">👤</span>
+      <div style="flex:1;font-size:.82rem">
+        <span style="font-weight:600">${esc(m.vorname)} ${esc(m.nachname)}</span>
+        <span style="color:#aaa;margin-left:6px">${esc(m.geburtstag)} – in ${m.daysUntil} Tagen</span>
+      </div>
+    </div>`;
+  }
+
+  let html = '';
+
+  // Header info box
+  if(nextProbeDate){
+    html += `<div style="background:#f0fff4;border:1.5px solid #a9dfbf;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.85rem;color:#1e8449">
+      📋 Nächste Probe: <strong>${nextProbe.datum.split('-').reverse().join('.')}</strong>
+      &nbsp;·&nbsp; Zeitraum: heute bis in ${windowDays} Tag${windowDays===1?'':'e'}
+    </div>`;
+  } else {
+    html += `<div style="background:#fef9e7;border:1px solid #f9ca8b;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:.82rem;color:#7d6608">
+      ℹ️ Keine Probe geplant – Anzeige der nächsten 30 Tage.
+    </div>`;
+  }
+
+  if(untilProbe.length){
+    html += `<div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1e8449;margin-bottom:7px">🎂 Bis zur nächsten Probe (${untilProbe.length})</div>`;
+    html += untilProbe.map(card).join('');
+  } else {
+    html += `<div style="text-align:center;padding:20px;color:#bbb;font-size:.88rem">🎵 Keine Geburtstage bis zur nächsten Probe.</div>`;
+  }
+
+  if(later.length){
+    html += `<div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#aaa;margin:14px 0 6px">Danach</div>`;
+    html += later.slice(0,8).map(smallCard).join('');
+    if(later.length>8) html += `<div style="font-size:.78rem;color:#aaa;padding:4px 0">… und ${later.length-8} weitere</div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+// ===== SETLISTE EDIT =====
+let _editSetlisteId = null;
+function editSetliste(terminId){
+  const t = termine.find(x=>x.id===terminId);
+  if(!t) return;
+  _editSetlisteId = terminId;
+  
+  // Populate song picker from all seasons
+  const picker = document.getElementById('setliste-song-picker');
+  const allSongs = D?.seasons?.flatMap(s=>s.songs.map(song=>({...song,seasonName:s.name})))||[];
+  const currentList = t.setliste||[];
+  picker.innerHTML = allSongs.map(s=>{
+    const checked = currentList.includes(s.name);
+    return`<label style="display:inline-flex;align-items:center;gap:5px;background:${checked?'#d6eaf8':'#f0f4f8'};border:1.5px solid ${checked?'#2980b9':'transparent'};border-radius:20px;padding:4px 11px;cursor:pointer;font-size:.82rem;user-select:none">
+      <input type="checkbox" value="${esc(s.name)}" ${checked?'checked':''} style="accent-color:#2980b9">
+      ${esc(s.name)}
+    </label>`;
+  }).join('');
+  
+  // Show custom entries (not in song list)
+  const knownNames = allSongs.map(s=>s.name);
+  const customList = document.getElementById('setliste-custom-list');
+  const customs = currentList.filter(name=>!knownNames.includes(name));
+  customList.innerHTML = customs.map(name=>`
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+      <span style="flex:1;font-size:.85rem;padding:4px 8px;background:#fef9e7;border-radius:5px">✏️ ${esc(name)}</span>
+      <button class="btn btn-danger btn-sm" onclick="removeCustomSetliste('${esc(name)}')">✕</button>
+    </div>`).join('');
+  
+  document.getElementById('modal-setliste').classList.add('open');
+}
+
+function addCustomSetlisteSong(){
+  const inp = document.getElementById('setliste-custom-input');
+  const val = inp.value.trim();
+  if(!val) return;
+  const customList = document.getElementById('setliste-custom-list');
+  customList.innerHTML += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+    <span style="flex:1;font-size:.85rem;padding:4px 8px;background:#fef9e7;border-radius:5px">✏️ ${esc(val)}</span>
+    <button class="btn btn-danger btn-sm" onclick="removeCustomSetliste('${esc(val)}')">✕</button>
+  </div>`;
+  inp.value='';
+}
+
+function removeCustomSetliste(name){
+  const customList = document.getElementById('setliste-custom-list');
+  customList.innerHTML = customList.innerHTML.replace(new RegExp(`<div[^>]*>\s*<span[^>]*>✏️ ${name}<\/span>.*?<\/div>`,'s'),'');
+}
+
+async function saveSetliste(){
+  if(!_editSetlisteId) return;
+  const t = termine.find(x=>x.id===_editSetlisteId);
+  if(!t) return;
+  // Get checked songs
+  const checked = [...document.querySelectorAll('#setliste-song-picker input:checked')].map(x=>x.value);
+  // Get custom entries
+  const customs = [...document.querySelectorAll('#setliste-custom-list span')].map(s=>s.textContent.replace('✏️ ','').trim()).filter(Boolean);
+  t.setliste = [...checked, ...customs];
+  await fetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)});
+  closeModal();
+  renderTermine();
+}
+
+// ===== HAUSAUFGABEN EDIT =====
+let _editHAId = null;
+function editHausaufgaben(probeId){
+  const p = (D?.proben||[]).find(x=>x.id===probeId);
+  if(!p) return;
+  _editHAId = probeId;
+  const hw = p.hausaufgaben||{};
+  document.getElementById('ha-sopran').value = hw['Sopran']||'';
+  document.getElementById('ha-alt').value = hw['Alt']||'';
+  document.getElementById('ha-tenor').value = hw['Tenor']||'';
+  document.getElementById('ha-bass').value = hw['Bass']||'';
+  document.getElementById('modal-hausaufgaben').classList.add('open');
+}
+
+async function saveHausaufgaben(){
+  if(!_editHAId) return;
+  const p = (D?.proben||[]).find(x=>x.id===_editHAId);
+  if(!p) return;
+  const newHw = {};
+  ['Sopran','Alt','Tenor','Bass'].forEach(g=>{
+    const val = document.getElementById('ha-'+g.toLowerCase())?.value?.trim();
+    if(val) newHw[g] = val;
+  });
+  p.hausaufgaben = newHw;
+  await fetch(DB+'/chorproben.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seasons:D.seasons,proben:D.proben})});
+  closeModal();
+  renderProben();
+}
+
+// ===== USER MANAGEMENT EXTRAS =====
+let _editUserUid = null;
+let _editUserData = null;
+async function openEditUser(uid){
+  _editUserUid = uid;
+  const res = await fetch(DB+'/userprofiles/'+uid+'.json');
+  const u = await res.json();
+  if(!u) return;
+  _editUserData = u;
+  
+  document.getElementById('eu-uid').value = uid;
+  document.getElementById('eu-username').value = u.username||'';
+  document.getElementById('eu-email').value = u.email||'';
+  document.getElementById('eu-reset-result').textContent = '';
+
+  
+  // Load permissions
+  const perms = u.permissions||[];
+  ['termine','mitglieder','proben','kommentare','lieder'].forEach(p=>{
+    const el = document.getElementById('perm-'+p);
+    if(el) el.checked = perms.includes(p) || perms.includes('all');
+  });
+  
+  document.getElementById('modal-edit-user').classList.add('open');
+}
+
+async function saveEditUser(){
+  const uid = document.getElementById('eu-uid').value;
+  const newUsername = document.getElementById('eu-username').value.trim();
+  if(!newUsername){alert('Benutzername darf nicht leer sein.');return;}
+  
+  // Collect permissions
+  const perms = ['termine','mitglieder','proben','kommentare','lieder'].filter(p=>{
+    const el=document.getElementById('perm-'+p);return el&&el.checked;
+  });
+  
+  // Update username if changed
+  const oldUsername = _editUserData?.username;
+  if(newUsername !== oldUsername){
+    await fetch(DB+'/userprofiles/'+uid+'/username.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newUsername)});
+    await fetch(DB+'/usernames/'+newUsername.toLowerCase()+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:_editUserData?.email,uid})});
+    if(oldUsername) await fetch(DB+'/usernames/'+oldUsername.toLowerCase()+'.json',{method:'DELETE'});
+  }
+  
+  // Update permissions
+  await fetch(DB+'/userprofiles/'+uid+'/permissions.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(perms)});
+  
+  closeModal();
+  renderUserVerwaltung();
+}
+
+async function sendResetFromModal(){
+  const email = document.getElementById('eu-email').value;
+  if(!email){document.getElementById('eu-reset-result').textContent='Keine E-Mail bekannt.';return;}
+  try{
+    await window._fbResetPassword(window._fbAuth,email);
+    document.getElementById('eu-reset-result').textContent='✅ Reset-E-Mail gesendet!';
+    document.getElementById('eu-reset-result').style.color='#27ae60';
+  }catch(e){document.getElementById('eu-reset-result').textContent='Fehler: '+e.message;document.getElementById('eu-reset-result').style.color='#e74c3c';}
+}
+
+async function sendResetEmail(email){
+  if(!email){alert('Keine E-Mail-Adresse bekannt.');return;}
+  try{
+    await window._fbResetPassword(window._fbAuth, email);
+    alert('✅ Passwort-Reset-E-Mail gesendet an: '+email);
+  }catch(e){alert('Fehler: '+e.message);}
+}
+
+// ===== EINSTELLUNGEN =====
+function renderEinstellungen(){
+  const p = currentUserProfile;
+  const el_u = document.getElementById('einst-username');
+  const el_e = document.getElementById('einst-email');
+  const el_p = document.getElementById('einst-perms');
+  const el_an = document.getElementById('einst-anzeigename');
+  if(el_u) el_u.textContent = p?.username || currentUser?.email?.split('@')[0] || '–';
+  if(el_e) el_e.textContent = p?.email || currentUser?.email || '–';
+  if(el_an) el_an.value = p?.anzeigename || '';
+  if(el_p){
+    const perms = p?.permissions||[];
+    const labels = {proben:'Proben',termine:'Termine',mitglieder:'Mitglieder',kommentare:'Kommentare löschen',lieder:'Lieder'};
+    if(p?.isAdmin) el_p.textContent = '🔑 Admin';
+    else if(perms.length) el_p.textContent = '🛡️ Berechtigungen: '+perms.map(x=>labels[x]||x).join(', ');
+    else el_p.textContent = '';
+  }
+  const r = document.getElementById('einst-result');
+  if(r) r.textContent='';
+  const nr = document.getElementById('einst-name-result');
+  if(nr) nr.textContent='';
+  const pw1 = document.getElementById('einst-pw1');
+  const pw2 = document.getElementById('einst-pw2');
+  if(pw1) pw1.value='';
+  if(pw2) pw2.value='';
+}
+
+async function saveAnzeigename(){
+  const val = document.getElementById('einst-anzeigename').value.trim();
+  const res = document.getElementById('einst-name-result');
+  const uid = currentUser?.uid;
+  if(!uid) return;
+  try{
+    await fetch(DB+'/userprofiles/'+uid+'/anzeigename.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(val||null)});
+    if(currentUserProfile) currentUserProfile.anzeigename = val||null;
+    // Update header chip
+    const chip = document.getElementById('user-display');
+    if(chip) chip.textContent = '👤 ' + (val || currentUserProfile?.username || currentUser.email.split('@')[0]);
+    // Pre-fill comment name field
+    const kn = document.getElementById('k-name');
+    if(kn && val) kn.value = val;
+    res.style.color='#27ae60'; res.textContent='✅ Anzeigename gespeichert!';
+    setTimeout(()=>{if(res)res.textContent='';},2500);
+  }catch(e){
+    res.style.color='#e74c3c'; res.textContent='❌ Fehler beim Speichern.';
+  }
+}
+
+async function saveEinstellungenPw(){
+  const pw1 = document.getElementById('einst-pw1').value;
+  const pw2 = document.getElementById('einst-pw2').value;
+  const res = document.getElementById('einst-result');
+  if(!pw1||pw1.length<6){res.style.color='#e74c3c';res.textContent='❌ Passwort muss mind. 6 Zeichen haben.';return;}
+  if(pw1!==pw2){res.style.color='#e74c3c';res.textContent='❌ Passwörter stimmen nicht überein.';return;}
+  try{
+    await window._fbUpdatePassword(window._fbAuth.currentUser, pw1);
+    res.style.color='#27ae60';
+    res.textContent='✅ Passwort erfolgreich geändert!';
+    document.getElementById('einst-pw1').value='';
+    document.getElementById('einst-pw2').value='';
+  }catch(e){
+    res.style.color='#e74c3c';
+    if(e.code==='auth/requires-recent-login') res.textContent='❌ Bitte neu anmelden und dann nochmal versuchen.';
+    else res.textContent='❌ Fehler: '+e.message;
+  }
+}
+
+// ===== PERMISSIONS =====
+function getPermissions(){
+  if(!currentUserProfile) return [];
+  if(currentUserProfile.isAdmin || adminMode) return ['all'];
+  return currentUserProfile.permissions || [];
+}
+function hasPermission(perm){
+  const perms = getPermissions();
+  return perms.includes('all') || perms.includes(perm);
+}
+
+// Override renderKonsole to also load auto-logout setting
+const _origRenderKonsole = typeof renderKonsole !== 'undefined' ? renderKonsole : null;
+
+// LOAD ALL
+async function loadAll(){
+  try{
+    const r1=await fetch(DB+'/chorproben.json');
+    if(r1.ok){const d=await r1.json();if(d&&d.seasons){D=d;D.seasons=D.seasons.map(s=>Object.assign({},s,{songs:Array.isArray(s.songs)?s.songs:[]}));D.proben=Array.isArray(D.proben)?D.proben:[];}}
+    const r2=await fetch(DB+'/termine.json');
+    if(r2.ok){const d=await r2.json();if(d&&Array.isArray(d)&&d.length)termine=d;else termine=INIT_TERMINE;}else termine=INIT_TERMINE;
+    const r3=await fetch(DB+'/probenplan.json');
+    if(r3.ok){const d=await r3.json();if(d&&Array.isArray(d))probenplan=d;}
+    const r4=await fetch(DB+'/mitglieder.json');
+    if(r4.ok){const d=await r4.json();if(d&&Array.isArray(d)&&d.length)mitglieder=d;else mitglieder=INIT_MITGLIEDER;}else mitglieder=INIT_MITGLIEDER;
+  }catch(e){termine=INIT_TERMINE;mitglieder=INIT_MITGLIEDER;console.warn(e);}
+  const d=new Date();
+  document.getElementById('stand').textContent='Stand: '+d.toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'})+' · '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr';
+  if(D){renderLieder();renderProben();populateLiedSelect();}
+  else document.getElementById('lieder-list').innerHTML='<div class="empty">Noch keine Daten. Tracker öffnen und synchronisieren.</div>';
+  renderTermine();
+  renderMitglieder();
+  await loadKommentare();
+  await loadLiedwuensche();
+  applyAdminMode();
+  // Auto-delete on load
+  const autoDays=parseInt(localStorage.getItem('auto_delete_days')||'0');
+  if(autoDays>0&&kommentare.length){const cutoff=new Date();cutoff.setDate(cutoff.getDate()-autoDays);const toDelete=kommentare.filter(k=>new Date(k.datum)<cutoff);if(toDelete.length)Promise.all(toDelete.map(k=>k._key?fetch(DB+'/kommentare/'+k._key+'.json',{method:'DELETE'}):Promise.resolve())).then(()=>loadKommentare());}
+  // Save initial Mitglieder to Firebase if empty
+  if(mitglieder===INIT_MITGLIEDER){fetch(DB+'/mitglieder.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(INIT_MITGLIEDER)}).catch(e=>console.warn(e));}
+}
+
+// loadAll is called by onAuthChange when user logs in
+setInterval(()=>{if(currentUser){loadAll();if(aktiveTerminTab==='kalender')renderKalender();}},120000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser)loadAll();});
+</script>
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').then(()=>console.log('SW registered')).catch(e=>console.warn('SW error',e));
+}
+</script>
+</body>
+</html>
