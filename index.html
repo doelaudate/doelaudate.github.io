@@ -707,7 +707,7 @@ function renderLieder(){
   el.innerHTML=html;
 }
 function buildTbl(songs){
-  const canEdit = hasPermission('lieder') || adminMode;
+  const canEdit = hasPermission('lieder');
   return '<table><thead><tr><th>Lied</th><th>Letzte Probe</th><th style="text-align:center">Anzahl</th><th>Status</th><th style="text-align:center">Noten</th></tr></thead><tbody>'+songs.map(s=>{
     const openLink = s.pdf?`<a href="${esc(s.pdf)}" target="_blank" rel="noopener" style="text-decoration:none;font-size:1.15rem" title="Noten öffnen">📄</a>`:'';
     const editBtn = canEdit?`<button onclick="editSongPdf('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:.85rem;opacity:.45;padding:0 2px" title="Noten-Link bearbeiten">✏️</button>`:'';
@@ -720,7 +720,7 @@ function findSongById(id){
   return null;
 }
 async function editSongPdf(id){
-  if(!(hasPermission('lieder')||adminMode)) return;
+  if(!hasPermission('lieder')) return;
   const song=findSongById(id);
   if(!song) return;
   const cur=song.pdf||'';
