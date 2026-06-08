@@ -706,7 +706,32 @@ function renderLieder(){
   else html=buildTbl(songs);
   el.innerHTML=html;
 }
-function buildTbl(songs){return'<table><thead><tr><th>Lied</th><th>Letzte Probe</th><th style="text-align:center">Anzahl</th><th>Status</th></tr></thead><tbody>'+songs.map(s=>`<tr><td><strong>${esc(s.name)}</strong></td><td>${fmt(s.last)}</td><td style="text-align:center;color:#666">${s.count}×</td><td><span class="dot" style="background:${dotC(s.last)}"></span><span class="badge" style="${bdgS(s.last)}">${bdgT(s.last)}</span></td></tr>`).join('')+'</tbody></table>';}
+function buildTbl(songs){
+  const canEdit = hasPermission('lieder') || adminMode;
+  return '<table><thead><tr><th>Lied</th><th>Letzte Probe</th><th style="text-align:center">Anzahl</th><th>Status</th><th style="text-align:center">Noten</th></tr></thead><tbody>'+songs.map(s=>{
+    const openLink = s.pdf?`<a href="${esc(s.pdf)}" target="_blank" rel="noopener" style="text-decoration:none;font-size:1.15rem" title="Noten öffnen">📄</a>`:'';
+    const editBtn = canEdit?`<button onclick="editSongPdf('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:.85rem;opacity:.45;padding:0 2px" title="Noten-Link bearbeiten">✏️</button>`:'';
+    const cell = (openLink||editBtn) ? (openLink+' '+editBtn) : '—';
+    return `<tr><td><strong>${esc(s.name)}</strong></td><td>${fmt(s.last)}</td><td style="text-align:center;color:#666">${s.count}×</td><td><span class="dot" style="background:${dotC(s.last)}"></span><span class="badge" style="${bdgS(s.last)}">${bdgT(s.last)}</span></td><td style="text-align:center;white-space:nowrap">${cell}</td></tr>`;
+  }).join('')+'</tbody></table>';
+}
+function findSongById(id){
+  for(const s of (D.seasons||[])){ const f=(s.songs||[]).find(x=>x.id===id); if(f) return f; }
+  return null;
+}
+async function editSongPdf(id){
+  if(!(hasPermission('lieder')||adminMode)) return;
+  const song=findSongById(id);
+  if(!song) return;
+  const cur=song.pdf||'';
+  const url=prompt('Link zur Noten-PDF für "'+song.name+'"\n(z.B. OneDrive- oder Google-Drive-Freigabelink).\n\nLeer lassen zum Entfernen:', cur);
+  if(url===null) return;
+  const u=url.trim();
+  if(u && !/^https?:\/\//i.test(u)){ alert('Bitte einen vollständigen Link eingeben (muss mit https:// beginnen).'); return; }
+  if(u) song.pdf=u; else delete song.pdf;
+  await fetch(DB+'/chorproben.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seasons:D.seasons,proben:D.proben||[]})});
+  renderLieder();
+}
 
 // SONG PICKER
 function renderSongPicker(){
