@@ -140,6 +140,7 @@ input[type=checkbox]{accent-color:#2980b9}
 <!-- Firebase v8 compat (synchronous load) -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 <script>
   firebase.initializeApp({
     apiKey: "AIzaSyDtiIn1UzexFOmjBgr12SAerbjw_n8_pLo",
@@ -151,6 +152,7 @@ input[type=checkbox]{accent-color:#2980b9}
     appId: "1:101731142906:web:ab0956daba734143f5cd43"
   });
   const _auth = firebase.auth();
+  window._fbStorage = firebase.storage();
   // Map to window globals used by the app
   window._fbAuth = _auth;
   window._fbSignIn = (auth, email, pw) => auth.signInWithEmailAndPassword(email, pw);
@@ -492,6 +494,29 @@ input[type=checkbox]{accent-color:#2980b9}
 
 </div><!-- /content -->
 
+<div class="modal-overlay" id="modal-songpdf">
+  <div class="modal">
+    <h3>📄 Noten – <span id="sp-songname"></span></h3>
+    <input type="hidden" id="sp-songid">
+    <div style="background:#f4f6f8;border-radius:8px;padding:12px 14px;margin-bottom:14px">
+      <div style="font-size:.82rem;font-weight:600;color:#2c3e50;margin-bottom:8px">📤 PDF hochladen</div>
+      <input type="file" id="sp-file" accept="application/pdf,.pdf" style="font-size:.85rem;width:100%">
+      <button class="btn btn-success btn-sm" style="margin-top:10px" onclick="uploadSongPdf()">⬆️ Hochladen & speichern</button>
+      <div id="sp-progress" style="font-size:.82rem;color:#2980b9;margin-top:8px;min-height:16px"></div>
+    </div>
+    <div style="text-align:center;font-size:.78rem;color:#aaa;margin:6px 0">— oder —</div>
+    <div style="margin-bottom:6px">
+      <div style="font-size:.82rem;font-weight:600;color:#2c3e50;margin-bottom:6px">🔗 Link einfügen (z.B. OneDrive)</div>
+      <input type="text" id="sp-link" class="fl-input" placeholder="https://...">
+      <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveSongPdfLink()">💾 Link speichern</button>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn btn-danger btn-sm" onclick="removeSongPdf()">🗑️ Noten entfernen</button>
+      <button class="btn btn-gray" onclick="closeModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-liedwunsch">
   <div class="modal">
     <h3>✏️ Liedwunsch bearbeiten</h3>
@@ -746,18 +771,66 @@ function findSongById(id){
   for(const s of (D.seasons||[])){ const f=(s.songs||[]).find(x=>x.id===id); if(f) return f; }
   return null;
 }
-async function editSongPdf(id){
+function songPos(id){
+  for(let si=0;si<(D.seasons||[]).length;si++){ const sj=(D.seasons[si].songs||[]).findIndex(x=>x.id===id); if(sj>=0) return [si,sj]; }
+  return null;
+}
+async function setSongPdf(id, url){
+  const p=songPos(id); if(!p) return;
+  const song=D.seasons[p[0]].songs[p[1]];
+  if(url) song.pdf=url; else delete song.pdf;
+  // Gezielt nur dieses Feld schreiben (kein Überschreiben des ganzen Baums)
+  await fetch(DB+'/chorproben/seasons/'+p[0]+'/songs/'+p[1]+'/pdf.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(url||null)});
+  renderLieder();
+}
+function editSongPdf(id){
   if(!hasPermission('lieder')) return;
   const song=findSongById(id);
   if(!song) return;
-  const cur=song.pdf||'';
-  const url=prompt('Link zur Noten-PDF für "'+song.name+'"\n(z.B. OneDrive- oder Google-Drive-Freigabelink).\n\nLeer lassen zum Entfernen:', cur);
-  if(url===null) return;
-  const u=url.trim();
+  document.getElementById('sp-songid').value=id;
+  document.getElementById('sp-songname').textContent=song.name;
+  document.getElementById('sp-link').value=song.pdf||'';
+  document.getElementById('sp-file').value='';
+  document.getElementById('sp-progress').textContent='';
+  document.getElementById('modal-songpdf').classList.add('open');
+}
+async function saveSongPdfLink(){
+  if(!hasPermission('lieder')) return;
+  const id=document.getElementById('sp-songid').value;
+  const u=document.getElementById('sp-link').value.trim();
   if(u && !/^https?:\/\//i.test(u)){ alert('Bitte einen vollständigen Link eingeben (muss mit https:// beginnen).'); return; }
-  if(u) song.pdf=u; else delete song.pdf;
-  await fetch(DB+'/chorproben.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seasons:D.seasons,proben:D.proben||[]})});
-  renderLieder();
+  await setSongPdf(id, u);
+  closeModal();
+}
+async function removeSongPdf(){
+  if(!hasPermission('lieder')) return;
+  if(!confirm('Noten für dieses Lied entfernen?')) return;
+  const id=document.getElementById('sp-songid').value;
+  await setSongPdf(id, '');
+  closeModal();
+}
+function uploadSongPdf(){
+  if(!hasPermission('lieder')) return;
+  const id=document.getElementById('sp-songid').value;
+  const fileInput=document.getElementById('sp-file');
+  const prog=document.getElementById('sp-progress');
+  const file=fileInput.files[0];
+  if(!file){ prog.style.color='#e74c3c'; prog.textContent='❌ Bitte zuerst eine PDF-Datei auswählen.'; return; }
+  if(file.type!=='application/pdf' && !/\.pdf$/i.test(file.name)){ prog.style.color='#e74c3c'; prog.textContent='❌ Bitte eine PDF-Datei wählen.'; return; }
+  if(!window._fbStorage || !window._fbAuth.currentUser){ prog.style.color='#e74c3c'; prog.textContent='❌ Nicht angemeldet.'; return; }
+  prog.style.color='#2980b9'; prog.textContent='⏳ Wird hochgeladen…';
+  const ref=window._fbStorage.ref('noten/'+id+'.pdf');
+  const task=ref.put(file,{contentType:'application/pdf'});
+  task.on('state_changed',
+    snap=>{ const pct=Math.round((snap.bytesTransferred/snap.totalBytes)*100); prog.textContent='⏳ Wird hochgeladen… '+pct+'%'; },
+    err=>{ prog.style.color='#e74c3c'; prog.textContent='❌ Fehler: '+err.message; },
+    async ()=>{
+      const url=await ref.getDownloadURL();
+      await setSongPdf(id, url);
+      prog.style.color='#27ae60'; prog.textContent='✅ Hochgeladen & gespeichert!';
+      setTimeout(closeModal, 1200);
+    }
+  );
 }
 
 // SONG PICKER
