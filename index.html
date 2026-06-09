@@ -141,6 +141,7 @@ input[type=checkbox]{accent-color:#2980b9}
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
 <script>
   firebase.initializeApp({
     apiKey: "AIzaSyDtiIn1UzexFOmjBgr12SAerbjw_n8_pLo",
@@ -153,6 +154,7 @@ input[type=checkbox]{accent-color:#2980b9}
   });
   const _auth = firebase.auth();
   window._fbStorage = firebase.storage();
+  try { window._fbFunctions = firebase.app().functions('europe-west1'); } catch(e) { console.warn('functions init', e); }
   // Map to window globals used by the app
   window._fbAuth = _auth;
   window._fbSignIn = (auth, email, pw) => auth.signInWithEmailAndPassword(email, pw);
@@ -392,6 +394,22 @@ input[type=checkbox]{accent-color:#2980b9}
   <div class="card">
     <div class="card-title">⚙️ Admin-Konsole</div>
     <div class="konsole-section">
+      <div class="konsole-title">🔔 Push-Benachrichtigungen</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:10px">Bei welchen Ereignissen soll automatisch eine Push-Nachricht an alle Mitglieder gehen?</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-termin" style="accent-color:#2980b9;width:16px;height:16px"> 🗓️ Neuer Termin hinzugefügt</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-probe" style="accent-color:#2980b9;width:16px;height:16px"> 🎹 Neue Probe geplant</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-liedwunsch" style="accent-color:#2980b9;width:16px;height:16px"> 🎵 Neuer Liedwunsch</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-kommentar" style="accent-color:#2980b9;width:16px;height:16px"> 💬 Neuer Kommentar</label>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="savePushSettings()">💾 Speichern</button>
+        <button class="btn btn-gray btn-sm" onclick="sendTestPush()">🔔 Test-Nachricht senden</button>
+        <span id="push-settings-result" style="font-size:.8rem"></span>
+      </div>
+      <div id="push-subs-count" style="font-size:.78rem;color:#aaa;margin-top:8px"></div>
+    </div>
+    <div class="konsole-section">
       <div class="konsole-title">📊 Datenübersicht</div>
       <div id="konsole-stats" style="font-size:.85rem;color:#555;line-height:1.8"></div>
     </div>
@@ -488,6 +506,19 @@ input[type=checkbox]{accent-color:#2980b9}
         <button class="btn btn-primary" onclick="saveEinstellungenPw()">💾 Passwort speichern</button>
       </div>
       <div id="einst-result" style="font-size:.83rem;min-height:18px"></div>
+    </div>
+  </div>
+
+  <div class="card" style="max-width:480px">
+    <div class="card-title">🔔 Push-Benachrichtigungen</div>
+    <div style="font-size:.84rem;color:#666;margin-bottom:12px;line-height:1.5">
+      Lass dich auf diesem Gerät benachrichtigen, wenn es neue Termine, Proben oder Liedwünsche gibt – auch wenn die App geschlossen ist.
+    </div>
+    <div id="push-status" style="font-size:.84rem;margin-bottom:10px"></div>
+    <button class="btn btn-primary" id="push-btn" onclick="togglePush()">🔔 Benachrichtigungen aktivieren</button>
+    <div id="push-result" style="font-size:.82rem;min-height:16px;margin-top:8px"></div>
+    <div id="push-ios-hint" style="display:none;font-size:.78rem;color:#888;margin-top:10px;background:#f4f6f8;border-radius:6px;padding:8px 10px;line-height:1.4">
+      📱 <strong>iPhone:</strong> Push funktioniert nur, wenn die App über „Teilen → Zum Home-Bildschirm" installiert wurde und von dort geöffnet wird.
     </div>
   </div>
 </div>
@@ -878,6 +909,7 @@ async function saveProbe(){
   document.getElementById('probe-notiz').value='';
   clearSongPicker();
   renderProben(); renderLieder();
+  if(art!=='vergangen') notifyPush('probe','🎹 Neue Probe geplant', fmt(datum));
   alert('✅ Gespeichert!');
 }
 
@@ -1057,10 +1089,12 @@ async function addTermin(){
   const titel=document.getElementById('t-titel').value.trim();
   const datum=document.getElementById('t-datum').value;
   if(!titel||!datum){alert('Bezeichnung und Datum erforderlich.');return;}
-  termine.push({id:uid(),titel,datum,datum_ende:document.getElementById('t-datum-ende').value||'',uhrzeit:document.getElementById('t-uhrzeit').value.trim(),typ:document.getElementById('t-typ').value,beschreibung:document.getElementById('t-beschreibung').value.trim(),abstimmungen:{}});
+  const tUhr=document.getElementById('t-uhrzeit').value.trim();
+  termine.push({id:uid(),titel,datum,datum_ende:document.getElementById('t-datum-ende').value||'',uhrzeit:tUhr,typ:document.getElementById('t-typ').value,beschreibung:document.getElementById('t-beschreibung').value.trim(),abstimmungen:{}});
   await fetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
   ['t-titel','t-datum','t-datum-ende','t-uhrzeit','t-beschreibung'].forEach(id=>document.getElementById(id).value='');
   renderTermine(); renderKalender();
+  notifyPush('termin','🗓️ Neuer Termin: '+titel, fmt(datum)+(tUhr?' um '+tUhr+' Uhr':''));
   alert('✅ Termin gespeichert!');
 }
 async function deleteTermin(id){
@@ -1235,7 +1269,7 @@ async function submitKommentar(){
   if(!name){alert('Bitte deinen Namen eingeben.');return;}
   if(!text){alert('Bitte einen Kommentar schreiben.');return;}
   const btn=document.getElementById('k-btn');btn.textContent='⏳';btn.disabled=true;
-  try{await fetch(DB+'/kommentare.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,text,lied:lied||'',datum:new Date().toISOString()})});document.getElementById('k-text').value='';document.getElementById('k-lied').value='';await loadKommentare();btn.textContent='✅ Gesendet!';setTimeout(()=>{btn.textContent='💬 Abschicken';btn.disabled=false;},2000);}
+  try{await fetch(DB+'/kommentare.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,text,lied:lied||'',datum:new Date().toISOString()})});document.getElementById('k-text').value='';document.getElementById('k-lied').value='';await loadKommentare();notifyPush('kommentar','💬 Neuer Kommentar von '+name,(lied?'['+lied+'] ':'')+text);btn.textContent='✅ Gesendet!';setTimeout(()=>{btn.textContent='💬 Abschicken';btn.disabled=false;},2000);}
   catch(e){alert('Fehler: '+e.message);btn.textContent='💬 Abschicken';btn.disabled=false;}
 }
 
@@ -1245,6 +1279,7 @@ function renderKonsole(){
   const alMin = document.getElementById('auto-logout-min');
   if(alMin) alMin.value = localStorage.getItem('auto_logout_min')||'0';
 
+  loadPushSettings();
   renderUserVerwaltung();
 
   const el=document.getElementById('konsole-stats');if(!el)return;
@@ -1816,6 +1851,7 @@ async function submitLiedwunsch(){
     res.style.color='#27ae60'; res.textContent='✅ Liedwunsch eingereicht!';
     setTimeout(()=>{res.textContent='';},2500);
     await loadLiedwuensche();
+    notifyPush('liedwunsch','🎵 Neuer Liedwunsch', titel+(interpret?' – '+interpret:''));
   }catch(e){res.style.color='#e74c3c';res.textContent='❌ Fehler beim Speichern.';}
   btn.disabled=false;
 }
@@ -2205,6 +2241,8 @@ function renderEinstellungen(){
   const pw2 = document.getElementById('einst-pw2');
   if(pw1) pw1.value='';
   if(pw2) pw2.value='';
+  const pr = document.getElementById('push-result'); if(pr) pr.textContent='';
+  renderPushStatus();
 }
 
 async function saveAnzeigename(){
@@ -2247,6 +2285,87 @@ async function saveEinstellungenPw(){
   }
 }
 
+// ===== PUSH-BENACHRICHTIGUNGEN =====
+const VAPID_PUBLIC = 'BOGiRzAjSW8eEWF8Q_vy_XXcq09OdlWs02cmpWMxIQLqF4WB0f7GwAd1Y-9f5JTNKcvcaZ4HE_GgruGV9vei7Jc';
+let pushSettings = {};
+
+function urlB64ToUint8(base64String){
+  const padding='='.repeat((4 - base64String.length % 4) % 4);
+  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=atob(base64); const arr=new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i);
+  return arr;
+}
+
+async function renderPushStatus(){
+  const st=document.getElementById('push-status'); const btn=document.getElementById('push-btn'); const ios=document.getElementById('push-ios-hint');
+  if(!st) return;
+  if(ios) ios.style.display = /iphone|ipad|ipod/i.test(navigator.userAgent) ? 'block':'none';
+  if(!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)){
+    st.innerHTML='<span style="color:#e67e22">⚠️ Dieses Gerät/Browser unterstützt keine Push-Nachrichten.</span>';
+    if(btn) btn.style.display='none'; return;
+  }
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.getSubscription();
+    if(sub){ st.innerHTML='<span style="color:#27ae60">✅ Auf diesem Gerät aktiviert</span>'; if(btn){btn.textContent='🔕 Benachrichtigungen ausschalten'; btn.className='btn btn-gray';} }
+    else { st.innerHTML='<span style="color:#888">Nicht aktiviert</span>'; if(btn){btn.textContent='🔔 Benachrichtigungen aktivieren'; btn.className='btn btn-primary';} }
+  }catch(e){ st.textContent=''; }
+}
+
+async function togglePush(){
+  const res=document.getElementById('push-result');
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)){ res.style.color='#e74c3c'; res.textContent='❌ Nicht unterstützt auf diesem Gerät.'; return; }
+  if(!currentUser){ res.style.color='#e74c3c'; res.textContent='❌ Bitte zuerst anmelden.'; return; }
+  res.style.color='#2980b9'; res.textContent='⏳ …';
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription();
+    if(sub){
+      try{ await sub.unsubscribe(); }catch(e){}
+      await fetch(DB+'/pushsubs/'+currentUser.uid+'.json',{method:'DELETE'});
+      res.style.color='#888'; res.textContent='🔕 Benachrichtigungen deaktiviert.';
+      renderPushStatus(); return;
+    }
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){ res.style.color='#e74c3c'; res.textContent='❌ Erlaubnis nicht erteilt. Bitte im Browser für diese Seite freigeben.'; return; }
+    sub=await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: urlB64ToUint8(VAPID_PUBLIC) });
+    await fetch(DB+'/pushsubs/'+currentUser.uid+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ sub: sub.toJSON(), name:(getUserVoteName()||''), ts:Date.now() })});
+    res.style.color='#27ae60'; res.textContent='✅ Benachrichtigungen aktiviert!';
+    renderPushStatus();
+  }catch(e){ res.style.color='#e74c3c'; res.textContent='❌ Fehler: '+(e.message||e); }
+}
+
+async function loadPushSettings(){
+  try{
+    const r=await fetch(DB+'/settings/push.json'); pushSettings=(r.ok?await r.json():null)||{};
+    const m={termin:'push-ev-termin',probe:'push-ev-probe',liedwunsch:'push-ev-liedwunsch',kommentar:'push-ev-kommentar'};
+    for(const k in m){ const el=document.getElementById(m[k]); if(el) el.checked=!!pushSettings[k]; }
+    const c=document.getElementById('push-subs-count');
+    if(c){ const sr=await fetch(DB+'/pushsubs.json'); const so=sr.ok?await sr.json():null; c.textContent='📱 '+(so?Object.keys(so).length:0)+' Gerät(e) abonniert'; }
+  }catch(e){}
+}
+async function savePushSettings(){
+  const s={ termin:document.getElementById('push-ev-termin').checked, probe:document.getElementById('push-ev-probe').checked, liedwunsch:document.getElementById('push-ev-liedwunsch').checked, kommentar:document.getElementById('push-ev-kommentar').checked };
+  await fetch(DB+'/settings/push.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(s)});
+  pushSettings=s;
+  const r=document.getElementById('push-settings-result'); r.style.color='#27ae60'; r.textContent='✅ Gespeichert'; setTimeout(()=>{if(r)r.textContent='';},2000);
+}
+async function sendTestPush(){
+  const r=document.getElementById('push-settings-result');
+  if(!window._fbFunctions){ r.style.color='#e74c3c'; r.textContent='❌ Server noch nicht eingerichtet'; return; }
+  r.style.color='#2980b9'; r.textContent='⏳ sende…';
+  try{ const res=await window._fbFunctions.httpsCallable('sendNotification')({title:'Chor Dölau', body:'🔔 Test-Benachrichtigung'}); r.style.color='#27ae60'; r.textContent='✅ an '+(res.data&&res.data.sent)+' Gerät(e) gesendet'; }
+  catch(e){ r.style.color='#e74c3c'; r.textContent='❌ '+(e.message||e.code||'Fehler'); }
+}
+// Wird nach dem Anlegen von Terminen/Proben/etc. aufgerufen
+async function notifyPush(eventKey, title, body){
+  if(!pushSettings || !pushSettings[eventKey]) return;
+  if(!window._fbFunctions) return;
+  try{ await window._fbFunctions.httpsCallable('sendNotification')({title, body}); }
+  catch(e){ console.warn('Push-Versand fehlgeschlagen', e); }
+}
+
 // ===== PERMISSIONS =====
 function getPermissions(){
   if(!currentUserProfile) return [];
@@ -2281,6 +2400,7 @@ async function loadAll(){
   renderMitglieder();
   await loadKommentare();
   await loadLiedwuensche();
+  loadPushSettings();
   applyAdminMode();
   // Auto-delete on load
   const autoDays=parseInt(localStorage.getItem('auto_delete_days')||'0');
