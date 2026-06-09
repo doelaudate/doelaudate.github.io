@@ -1,0 +1,23 @@
+name: Push-Benachrichtigungen
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Abhängigkeiten installieren
+        working-directory: push-sender
+        run: npm install --no-audit --no-fund
+      - name: Nachrichten verschicken
+        working-directory: push-sender
+        env:
+          VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
+        run: node send.js
