@@ -5,9 +5,15 @@ on:
     - cron: '*/5 * * * *'
   workflow_dispatch:
 
+# Läufe nacheinander (kein Doppelversand), neuer Lauf startet wenn der alte endet
+concurrency:
+  group: push-sender
+  cancel-in-progress: false
+
 jobs:
   send:
     runs-on: ubuntu-latest
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -16,8 +22,8 @@ jobs:
       - name: Abhängigkeiten installieren
         working-directory: push-sender
         run: npm install --no-audit --no-fund
-      - name: Nachrichten verschicken
+      - name: Warteschlange abarbeiten (Dauerlauf ~10 Min)
         working-directory: push-sender
         env:
           VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
-        run: node send.js
+        run: node send-loop.js
