@@ -590,7 +590,12 @@ input[type=checkbox]{accent-color:#2980b9}
     <div style="margin-bottom:6px">
       <div style="font-size:.82rem;font-weight:600;color:#2c3e50;margin-bottom:6px">🔗 Link einfügen (z.B. OneDrive)</div>
       <input type="text" id="sp-link" class="fl-input" placeholder="https://...">
-      <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveSongPdfLink()">💾 Link speichern</button>
+      <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveSongPdfLink()">💾 Noten-Link speichern</button>
+    </div>
+    <div style="border-top:1px solid #eee;margin-top:14px;padding-top:12px">
+      <div style="font-size:.82rem;font-weight:600;color:#2c3e50;margin-bottom:6px">🎤 Übe-App / Stimmcoach (Link)</div>
+      <input type="text" id="sp-uebe" class="fl-input" placeholder="https://doelaudate.github.io/ueben/...">
+      <button class="btn btn-primary btn-sm" style="margin-top:8px;background:#8e44ad" onclick="saveSongUebe()">💾 Übe-App speichern</button>
     </div>
     <div class="modal-actions" style="justify-content:space-between">
       <button class="btn btn-danger btn-sm" onclick="removeSongPdf()">🗑️ Noten entfernen</button>
@@ -868,8 +873,9 @@ function buildTbl(songs){
   const canEdit = uiEdit('lieder');
   return '<table><thead><tr><th>Lied</th><th>Letzte Probe</th><th style="text-align:center">Anzahl</th><th>Status</th><th style="text-align:center">Noten</th></tr></thead><tbody>'+songs.map(s=>{
     const openLink = s.pdf?`<a href="${esc(s.pdf)}" target="_blank" rel="noopener" style="text-decoration:none;font-size:1.15rem" title="Noten öffnen">📄</a>`:'';
-    const editBtn = canEdit?`<button onclick="editSongPdf('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:.85rem;opacity:.45;padding:0 2px" title="Noten-Link bearbeiten">✏️</button>`:'';
-    const cell = (openLink||editBtn) ? (openLink+' '+editBtn) : '—';
+    const uebenLink = s.uebe?`<a href="${esc(s.uebe)}" target="_blank" rel="noopener" style="text-decoration:none;font-size:1.1rem" title="Stimmcoach – Üben">🎤</a>`:'';
+    const editBtn = canEdit?`<button onclick="editSongPdf('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:.85rem;opacity:.45;padding:0 2px" title="Noten/Üben bearbeiten">✏️</button>`:'';
+    const cell = (openLink||uebenLink||editBtn) ? [openLink,uebenLink,editBtn].filter(Boolean).join(' ') : '—';
     return `<tr><td><strong>${esc(s.name)}</strong></td><td>${fmt(s.last)}</td><td style="text-align:center;color:#666">${s.count}×</td><td><span class="dot" style="background:${dotC(s.last)}"></span><span class="badge" style="${bdgS(s.last)}">${bdgT(s.last)}</span></td><td style="text-align:center;white-space:nowrap">${cell}</td></tr>`;
   }).join('')+'</tbody></table>';
 }
@@ -896,9 +902,25 @@ function editSongPdf(id){
   document.getElementById('sp-songid').value=id;
   document.getElementById('sp-songname').textContent=song.name;
   document.getElementById('sp-link').value=song.pdf||'';
+  document.getElementById('sp-uebe').value=song.uebe||'';
   document.getElementById('sp-file').value='';
   document.getElementById('sp-progress').textContent='';
   document.getElementById('modal-songpdf').classList.add('open');
+}
+async function setSongUebe(id, url){
+  const p=songPos(id); if(!p) return;
+  const song=D.seasons[p[0]].songs[p[1]];
+  if(url) song.uebe=url; else delete song.uebe;
+  await fetch(DB+'/chorproben/seasons/'+p[0]+'/songs/'+p[1]+'/uebe.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(url||null)});
+  renderLieder();
+}
+async function saveSongUebe(){
+  if(!hasPermission('lieder')) return;
+  const id=document.getElementById('sp-songid').value;
+  const u=document.getElementById('sp-uebe').value.trim();
+  if(u && !/^https?:\/\//i.test(u)){ alert('Bitte einen vollständigen Link eingeben (muss mit https:// beginnen).'); return; }
+  await setSongUebe(id, u);
+  closeModal();
 }
 async function saveSongPdfLink(){
   if(!hasPermission('lieder')) return;
