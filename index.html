@@ -207,6 +207,9 @@ input[type=checkbox]{accent-color:#2980b9}
   </div>
   <div class="header-right">
     <span id="admin-badge" class="admin-badge" style="display:none">🔑 Admin</span>
+    <button id="bell-btn" onclick="openNotifications()" title="Benachrichtigungen" style="display:none;position:relative;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:8px;padding:3px 9px;cursor:pointer;font-size:1.05rem;line-height:1.4">
+      🔔<span id="bell-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:#e74c3c;color:white;font-size:.6rem;font-weight:700;min-width:16px;height:16px;border-radius:8px;padding:0 4px;line-height:16px;text-align:center">0</span>
+    </button>
     <div id="user-chip" class="user-chip" onclick="showUserMenu()" style="display:none">
       <span id="user-display">👤</span>
       <span style="font-size:.7rem;opacity:.7">▾</span>
@@ -375,8 +378,8 @@ input[type=checkbox]{accent-color:#2980b9}
 </div>
 
 <div class="page" id="p-plakate">
-  <div class="admin-section admin-only" data-perm="termine">
-    <div class="admin-label">🔑 Admin: Plakat-Standort hinzufügen</div>
+  <div class="card k-form-wrap">
+    <div class="card-title" style="margin-bottom:10px">＋ Neuen Standort hinzufügen</div>
     <div class="form-row">
       <input class="fl-input" type="text" id="pl-ort" placeholder="Standort / Geschäft *" style="flex:2;min-width:160px">
       <input class="fl-input" type="text" id="pl-anzahl" placeholder="Anzahl Plakate" style="flex:1;min-width:90px">
@@ -565,6 +568,14 @@ input[type=checkbox]{accent-color:#2980b9}
 
 </div><!-- /content -->
 
+<div class="modal-overlay" id="modal-notifications">
+  <div class="modal">
+    <h3>🔔 Benachrichtigungen</h3>
+    <div id="notif-list" style="max-height:62vh;overflow-y:auto;margin:-4px -4px 0"></div>
+    <div class="modal-actions"><button class="btn btn-gray" onclick="closeModal()">Schließen</button></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-songpdf">
   <div class="modal">
     <h3>📄 Noten – <span id="sp-songname"></span></h3>
@@ -735,7 +746,7 @@ const TYP_COLOR={"konzert": "#2980b9", "fest": "#e67e22", "chorlager": "#27ae60"
 const INIT_MITGLIEDER=[{"nr": 1, "nachname": "Arnold", "vorname": "Christiane", "telefon": "0345/6801481", "handy": "0175/5369335", "email": "nck_arnold@t-online.de", "geburtstag": "11.07.58", "adresse": "Ellen-Weber-Str. 97", "plz": "06120", "username": "CA110758"}, {"nr": 2, "nachname": "Balbach", "vorname": "Jochen", "telefon": "0345/6802913", "handy": "0151/15336411", "email": "jochen.balbach@physik.uni-halle.de", "geburtstag": "17.05.66", "adresse": "Otto-Kanning-Str. 30", "plz": "", "username": "JB170566"}, {"nr": 3, "nachname": "Balbach", "vorname": "Petra", "telefon": "0345/6802913", "handy": "0151/12811946", "email": "felixaustria@gmx.de", "geburtstag": "04.09.64", "adresse": "Otto-Kanning-Str. 30", "plz": "", "username": "PB040964"}, {"nr": 4, "nachname": "Bromann", "vorname": "Birte", "telefon": "", "handy": "0163/5039756", "email": "birte.bromann@t-online.de", "geburtstag": "25.05.88", "adresse": "", "plz": "", "username": "BB250588"}, {"nr": 5, "nachname": "Dicty", "vorname": "Hannah", "telefon": "", "handy": "0176/94960900", "email": "hannah.dicty@gmail.com", "geburtstag": "16.03.01", "adresse": "Adolph-von-Harnack-Str. 4", "plz": "06114", "username": "HD160301"}, {"nr": 6, "nachname": "Durka", "vorname": "Walter", "telefon": "0345/5321345", "handy": "0170/9489446", "email": "walter.durka@ufz.de", "geburtstag": "20.12.62", "adresse": "Edmund-Husserl-Str. 4", "plz": "06120", "username": "WD201262"}, {"nr": 7, "nachname": "Engel", "vorname": "Jeanette", "telefon": "", "handy": "0171/2134188", "email": "jeanette.engel@gmx.de", "geburtstag": "29.01.87", "adresse": "Brüderstr. 13", "plz": "06108", "username": "JE290187"}, {"nr": 8, "nachname": "Fliegner", "vorname": "Antje", "telefon": "", "handy": "0176/51970719", "email": "antjefliegner@web.de", "geburtstag": "03.07.70", "adresse": "", "plz": "", "username": "AF030770"}, {"nr": 9, "nachname": "Göricke", "vorname": "Petra", "telefon": "", "handy": "0170/6047997", "email": "petra-goericke@web.de", "geburtstag": "31.01.61", "adresse": "Ellen-Weber-Str. 10", "plz": "06120", "username": "PG310161"}, {"nr": 10, "nachname": "Hähndel", "vorname": "Ursula", "telefon": "", "handy": "0176/62432938", "email": "ursula.haehndel@tele2.de", "geburtstag": "20.05.57", "adresse": "Lunzbergring 3", "plz": "06120", "username": "UH200557"}, {"nr": 11, "nachname": "Herrmann", "vorname": "Doris", "telefon": "", "handy": "0176/55243597", "email": "dorisherrmann4@gmail.com", "geburtstag": "", "adresse": "Angerweg 8b", "plz": "06120", "username": "DH"}, {"nr": 12, "nachname": "Heise", "vorname": "Matthias", "telefon": "", "handy": "0162/33865177", "email": "tjhm.heise@arcor.de", "geburtstag": "29.05.66", "adresse": "Bergschenkenweg 52a", "plz": "06118", "username": "MH290566"}, {"nr": 13, "nachname": "Jäckel", "vorname": "Eckhard", "telefon": "", "handy": "0173/9140294", "email": "ecki.jaeckel@gmail.com", "geburtstag": "", "adresse": "Waldmeisterstr. 5", "plz": "06120", "username": "EJ"}, {"nr": 14, "nachname": "Koser", "vorname": "Susanne", "telefon": "0345/6829880", "handy": "0152/34551426", "email": "susannekoser@web.de", "geburtstag": "29.09.69", "adresse": "Otto-Kanning-Str. 53", "plz": "06120", "username": "SK290969"}, {"nr": 15, "nachname": "Krause", "vorname": "Bianca", "telefon": "", "handy": "0157/54146071", "email": "krause.beibei@gmail.com", "geburtstag": "07.01.82", "adresse": "", "plz": "", "username": "BK070182"}, {"nr": 16, "nachname": "Kühn", "vorname": "Elisabeth", "telefon": "0345/6802868", "handy": "0170/2249383", "email": "Elisabeth@spa-house.de", "geburtstag": "04.02.66", "adresse": "Otto-Kanning-Str. 49", "plz": "06120", "username": "EK040266"}, {"nr": 17, "nachname": "Kühn", "vorname": "Ingolf", "telefon": "0345/6802868", "handy": "0176/51248157", "email": "Ingolf@spa-house.de", "geburtstag": "21.01.67", "adresse": "Otto-Kanning-Str. 49", "plz": "06120", "username": "IK210167"}, {"nr": 18, "nachname": "Kulig", "vorname": "Nadja", "telefon": "0345/6856196", "handy": "0151/44556194", "email": "nadja.kulig@gmx.de", "geburtstag": "30.04.76", "adresse": "Brandbergweg 29", "plz": "06120", "username": "NK300476"}, {"nr": 19, "nachname": "Kull", "vorname": "Eberhard", "telefon": "0345/5504206", "handy": "", "email": "ekk38@gmx.de", "geburtstag": "11.03.38", "adresse": "Alfred-Oelsner-Str. 15", "plz": "06120", "username": "EK110338"}, {"nr": 20, "nachname": "Kursawe", "vorname": "Josephiene", "telefon": "", "handy": "0176/84507517", "email": "josephiene.kursawe@mailbox.org", "geburtstag": "19.01.87", "adresse": "", "plz": "", "username": "JK190187"}, {"nr": 21, "nachname": "Lamm", "vorname": "Marco", "telefon": "0345/6800536", "handy": "0160/93147286", "email": "mclamm@t-online.de", "geburtstag": "", "adresse": "Otto-Kanning-Str. 45", "plz": "06120", "username": "ML"}, {"nr": 22, "nachname": "Linke", "vorname": "Susanne", "telefon": "", "handy": "0152/03866999", "email": "susanne-linke@gmx.de", "geburtstag": "27.04.91", "adresse": "Ellen-Weber-Str. 131", "plz": "", "username": "SL270491"}, {"nr": 23, "nachname": "Moeller", "vorname": "Regina", "telefon": "", "handy": "0173/3494549", "email": "regina.moeller.halle@freenet.de", "geburtstag": "", "adresse": "Blumenau 25", "plz": "06120", "username": "RM"}, {"nr": 24, "nachname": "Mothes", "vorname": "Rosi", "telefon": "", "handy": "0151/23952005", "email": "rosi.mothes@web.de", "geburtstag": "09.07.69", "adresse": "W.-v.-Kügelgen-Str. 7", "plz": "06120", "username": "RM090769"}, {"nr": 25, "nachname": "Niebuhr", "vorname": "Sören", "telefon": "0345/6140672", "handy": "0173/5660181", "email": "snh@gmx.de", "geburtstag": "13.07.71", "adresse": "", "plz": "06198", "username": "SN130771"}, {"nr": 26, "nachname": "Ortlieb", "vorname": "Stefanie", "telefon": "", "handy": "0152/28616121", "email": "stef94.ortlieb@web.de", "geburtstag": "19.07.94", "adresse": "Aalweg 15", "plz": "06120", "username": "SO190794"}, {"nr": 27, "nachname": "Rödel", "vorname": "Klaus", "telefon": "0345/5508505", "handy": "0178/3095264", "email": "ledeor.klaus@gmail.com", "geburtstag": "", "adresse": "Franz-Mehring-Str. 6", "plz": "06120", "username": "KR"}, {"nr": 28, "nachname": "Rohde", "vorname": "Ida", "telefon": "", "handy": "0178/6841991", "email": "ida.rohde@outlook.de", "geburtstag": "10.07.01", "adresse": "Hoher Weg 6", "plz": "06120", "username": "IR100701"}, {"nr": 29, "nachname": "Schild von Spannenberg", "vorname": "Ulrike", "telefon": "", "handy": "0171/9985650", "email": "SVShome@gmx.de", "geburtstag": "04.11.62", "adresse": "Ellen-Weber-Str. 98", "plz": "06120", "username": "US041162"}, {"nr": 30, "nachname": "Skaliks", "vorname": "Ulrike", "telefon": "", "handy": "0177/8999020", "email": "uljoe@gmx.de", "geburtstag": "09.07.73", "adresse": "Smaragdweg 21", "plz": "06120", "username": "US090773"}, {"nr": 31, "nachname": "Steinborn", "vorname": "Danny", "telefon": "", "handy": "0177/5776157", "email": "dannysteinborn@gmail.com", "geburtstag": "05.02.02", "adresse": "Heideweg 21", "plz": "06120", "username": "DS050202"}, {"nr": 32, "nachname": "Stubbs", "vorname": "Milton", "telefon": "", "handy": "0176/32715256", "email": "stubbs@biochemtech.uni-halle.de", "geburtstag": "15.05.62", "adresse": "Ammernweg 2", "plz": "", "username": "MS150562"}, {"nr": 33, "nachname": "von Borell", "vorname": "Susanne", "telefon": "0345/5500330", "handy": "0176/56809120", "email": "svbdv@posteo.de", "geburtstag": "", "adresse": "Schwedenweg 9", "plz": "06120", "username": "SV"}, {"nr": 34, "nachname": "von Nessen", "vorname": "Rita", "telefon": "", "handy": "0172/3741626", "email": "eselsmilch@web.de", "geburtstag": "18.12.69", "adresse": "Irisweg 5", "plz": "06118", "username": "RV181269"}, {"nr": 35, "nachname": "Werge", "vorname": "Kerstin", "telefon": "0345/5503231", "handy": "0160/1202414", "email": "werge@t-online.de", "geburtstag": "14.01.68", "adresse": "Fichtenstr. 10", "plz": "06198", "username": "KW140168"}, {"nr": 36, "nachname": "Wolff", "vorname": "Martin", "telefon": "", "handy": "0176/54482520", "email": "Doelaudate@martinwolff-tenor.de", "geburtstag": "29.04.98", "adresse": "Geiststr. 21", "plz": "06108", "username": "MW290498"}];
 const INIT_TERMINE=[{"id": "23r7du2kk", "titel": "4 Chöre Konzert", "datum": "2026-06-07", "datum_ende": "", "uhrzeit": "15:00", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "8vfz808c1", "titel": "Lieskauer Sommerfest", "datum": "2026-06-21", "datum_ende": "", "uhrzeit": "11:00", "typ": "fest", "beschreibung": "", "abstimmungen": {}}, {"id": "79976fwpi", "titel": "Sommerkonzert", "datum": "2026-06-28", "datum_ende": "", "uhrzeit": "15:00", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "fympt3vrg", "titel": "Gemeindefest", "datum": "2026-09-20", "datum_ende": "", "uhrzeit": "14:00 / 15:00 / 16:00", "typ": "fest", "beschreibung": "Uhrzeit noch nicht festgelegt", "abstimmungen": {}}, {"id": "ru26ly3p6", "titel": "Chorlager Schierke", "datum": "2026-11-06", "datum_ende": "2026-11-08", "uhrzeit": "", "typ": "chorlager", "beschreibung": "", "abstimmungen": {}}, {"id": "c81poy77r", "titel": "Lichtergottesdienst", "datum": "2026-11-29", "datum_ende": "", "uhrzeit": "", "typ": "gottesdienst", "beschreibung": "", "abstimmungen": {}}, {"id": "fwktqtez8", "titel": "Weihnachtskonzert", "datum": "2026-12-05", "datum_ende": "", "uhrzeit": "", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "h5k00tkj8", "titel": "Chorlager", "datum": "2027-10-14", "datum_ende": "2027-10-16", "uhrzeit": "", "typ": "chorlager", "beschreibung": "", "abstimmungen": {}}];
 
-let D=null, termine=[], kommentare=[], probenplan=[], mitglieder=[], liedwuensche=[], plakate=[], probenstatus={};
+let D=null, termine=[], kommentare=[], probenplan=[], mitglieder=[], liedwuensche=[], plakate=[], probenstatus={}, benachrichtigungen=[];
 let adminMode = sessionStorage.getItem('chor_admin')==='1';
 let editMode = sessionStorage.getItem('chor_editmode')==='1';
 // Sichtbarkeit von Admin-Bearbeitungs-Elementen: nur wenn Bearbeiten-Modus AN und Berechtigung vorhanden
@@ -1448,6 +1459,7 @@ async function loadUserProfile(uid, email) {
     const displayName = profile?.anzeigename || profile?.username || email.split('@')[0];
     document.getElementById('user-display').textContent = '👤 ' + displayName;
     document.getElementById('user-chip').style.display = 'flex';
+    const _bell=document.getElementById('bell-btn'); if(_bell) _bell.style.display='block';
     document.querySelectorAll('.user-only').forEach(el=>el.style.removeProperty('display'));
     // Pre-fill comment name with display name
     const kn = document.getElementById('k-name');
@@ -1463,6 +1475,7 @@ async function loadUserProfile(uid, email) {
   } catch(e) {
     document.getElementById('user-display').textContent = '👤 ' + email.split('@')[0];
     document.getElementById('user-chip').style.display = 'flex';
+    const _bell2=document.getElementById('bell-btn'); if(_bell2) _bell2.style.display='block';
     const lb=document.getElementById('logout-btn');if(lb)lb.style.display='block';
     loadAll();
   }
@@ -1491,6 +1504,7 @@ async function doLogin() {
     document.getElementById('login-overlay').style.display = 'none';
     document.getElementById('user-display').textContent = '🔑 Admin';
     document.getElementById('user-chip').style.display = 'flex';
+    const _bell3=document.getElementById('bell-btn'); if(_bell3) _bell3.style.display='block';
     const _lb=document.getElementById('logout-btn');if(_lb)_lb.style.display='block';
     applyAdminMode();
     loadAll();
@@ -2042,6 +2056,59 @@ async function saveLiedwunschEdit(){
   await loadLiedwuensche();
 }
 
+// ===== BENACHRICHTIGUNGEN (Glocke / Verlauf) =====
+async function logNotification(title, body){
+  try{ await fetch(DB+'/benachrichtigungen.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title, body, ts:Date.now()})}); }
+  catch(e){ console.warn('Log-Benachrichtigung', e); }
+}
+async function loadBenachrichtigungen(){
+  try{
+    const r=await fetch(DB+'/benachrichtigungen.json');
+    const d=r.ok?await r.json():null;
+    benachrichtigungen=d?Object.entries(d).map(([k,v])=>Object.assign({},v,{_key:k})).sort((a,b)=>(b.ts||0)-(a.ts||0)):[];
+    updateBellBadge();
+  }catch(e){}
+}
+function updateBellBadge(){
+  const badge=document.getElementById('bell-badge'); if(!badge) return;
+  const lastSeen=parseInt(localStorage.getItem('notif_last_seen')||'0');
+  const unread=benachrichtigungen.filter(n=>(n.ts||0)>lastSeen).length;
+  if(unread>0){ badge.textContent=unread>99?'99+':unread; badge.style.display='block'; }
+  else { badge.style.display='none'; }
+}
+function timeAgo(ts){
+  const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60) return 'gerade eben';
+  if(s<3600) return 'vor '+Math.floor(s/60)+' Min';
+  if(s<86400) return 'vor '+Math.floor(s/3600)+' Std';
+  return new Date(ts).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+function renderNotifList(){
+  const el=document.getElementById('notif-list'); if(!el) return;
+  if(!benachrichtigungen.length){ el.innerHTML='<div class="empty" style="padding:24px">Noch keine Benachrichtigungen.</div>'; return; }
+  const lastSeen=parseInt(localStorage.getItem('notif_last_seen')||'0');
+  el.innerHTML=benachrichtigungen.slice(0,50).map(n=>{
+    const neu=(n.ts||0)>lastSeen;
+    return `<div style="display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid #f0f0f0;background:${neu?'#eaf3fb':'transparent'}">
+      <div style="font-size:1.2rem;flex-shrink:0">🔔</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:.88rem;color:#2c3e50">${esc(n.title||'Chor Dölau')}${neu?' <span style="color:#e74c3c;font-size:.62rem;font-weight:700">● NEU</span>':''}</div>
+        ${n.body?`<div style="font-size:.83rem;color:#555;margin-top:1px;word-break:break-word">${esc(n.body)}</div>`:''}
+        <div style="font-size:.72rem;color:#aaa;margin-top:2px">${n.ts?timeAgo(n.ts):''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function openNotifications(){
+  await loadBenachrichtigungen();
+  renderNotifList();
+  document.getElementById('modal-notifications').classList.add('open');
+  // Als gelesen markieren
+  const maxTs=benachrichtigungen.reduce((m,n)=>Math.max(m,n.ts||0),0);
+  localStorage.setItem('notif_last_seen', String(Math.max(maxTs, Date.now())));
+  updateBellBadge();
+}
+
 // ===== PLAKATE =====
 async function loadPlakate(){
   try{
@@ -2053,7 +2120,6 @@ async function loadPlakate(){
   }catch(e){console.warn(e);}
 }
 async function addPlakat(){
-  if(!uiEdit('termine')) return;
   const ort=document.getElementById('pl-ort').value.trim();
   if(!ort){alert('Bitte einen Standort eingeben.');return;}
   const anzahl=document.getElementById('pl-anzahl').value.trim();
@@ -2554,15 +2620,18 @@ async function sendBroadcast(){
   if(!confirm('Push-Nachricht jetzt an ALLE Mitglieder senden?\n\n'+(titel?titel+'\n':'')+text)) return;
   r.style.color='#2980b9'; r.textContent='⏳ wird gesendet…';
   try{
-    await fetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:(titel||'📢 Chor Dölau'), body:text, ts:Date.now()})});
+    const bTitel=titel||'📢 Chor Dölau';
+    await fetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:bTitel, body:text, ts:Date.now()})});
+    logNotification(bTitel, text);
     titelEl.value=''; textEl.value='';
-    r.style.color='#27ae60'; r.textContent='✅ Gesendet – kommt in 1–5 Min. bei allen an.';
+    r.style.color='#27ae60'; r.textContent='✅ Gesendet – kommt gleich bei allen an.';
     setTimeout(()=>{if(r)r.textContent='';},8000);
   }catch(e){ r.style.color='#e74c3c'; r.textContent='❌ Fehler beim Senden.'; }
 }
 // Legt eine Nachricht in die Warteschlange; ein automatischer Job verschickt sie.
 async function notifyPush(eventKey, title, body){
-  if(!pushSettings || !pushSettings[eventKey]) return;
+  logNotification(title, body);           // immer im Glocken-Verlauf anzeigen
+  if(!pushSettings || !pushSettings[eventKey]) return;   // Push nur wenn aktiviert
   try{ await fetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title, body, ts:Date.now()})}); }
   catch(e){ console.warn('Push-Queue fehlgeschlagen', e); }
 }
@@ -2620,6 +2689,8 @@ async function loadAll(){
   await loadLiedwuensche();
   await loadPlakate();
   await loadProbenstatus();
+  await loadBenachrichtigungen();
+  if(!window._notifPoll){ window._notifPoll=setInterval(loadBenachrichtigungen, 90000); }
   loadPushSettings();
   applyAdminMode();
   // Auto-delete on load
