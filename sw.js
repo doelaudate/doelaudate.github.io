@@ -1,4 +1,4 @@
-const CACHE = 'chor-doelau-v2';
+const CACHE = 'chor-doelau-v3';
 const OFFLINE_FILES = ['/', '/index.html'];
 
 self.addEventListener('install', e => {
@@ -30,8 +30,13 @@ self.addEventListener('push', event => {
     body: data.body || '',
     icon: data.icon || '/icon-192.png',
     badge: data.badge || '/icon-192.png',
+    image: data.image || undefined,
     data: { url: data.url || 'https://doelaudate.github.io' },
-    vibrate: [100, 50, 100]
+    vibrate: [200, 100, 200, 100, 200],
+    requireInteraction: true,   // bleibt auf dem Bildschirm, bis man tippt (wie WhatsApp)
+    renotify: true,
+    tag: 'chor-' + Date.now(),  // jede Nachricht einzeln anzeigen
+    silent: false
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
