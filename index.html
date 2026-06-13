@@ -1056,19 +1056,19 @@ async function loadProbenstatus(){
 }
 function buildProbeAttendance(p){
   const st=(probenstatus && probenstatus[p.id])||{};
-  const entries=Object.values(st);
-  const ja=entries.filter(e=>e&&e.status==='ja').map(e=>e.name);
-  const nein=entries.filter(e=>e&&e.status==='nein').map(e=>e.name);
+  const nein=Object.values(st).filter(e=>e&&e.status==='nein').map(e=>e.name);
   const myUid=currentUser&&currentUser.uid;
-  const mine=(myUid && st[myUid])?st[myUid].status:null;
+  const abgemeldet=(myUid && st[myUid] && st[myUid].status==='nein');
   return `<div style="margin-top:8px;border-top:1px dashed #d9e6d0;padding-top:8px">
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <span style="font-size:.78rem;color:#555;font-weight:500">Bist du dabei?</span>
-      <button class="btn btn-sm" style="font-size:.74rem;background:${mine==='ja'?'#27ae60':'#d5f5e3'};color:${mine==='ja'?'#fff':'#1a7a40'}" onclick="setProbeStatus('${p.id}','ja')">✅ Komme</button>
-      <button class="btn btn-sm" style="font-size:.74rem;background:${mine==='nein'?'#e74c3c':'#fdecea'};color:${mine==='nein'?'#fff':'#922b21'}" onclick="setProbeStatus('${p.id}','nein')">❌ Kann nicht</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      ${abgemeldet
+        ? `<span style="font-size:.8rem;color:#922b21;font-weight:600">❌ Du bist abgemeldet</span>
+           <button class="btn btn-sm" style="font-size:.74rem;background:#d5f5e3;color:#1a7a40" onclick="setProbeStatus('${p.id}','nein')">↩ Doch dabei</button>`
+        : `<span style="font-size:.78rem;color:#555">Kannst du nicht?</span>
+           <button class="btn btn-sm" style="font-size:.74rem;background:#fdecea;color:#922b21" onclick="setProbeStatus('${p.id}','nein')">❌ Abmelden</button>`
+      }
     </div>
     ${nein.length?`<div style="font-size:.76rem;color:#922b21;margin-top:5px">❌ Abgemeldet (${nein.length}): ${nein.map(esc).join(', ')}</div>`:''}
-    ${ja.length?`<div style="font-size:.76rem;color:#1a7a40;margin-top:2px">✅ Zugesagt (${ja.length}): ${ja.map(esc).join(', ')}</div>`:''}
   </div>`;
 }
 async function setProbeStatus(probeId, status){
