@@ -226,6 +226,7 @@ input[type=checkbox]{accent-color:#2980b9}
   <div class="mtab" onclick="showPage('mitglieder',this)">👥 Mitglieder</div>
   <div class="mtab" onclick="showPage('plakate',this)">📋 Plakate</div>
   <div class="mtab" onclick="showPage('kommentare',this)">💬 Kommentare <span id="k-count" style="background:rgba(41,128,185,.15);color:#2980b9;padding:1px 6px;border-radius:10px;font-size:.72rem;margin-left:3px"></span></div>
+  <div class="mtab admin-tab admin-only" onclick="showPage('anwesenheit',this)">📊 Anwesenheit</div>
   <div class="mtab user-only" id="tab-einstellungen" style="display:none" onclick="showPage('einstellungen',this)">⚙️ Einstellungen</div>
   <div class="mtab admin-tab admin-only" onclick="showPage('konsole',this)">⚙️ Konsole</div>
 </div>
@@ -411,6 +412,32 @@ input[type=checkbox]{accent-color:#2980b9}
     </div>
   </div>
   <div id="kommentare-list"></div>
+</div>
+
+<div class="page admin-only" id="p-anwesenheit">
+  <div class="card">
+    <div class="card-title">✅ Anwesenheit erfassen</div>
+    <div style="font-size:.83rem;color:#666;margin-bottom:10px">Wähle die Probe und tippe alle an, die <strong>fehlen</strong> (rot). Vorab-Abmeldungen sind schon markiert.</div>
+    <select id="anw-probe" class="fl-input" style="margin-bottom:10px" onchange="renderAnwErfassen()"></select>
+    <div id="anw-info"></div>
+    <div id="anw-roster" style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0"></div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-success btn-sm" onclick="saveAnwesenheit()">💾 Anwesenheit speichern</button>
+      <span id="anw-summary" style="font-size:.82rem;color:#666"></span>
+      <span id="anw-save-result" style="font-size:.82rem"></span>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+      <span class="card-title" style="margin-bottom:0">📊 Anwesenheits-Statistik</span>
+      <select id="anw-sort" class="fl-input" style="width:auto;font-size:.8rem;padding:4px 8px" onchange="renderAnwStats()">
+        <option value="quote">Quote ↑</option>
+        <option value="name">Name A–Z</option>
+        <option value="fehlt">Meiste Fehltage</option>
+      </select>
+    </div>
+    <div id="anw-stats"></div>
+  </div>
 </div>
 
 <div class="page admin-only" id="p-konsole">
@@ -751,7 +778,7 @@ const TYP_COLOR={"konzert": "#2980b9", "fest": "#e67e22", "chorlager": "#27ae60"
 const INIT_MITGLIEDER=[{"nr": 1, "nachname": "Arnold", "vorname": "Christiane", "telefon": "0345/6801481", "handy": "0175/5369335", "email": "nck_arnold@t-online.de", "geburtstag": "11.07.58", "adresse": "Ellen-Weber-Str. 97", "plz": "06120", "username": "CA110758"}, {"nr": 2, "nachname": "Balbach", "vorname": "Jochen", "telefon": "0345/6802913", "handy": "0151/15336411", "email": "jochen.balbach@physik.uni-halle.de", "geburtstag": "17.05.66", "adresse": "Otto-Kanning-Str. 30", "plz": "", "username": "JB170566"}, {"nr": 3, "nachname": "Balbach", "vorname": "Petra", "telefon": "0345/6802913", "handy": "0151/12811946", "email": "felixaustria@gmx.de", "geburtstag": "04.09.64", "adresse": "Otto-Kanning-Str. 30", "plz": "", "username": "PB040964"}, {"nr": 4, "nachname": "Bromann", "vorname": "Birte", "telefon": "", "handy": "0163/5039756", "email": "birte.bromann@t-online.de", "geburtstag": "25.05.88", "adresse": "", "plz": "", "username": "BB250588"}, {"nr": 5, "nachname": "Dicty", "vorname": "Hannah", "telefon": "", "handy": "0176/94960900", "email": "hannah.dicty@gmail.com", "geburtstag": "16.03.01", "adresse": "Adolph-von-Harnack-Str. 4", "plz": "06114", "username": "HD160301"}, {"nr": 6, "nachname": "Durka", "vorname": "Walter", "telefon": "0345/5321345", "handy": "0170/9489446", "email": "walter.durka@ufz.de", "geburtstag": "20.12.62", "adresse": "Edmund-Husserl-Str. 4", "plz": "06120", "username": "WD201262"}, {"nr": 7, "nachname": "Engel", "vorname": "Jeanette", "telefon": "", "handy": "0171/2134188", "email": "jeanette.engel@gmx.de", "geburtstag": "29.01.87", "adresse": "Brüderstr. 13", "plz": "06108", "username": "JE290187"}, {"nr": 8, "nachname": "Fliegner", "vorname": "Antje", "telefon": "", "handy": "0176/51970719", "email": "antjefliegner@web.de", "geburtstag": "03.07.70", "adresse": "", "plz": "", "username": "AF030770"}, {"nr": 9, "nachname": "Göricke", "vorname": "Petra", "telefon": "", "handy": "0170/6047997", "email": "petra-goericke@web.de", "geburtstag": "31.01.61", "adresse": "Ellen-Weber-Str. 10", "plz": "06120", "username": "PG310161"}, {"nr": 10, "nachname": "Hähndel", "vorname": "Ursula", "telefon": "", "handy": "0176/62432938", "email": "ursula.haehndel@tele2.de", "geburtstag": "20.05.57", "adresse": "Lunzbergring 3", "plz": "06120", "username": "UH200557"}, {"nr": 11, "nachname": "Herrmann", "vorname": "Doris", "telefon": "", "handy": "0176/55243597", "email": "dorisherrmann4@gmail.com", "geburtstag": "", "adresse": "Angerweg 8b", "plz": "06120", "username": "DH"}, {"nr": 12, "nachname": "Heise", "vorname": "Matthias", "telefon": "", "handy": "0162/33865177", "email": "tjhm.heise@arcor.de", "geburtstag": "29.05.66", "adresse": "Bergschenkenweg 52a", "plz": "06118", "username": "MH290566"}, {"nr": 13, "nachname": "Jäckel", "vorname": "Eckhard", "telefon": "", "handy": "0173/9140294", "email": "ecki.jaeckel@gmail.com", "geburtstag": "", "adresse": "Waldmeisterstr. 5", "plz": "06120", "username": "EJ"}, {"nr": 14, "nachname": "Koser", "vorname": "Susanne", "telefon": "0345/6829880", "handy": "0152/34551426", "email": "susannekoser@web.de", "geburtstag": "29.09.69", "adresse": "Otto-Kanning-Str. 53", "plz": "06120", "username": "SK290969"}, {"nr": 15, "nachname": "Krause", "vorname": "Bianca", "telefon": "", "handy": "0157/54146071", "email": "krause.beibei@gmail.com", "geburtstag": "07.01.82", "adresse": "", "plz": "", "username": "BK070182"}, {"nr": 16, "nachname": "Kühn", "vorname": "Elisabeth", "telefon": "0345/6802868", "handy": "0170/2249383", "email": "Elisabeth@spa-house.de", "geburtstag": "04.02.66", "adresse": "Otto-Kanning-Str. 49", "plz": "06120", "username": "EK040266"}, {"nr": 17, "nachname": "Kühn", "vorname": "Ingolf", "telefon": "0345/6802868", "handy": "0176/51248157", "email": "Ingolf@spa-house.de", "geburtstag": "21.01.67", "adresse": "Otto-Kanning-Str. 49", "plz": "06120", "username": "IK210167"}, {"nr": 18, "nachname": "Kulig", "vorname": "Nadja", "telefon": "0345/6856196", "handy": "0151/44556194", "email": "nadja.kulig@gmx.de", "geburtstag": "30.04.76", "adresse": "Brandbergweg 29", "plz": "06120", "username": "NK300476"}, {"nr": 19, "nachname": "Kull", "vorname": "Eberhard", "telefon": "0345/5504206", "handy": "", "email": "ekk38@gmx.de", "geburtstag": "11.03.38", "adresse": "Alfred-Oelsner-Str. 15", "plz": "06120", "username": "EK110338"}, {"nr": 20, "nachname": "Kursawe", "vorname": "Josephiene", "telefon": "", "handy": "0176/84507517", "email": "josephiene.kursawe@mailbox.org", "geburtstag": "19.01.87", "adresse": "", "plz": "", "username": "JK190187"}, {"nr": 21, "nachname": "Lamm", "vorname": "Marco", "telefon": "0345/6800536", "handy": "0160/93147286", "email": "mclamm@t-online.de", "geburtstag": "", "adresse": "Otto-Kanning-Str. 45", "plz": "06120", "username": "ML"}, {"nr": 22, "nachname": "Linke", "vorname": "Susanne", "telefon": "", "handy": "0152/03866999", "email": "susanne-linke@gmx.de", "geburtstag": "27.04.91", "adresse": "Ellen-Weber-Str. 131", "plz": "", "username": "SL270491"}, {"nr": 23, "nachname": "Moeller", "vorname": "Regina", "telefon": "", "handy": "0173/3494549", "email": "regina.moeller.halle@freenet.de", "geburtstag": "", "adresse": "Blumenau 25", "plz": "06120", "username": "RM"}, {"nr": 24, "nachname": "Mothes", "vorname": "Rosi", "telefon": "", "handy": "0151/23952005", "email": "rosi.mothes@web.de", "geburtstag": "09.07.69", "adresse": "W.-v.-Kügelgen-Str. 7", "plz": "06120", "username": "RM090769"}, {"nr": 25, "nachname": "Niebuhr", "vorname": "Sören", "telefon": "0345/6140672", "handy": "0173/5660181", "email": "snh@gmx.de", "geburtstag": "13.07.71", "adresse": "", "plz": "06198", "username": "SN130771"}, {"nr": 26, "nachname": "Ortlieb", "vorname": "Stefanie", "telefon": "", "handy": "0152/28616121", "email": "stef94.ortlieb@web.de", "geburtstag": "19.07.94", "adresse": "Aalweg 15", "plz": "06120", "username": "SO190794"}, {"nr": 27, "nachname": "Rödel", "vorname": "Klaus", "telefon": "0345/5508505", "handy": "0178/3095264", "email": "ledeor.klaus@gmail.com", "geburtstag": "", "adresse": "Franz-Mehring-Str. 6", "plz": "06120", "username": "KR"}, {"nr": 28, "nachname": "Rohde", "vorname": "Ida", "telefon": "", "handy": "0178/6841991", "email": "ida.rohde@outlook.de", "geburtstag": "10.07.01", "adresse": "Hoher Weg 6", "plz": "06120", "username": "IR100701"}, {"nr": 29, "nachname": "Schild von Spannenberg", "vorname": "Ulrike", "telefon": "", "handy": "0171/9985650", "email": "SVShome@gmx.de", "geburtstag": "04.11.62", "adresse": "Ellen-Weber-Str. 98", "plz": "06120", "username": "US041162"}, {"nr": 30, "nachname": "Skaliks", "vorname": "Ulrike", "telefon": "", "handy": "0177/8999020", "email": "uljoe@gmx.de", "geburtstag": "09.07.73", "adresse": "Smaragdweg 21", "plz": "06120", "username": "US090773"}, {"nr": 31, "nachname": "Steinborn", "vorname": "Danny", "telefon": "", "handy": "0177/5776157", "email": "dannysteinborn@gmail.com", "geburtstag": "05.02.02", "adresse": "Heideweg 21", "plz": "06120", "username": "DS050202"}, {"nr": 32, "nachname": "Stubbs", "vorname": "Milton", "telefon": "", "handy": "0176/32715256", "email": "stubbs@biochemtech.uni-halle.de", "geburtstag": "15.05.62", "adresse": "Ammernweg 2", "plz": "", "username": "MS150562"}, {"nr": 33, "nachname": "von Borell", "vorname": "Susanne", "telefon": "0345/5500330", "handy": "0176/56809120", "email": "svbdv@posteo.de", "geburtstag": "", "adresse": "Schwedenweg 9", "plz": "06120", "username": "SV"}, {"nr": 34, "nachname": "von Nessen", "vorname": "Rita", "telefon": "", "handy": "0172/3741626", "email": "eselsmilch@web.de", "geburtstag": "18.12.69", "adresse": "Irisweg 5", "plz": "06118", "username": "RV181269"}, {"nr": 35, "nachname": "Werge", "vorname": "Kerstin", "telefon": "0345/5503231", "handy": "0160/1202414", "email": "werge@t-online.de", "geburtstag": "14.01.68", "adresse": "Fichtenstr. 10", "plz": "06198", "username": "KW140168"}, {"nr": 36, "nachname": "Wolff", "vorname": "Martin", "telefon": "", "handy": "0176/54482520", "email": "Doelaudate@martinwolff-tenor.de", "geburtstag": "29.04.98", "adresse": "Geiststr. 21", "plz": "06108", "username": "MW290498"}];
 const INIT_TERMINE=[{"id": "23r7du2kk", "titel": "4 Chöre Konzert", "datum": "2026-06-07", "datum_ende": "", "uhrzeit": "15:00", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "8vfz808c1", "titel": "Lieskauer Sommerfest", "datum": "2026-06-21", "datum_ende": "", "uhrzeit": "11:00", "typ": "fest", "beschreibung": "", "abstimmungen": {}}, {"id": "79976fwpi", "titel": "Sommerkonzert", "datum": "2026-06-28", "datum_ende": "", "uhrzeit": "15:00", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "fympt3vrg", "titel": "Gemeindefest", "datum": "2026-09-20", "datum_ende": "", "uhrzeit": "14:00 / 15:00 / 16:00", "typ": "fest", "beschreibung": "Uhrzeit noch nicht festgelegt", "abstimmungen": {}}, {"id": "ru26ly3p6", "titel": "Chorlager Schierke", "datum": "2026-11-06", "datum_ende": "2026-11-08", "uhrzeit": "", "typ": "chorlager", "beschreibung": "", "abstimmungen": {}}, {"id": "c81poy77r", "titel": "Lichtergottesdienst", "datum": "2026-11-29", "datum_ende": "", "uhrzeit": "", "typ": "gottesdienst", "beschreibung": "", "abstimmungen": {}}, {"id": "fwktqtez8", "titel": "Weihnachtskonzert", "datum": "2026-12-05", "datum_ende": "", "uhrzeit": "", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "h5k00tkj8", "titel": "Chorlager", "datum": "2027-10-14", "datum_ende": "2027-10-16", "uhrzeit": "", "typ": "chorlager", "beschreibung": "", "abstimmungen": {}}];
 
-let D=null, termine=[], kommentare=[], probenplan=[], mitglieder=[], liedwuensche=[], plakate=[], probenstatus={}, benachrichtigungen=[];
+let D=null, termine=[], kommentare=[], probenplan=[], mitglieder=[], liedwuensche=[], plakate=[], probenstatus={}, benachrichtigungen=[], anwesenheit={}, anwWork=null;
 let adminMode = sessionStorage.getItem('chor_admin')==='1';
 let editMode = sessionStorage.getItem('chor_editmode')==='1';
 // Sichtbarkeit von Admin-Bearbeitungs-Elementen: nur wenn Bearbeiten-Modus AN und Berechtigung vorhanden
@@ -837,6 +864,7 @@ function showPage(id,tab){
   if(id==='einstellungen') renderEinstellungen();
   if(id==='lieder') renderLiedwuensche();
   if(id==='plakate') renderPlakate();
+  if(id==='anwesenheit') renderAnwesenheitPage();
 }
 
 // LIEDER
@@ -1054,6 +1082,101 @@ async function setProbeStatus(probeId, status){
     await fetch(DB+'/probenstatus/'+probeId+'/'+uid+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,status})});
   }
   await loadProbenstatus();
+}
+
+// ===== ANWESENHEIT (nur Admin) =====
+async function loadAnwesenheit(){
+  try{ const r=await fetch(DB+'/anwesenheit.json'); anwesenheit=(r.ok?await r.json():null)||{}; }catch(e){}
+}
+function allProbenSorted(){
+  if(!D) return [];
+  const alle=[...(probenplan||[]).map(p=>({...p,_src:'plan'})), ...((D.proben)||[]).map(p=>({...p,_src:'proben'}))];
+  return alle.filter(p=>p.datum).sort((a,b)=>b.datum.localeCompare(a.datum));
+}
+function memberKey(m){ return String(m.nr||m.id); }
+function memberName(m){ return ((m.vorname||'')+' '+(m.nachname||'')).trim(); }
+// Vorab-Selbstabmeldungen ('nein') best effort einem Mitglied zuordnen
+function selbstabmeldungen(probeId){
+  const st=probenstatus[probeId]||{};
+  const names=Object.values(st).filter(e=>e&&e.status==='nein').map(e=>(e.name||'')).filter(Boolean);
+  const matchedKeys=new Set();
+  names.forEach(nm=>{
+    const n=nm.toLowerCase();
+    const m=mitglieder.find(x=> x.vorname && x.nachname && n.includes(x.vorname.toLowerCase()) && n.includes(x.nachname.toLowerCase()));
+    if(m) matchedKeys.add(memberKey(m));
+  });
+  return {matchedKeys, names};
+}
+function renderAnwesenheitPage(){
+  const sel=document.getElementById('anw-probe'); if(!sel) return;
+  const proben=allProbenSorted();
+  const today=localToday();
+  sel.innerHTML=proben.map(p=>{
+    const erf=(anwesenheit[p.id]&&anwesenheit[p.id].erfasst)?' ✓':'';
+    const tag=p.datum===today?' (heute)':'';
+    return `<option value="${p.id}">${fmt(p.datum)}${tag}${erf}</option>`;
+  }).join('');
+  const todayP=proben.find(p=>p.datum===today);
+  if(todayP) sel.value=todayP.id; else if(proben.length) sel.value=proben[0].id;
+  renderAnwErfassen();
+  renderAnwStats();
+}
+function renderAnwErfassen(){
+  const sel=document.getElementById('anw-probe'); const info=document.getElementById('anw-info');
+  if(!sel) return;
+  const probeId=sel.value; if(!probeId){ anwWork=null; return; }
+  const saved=anwesenheit[probeId];
+  const sa=selbstabmeldungen(probeId);
+  let fehlt;
+  if(saved&&saved.fehlt){ fehlt=new Set(Object.keys(saved.fehlt)); }
+  else { fehlt=new Set(sa.matchedKeys); }
+  anwWork={probeId, fehlt};
+  if(info){
+    info.innerHTML = sa.names.length
+      ? `<div style="font-size:.8rem;color:#922b21;background:#fdecea;border-radius:6px;padding:6px 10px;margin-bottom:4px">📋 Vorab abgemeldet: ${sa.names.map(esc).join(', ')}</div>`
+      : '';
+  }
+  renderAnwRoster();
+}
+function renderAnwRoster(){
+  const roster=document.getElementById('anw-roster'); if(!roster||!anwWork) return;
+  const sorted=[...mitglieder].sort((a,b)=>memberName(a).localeCompare(memberName(b)));
+  roster.innerHTML=sorted.map(m=>{
+    const k=memberKey(m); const absent=anwWork.fehlt.has(k);
+    return `<button onclick="toggleAnw('${k}')" style="border:1.5px solid ${absent?'#e74c3c':'#27ae60'};background:${absent?'#fdecea':'#eafaf1'};color:${absent?'#922b21':'#1a7a40'};border-radius:16px;padding:5px 11px;font-size:.8rem;cursor:pointer;white-space:nowrap">${absent?'❌':'✅'} ${esc(memberName(m))}</button>`;
+  }).join('');
+  updateAnwSummary();
+}
+function toggleAnw(k){ if(!anwWork) return; if(anwWork.fehlt.has(k)) anwWork.fehlt.delete(k); else anwWork.fehlt.add(k); renderAnwRoster(); }
+function updateAnwSummary(){ const el=document.getElementById('anw-summary'); if(!el||!anwWork) return; const total=mitglieder.length; const f=anwWork.fehlt.size; el.textContent='Anwesend: '+(total-f)+' · Fehlt: '+f+' (von '+total+')'; }
+async function saveAnwesenheit(){
+  if(!anwWork){ return; }
+  const fehltObj={}; anwWork.fehlt.forEach(k=>fehltObj[k]=true);
+  const data={erfasst:new Date().toISOString(), fehlt:fehltObj};
+  await fetch(DB+'/anwesenheit/'+anwWork.probeId+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  anwesenheit[anwWork.probeId]=data;
+  const r=document.getElementById('anw-save-result'); if(r){ r.style.color='#27ae60'; r.textContent='✅ Gespeichert'; setTimeout(()=>{if(r)r.textContent='';},2500); }
+  renderAnwStats();
+}
+function renderAnwStats(){
+  const el=document.getElementById('anw-stats'); if(!el) return;
+  const captured=Object.entries(anwesenheit).filter(([,v])=>v&&v.erfasst);
+  if(!captured.length){ el.innerHTML='<div class="empty" style="padding:20px">Noch keine Anwesenheit erfasst.</div>'; return; }
+  const total=captured.length;
+  const rows=mitglieder.map(m=>{
+    const k=memberKey(m); let fehlt=0;
+    captured.forEach(([,v])=>{ if(v.fehlt&&v.fehlt[k]) fehlt++; });
+    const da=total-fehlt;
+    return {name:memberName(m), da, fehlt, quote:Math.round((da/total)*100)};
+  });
+  const sort=document.getElementById('anw-sort')?.value||'quote';
+  if(sort==='name') rows.sort((a,b)=>a.name.localeCompare(b.name));
+  else if(sort==='fehlt') rows.sort((a,b)=>b.fehlt-a.fehlt||a.name.localeCompare(b.name));
+  else rows.sort((a,b)=>a.quote-b.quote||b.fehlt-a.fehlt);
+  el.innerHTML=`<div style="font-size:.8rem;color:#888;margin-bottom:8px">Erfasste Proben: <strong>${total}</strong></div>
+    <table class="overview-table" style="width:100%"><thead><tr><th>Mitglied</th><th style="text-align:center">Da</th><th style="text-align:center">Fehlt</th><th style="text-align:center">Quote</th></tr></thead><tbody>`+
+    rows.map(r=>{ const c=r.quote>=80?'#27ae60':r.quote>=50?'#f39c12':'#e74c3c'; return `<tr><td>${esc(r.name)}</td><td style="text-align:center">${r.da}</td><td style="text-align:center;color:#922b21">${r.fehlt}</td><td style="text-align:center"><strong style="color:${c}">${r.quote}%</strong></td></tr>`; }).join('')+
+    `</tbody></table>`;
 }
 
 function localToday(){
@@ -2711,6 +2834,7 @@ async function loadAll(){
   await loadLiedwuensche();
   await loadPlakate();
   await loadProbenstatus();
+  await loadAnwesenheit();
   await loadBenachrichtigungen();
   if(!window._notifPoll){ window._notifPoll=setInterval(loadBenachrichtigungen, 90000); }
   loadPushSettings();
