@@ -112,6 +112,20 @@ textarea:focus{outline:none;border-color:#2980b9}
 .mitglied-detail a:hover{text-decoration:underline}
 .konsole-section{border:1px solid #e0e0e0;border-radius:8px;padding:14px;margin-bottom:12px}
 .konsole-title{font-weight:600;font-size:.9rem;color:#2c3e50;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.konsole-layout{display:flex;gap:14px;align-items:flex-start}
+.konsole-content{flex:1;min-width:0}
+.konsole-menu{flex:0 0 180px;display:flex;flex-direction:column;gap:5px;position:sticky;top:58px}
+.konsole-menu .km{display:flex;align-items:center;gap:7px;text-align:left;padding:9px 12px;border:1.5px solid #e6e6e6;background:white;border-radius:8px;cursor:pointer;font-size:.83rem;color:#555;transition:all .12s;width:100%}
+.konsole-menu .km:hover{border-color:#2980b9;color:#2980b9}
+.konsole-menu .km.active{background:#2980b9;color:#fff;border-color:#2980b9;font-weight:600}
+.konsole-pane{display:none}
+.konsole-pane.active{display:block}
+.konsole-pane .konsole-section{margin-bottom:0}
+@media(max-width:680px){
+  .konsole-layout{flex-direction:column}
+  .konsole-menu{flex:none;width:100%;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;position:static;padding-bottom:4px;order:-1;-webkit-overflow-scrolling:touch}
+  .konsole-menu .km{flex:0 0 auto;font-size:.78rem;padding:7px 11px;white-space:nowrap}
+}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center}
 .modal-overlay.open{display:flex}
 .modal{background:white;border-radius:12px;padding:22px;max-width:480px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto}
@@ -443,11 +457,28 @@ input[type=checkbox]{accent-color:#2980b9}
 <div class="page admin-only" id="p-konsole">
   <div class="card">
     <div class="card-title">⚙️ Admin-Konsole</div>
+    <div class="konsole-layout">
+    <div class="konsole-content">
+    <div class="konsole-pane active" id="kp-bearbeiten">
     <div class="konsole-section" style="border-color:#27ae60;background:#f0fff4">
       <div class="konsole-title">✏️ Bearbeiten-Modus</div>
       <div style="font-size:.83rem;color:#666;margin-bottom:10px">Wenn <strong>aus</strong>, siehst du die App wie ein normales Mitglied (übersichtlich). Zum <strong>Anlegen oder Bearbeiten</strong> von Terminen, Proben, Liedern usw. hier einschalten – die Admin-Werkzeuge erscheinen dann auf allen Seiten.</div>
       <button class="editmode-btn btn btn-sm" onclick="setEditMode(!editMode)">✏️ Bearbeiten-Modus einschalten</button>
     </div>
+    </div>
+    <div class="konsole-pane" id="kp-app">
+    <div class="konsole-section">
+      <div class="konsole-title">📝 Hinweistext (blaue Leiste)</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:8px">Text in der blauen Leiste ganz oben – für alle Mitglieder sichtbar. Z. B. eine kurze Ankündigung.</div>
+      <textarea id="notice-text" class="fl-input" style="min-height:60px" maxlength="200" placeholder="ℹ️ Diese Seite wird von der Chorleitung gepflegt …"></textarea>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="saveNotice()">💾 Speichern</button>
+        <button class="btn btn-gray btn-sm" onclick="resetNotice()">↩ Standardtext</button>
+        <span id="notice-result" style="font-size:.8rem"></span>
+      </div>
+    </div>
+    </div>
+    <div class="konsole-pane" id="kp-push">
     <div class="konsole-section">
       <div class="konsole-title">🔔 Push-Benachrichtigungen</div>
       <div style="font-size:.83rem;color:#666;margin-bottom:10px">Bei welchen Ereignissen soll automatisch eine Push-Nachricht an alle Mitglieder gehen?</div>
@@ -464,6 +495,8 @@ input[type=checkbox]{accent-color:#2980b9}
       </div>
       <div id="push-subs-count" style="font-size:.78rem;color:#aaa;margin-top:8px"></div>
     </div>
+    </div>
+    <div class="konsole-pane" id="kp-senden">
     <div class="konsole-section" style="border-color:#e74c3c;background:#fff8f8">
       <div class="konsole-title">📢 Wichtige Nachricht an alle senden</div>
       <div style="font-size:.83rem;color:#666;margin-bottom:10px">Schreibt eine Push-Nachricht direkt an alle Mitglieder mit aktivierten Benachrichtigungen – z. B. „Probe fällt heute aus".</div>
@@ -474,10 +507,14 @@ input[type=checkbox]{accent-color:#2980b9}
         <span id="broadcast-result" style="font-size:.8rem"></span>
       </div>
     </div>
+    </div>
+    <div class="konsole-pane" id="kp-uebersicht">
     <div class="konsole-section">
       <div class="konsole-title">📊 Datenübersicht</div>
       <div id="konsole-stats" style="font-size:.85rem;color:#555;line-height:1.8"></div>
     </div>
+    </div>
+    <div class="konsole-pane" id="kp-daten">
     <div class="konsole-section">
       <div class="konsole-title">🗑️ Automatisches Löschen</div>
       <div style="font-size:.84rem;color:#666;margin-bottom:10px">Kommentare älter als:</div>
@@ -501,6 +538,8 @@ input[type=checkbox]{accent-color:#2980b9}
         <button class="btn btn-danger btn-sm" onclick="clearAllKommentare()">🗑️ Alle Kommentare löschen</button>
       </div>
     </div>
+    </div>
+    <div class="konsole-pane" id="kp-sicherheit">
     <div class="konsole-section">
       <div class="konsole-title">⏱️ Auto-Abmeldung</div>
       <div style="font-size:.84rem;color:#666;margin-bottom:8px">Benutzer nach Inaktivität abmelden:</div>
@@ -525,6 +564,8 @@ input[type=checkbox]{accent-color:#2980b9}
       </div>
       <div id="pw-result" style="font-size:.8rem;color:#27ae60;margin-top:6px"></div>
     </div>
+    </div>
+    <div class="konsole-pane" id="kp-benutzer">
     <div class="konsole-section">
       <div class="konsole-title">👥 Benutzerverwaltung</div>
       <div style="margin-bottom:10px">
@@ -534,6 +575,19 @@ input[type=checkbox]{accent-color:#2980b9}
       </div>
       <div id="user-verwaltung"></div>
     </div>
+    </div>
+    </div><!-- /konsole-content -->
+    <div class="konsole-menu">
+      <button class="km active" data-kp="bearbeiten" onclick="konsoleNav('bearbeiten')">✏️ Bearbeiten</button>
+      <button class="km" data-kp="app" onclick="konsoleNav('app')">📝 App-Hinweis</button>
+      <button class="km" data-kp="push" onclick="konsoleNav('push')">🔔 Benachrichtigungen</button>
+      <button class="km" data-kp="senden" onclick="konsoleNav('senden')">📢 Nachricht senden</button>
+      <button class="km" data-kp="uebersicht" onclick="konsoleNav('uebersicht')">📊 Übersicht</button>
+      <button class="km" data-kp="daten" onclick="konsoleNav('daten')">💾 Daten &amp; Backup</button>
+      <button class="km" data-kp="sicherheit" onclick="konsoleNav('sicherheit')">🔑 Sicherheit</button>
+      <button class="km" data-kp="benutzer" onclick="konsoleNav('benutzer')">👥 Benutzer</button>
+    </div>
+    </div><!-- /konsole-layout -->
   </div>
 </div>
 
@@ -1663,12 +1717,35 @@ async function submitKommentar(){
 }
 
 // ADMIN KONSOLE
+// Konsole: Menü-Navigation rechts
+function konsoleNav(id){
+  document.querySelectorAll('#p-konsole .konsole-pane').forEach(p=>p.classList.toggle('active', p.id==='kp-'+id));
+  document.querySelectorAll('#p-konsole .km').forEach(b=>b.classList.toggle('active', b.getAttribute('data-kp')===id));
+  const c=document.querySelector('.konsole-content'); if(c) c.scrollTop=0;
+}
+const NOTICE_DEFAULT='ℹ️ Diese Seite wird von der Chorleitung gepflegt und lädt Änderungen automatisch.';
+async function loadNotice(){
+  try{
+    const r=await fetch(DB+'/settings/notice.json'); const t=r.ok?await r.json():null;
+    const nb=document.getElementById('notice-bar'); if(nb) nb.textContent = t || NOTICE_DEFAULT;
+    const ta=document.getElementById('notice-text'); if(ta) ta.value = (t!=null?t:'');
+  }catch(e){}
+}
+async function saveNotice(){
+  const ta=document.getElementById('notice-text'); const t=ta.value.trim();
+  await fetch(DB+'/settings/notice.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(t||null)});
+  const nb=document.getElementById('notice-bar'); if(nb) nb.textContent = t || NOTICE_DEFAULT;
+  const r=document.getElementById('notice-result'); if(r){ r.style.color='#27ae60'; r.textContent='✅ Gespeichert'; setTimeout(()=>{if(r)r.textContent='';},2500); }
+}
+function resetNotice(){ const ta=document.getElementById('notice-text'); if(ta) ta.value=''; saveNotice(); }
+
 function renderKonsole(){
   // Restore saved settings
   const alMin = document.getElementById('auto-logout-min');
   if(alMin) alMin.value = localStorage.getItem('auto_logout_min')||'0';
 
   loadPushSettings();
+  loadNotice();
   renderUserVerwaltung();
 
   const el=document.getElementById('konsole-stats');if(!el)return;
@@ -2971,6 +3048,7 @@ async function loadAll(){
   await loadProbenstatus();
   await loadAnwesenheit();
   await loadBenachrichtigungen();
+  loadNotice();
   if(!window._notifPoll){ window._notifPoll=setInterval(loadBenachrichtigungen, 90000); }
   loadPushSettings();
   applyAdminMode();
