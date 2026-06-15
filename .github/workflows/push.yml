@@ -26,4 +26,6 @@ jobs:
         working-directory: push-sender
         env:
           VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
+          PUSH_BOT_EMAIL: ${{ secrets.PUSH_BOT_EMAIL }}
+          PUSH_BOT_PW: ${{ secrets.PUSH_BOT_PW }}
         run: node send-loop.js
