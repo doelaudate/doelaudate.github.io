@@ -837,6 +837,14 @@ input[type=checkbox]{accent-color:#2980b9}
 
 <script>
 const DB='https://chor-doelau-default-rtdb.europe-west1.firebasedatabase.app';
+// Datenbank-Zugriff mit Anmelde-Token (für geschützte Regeln). Vor Anmeldung normaler Zugriff.
+async function dbFetch(url, opts){
+  try{
+    const u = window._fbAuth && window._fbAuth.currentUser;
+    if(u){ const tok = await u.getIdToken(); url += (url.indexOf('?')>=0?'&':'?') + 'auth=' + tok; }
+  }catch(e){}
+  return fetch(url, opts);
+}
 const ADMIN_PW='Asf06217';
 const TYP_LABEL={"konzert": "🎵 Konzert", "fest": "🎪 Fest", "chorlager": "🏕️ Chorlager", "gottesdienst": "⛪ Gottesdienst", "probe": "🎹 Probe", "sonstiges": "📌 Sonstiges"};
 const TYP_COLOR={"konzert": "#2980b9", "fest": "#e67e22", "chorlager": "#27ae60", "gottesdienst": "#8e44ad", "probe": "#c0392b", "sonstiges": "#7f8c8d"};
@@ -987,7 +995,7 @@ async function setSongPdf(id, url){
   const song=D.seasons[p[0]].songs[p[1]];
   if(url) song.pdf=url; else delete song.pdf;
   // Gezielt nur dieses Feld schreiben (kein Überschreiben des ganzen Baums)
-  await fetch(DB+'/chorproben/seasons/'+p[0]+'/songs/'+p[1]+'/pdf.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(url||null)});
+  await dbFetch(DB+'/chorproben/seasons/'+p[0]+'/songs/'+p[1]+'/pdf.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(url||null)});
   renderLieder();
 }
 function editSongPdf(id){
@@ -1006,7 +1014,7 @@ async function setSongUebe(id, url){
   const p=songPos(id); if(!p) return;
   const song=D.seasons[p[0]].songs[p[1]];
   if(url) song.uebe=url; else delete song.uebe;
-  await fetch(DB+'/chorproben/seasons/'+p[0]+'/songs/'+p[1]+'/uebe.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(url||null)});
+  await dbFetch(DB+'/chorproben/seasons/'+p[0]+'/songs/'+p[1]+'/uebe.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(url||null)});
   renderLieder();
 }
 async function saveSongUebe(){
@@ -1093,7 +1101,7 @@ async function uploadHoer(voice){
     const p=songPos(id); const song=D.seasons[p[0]].songs[p[1]];
     if(!song.hoer) song.hoer={};
     song.hoer[voice]=url;
-    await fetch(DB+'/chorproben/seasons/'+p[0]+'/songs/'+p[1]+'/hoer/'+voice+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(url)});
+    await dbFetch(DB+'/chorproben/seasons/'+p[0]+'/songs/'+p[1]+'/hoer/'+voice+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(url)});
     _hActive=null; renderHoer(); renderLieder();
     setHoerStatus('✅ Aufnahme gespeichert!','#27ae60'); setTimeout(()=>setHoerStatus('',''),2500);
   }catch(e){ _hActive=null; renderHoer(); setHoerStatus('❌ Fehler: '+(e.message||e),'#e74c3c'); }
@@ -1104,7 +1112,7 @@ async function deleteHoer(voice){
   const id=document.getElementById('hoer-songid').value;
   const p=songPos(id); const song=D.seasons[p[0]].songs[p[1]];
   if(song.hoer) delete song.hoer[voice];
-  await fetch(DB+'/chorproben/seasons/'+p[0]+'/songs/'+p[1]+'/hoer/'+voice+'.json',{method:'DELETE'});
+  await dbFetch(DB+'/chorproben/seasons/'+p[0]+'/songs/'+p[1]+'/hoer/'+voice+'.json',{method:'DELETE'});
   try{ await window._fbStorage.ref('noten/hoer-'+id+'-'+voice).delete(); }catch(e){}
   renderHoer(); renderLieder();
 }
@@ -1184,10 +1192,10 @@ async function saveProbe(){
     if(!songIds.length){alert('Bitte mindestens ein Lied auswählen.');return;}
     if(!D.proben) D.proben=[];
     D.proben.push(entry);
-    await fetch(DB+'/chorproben.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seasons:D.seasons,proben:D.proben})});
+    await dbFetch(DB+'/chorproben.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seasons:D.seasons,proben:D.proben})});
   } else {
     probenplan.push(entry);
-    await fetch(DB+'/probenplan.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(probenplan)});
+    await dbFetch(DB+'/probenplan.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(probenplan)});
   }
   document.getElementById('probe-datum').value='';
   document.getElementById('probe-notiz').value='';
@@ -1201,17 +1209,17 @@ async function deleteProbe(id,geplant=false){
   if(!confirm('Probe löschen?'))return;
   if(geplant){
     probenplan=probenplan.filter(p=>p.id!==id);
-    await fetch(DB+'/probenplan.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(probenplan)});
+    await dbFetch(DB+'/probenplan.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(probenplan)});
   } else {
     D.proben=D.proben.filter(p=>p.id!==id);
-    await fetch(DB+'/chorproben.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seasons:D.seasons,proben:D.proben})});
+    await dbFetch(DB+'/chorproben.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seasons:D.seasons,proben:D.proben})});
   }
   renderProben(); renderLieder();
 }
 
 // ===== PROBEN-ANWESENHEIT (Ab-/Zusage für geplante Proben) =====
 async function loadProbenstatus(){
-  try{ const r=await fetch(DB+'/probenstatus.json'); probenstatus=(r.ok?await r.json():null)||{}; renderProben(); }catch(e){}
+  try{ const r=await dbFetch(DB+'/probenstatus.json'); probenstatus=(r.ok?await r.json():null)||{}; renderProben(); }catch(e){}
 }
 function buildProbeAttendance(p){
   const st=(probenstatus && probenstatus[p.id])||{};
@@ -1236,16 +1244,16 @@ async function setProbeStatus(probeId, status){
   const name=getUserVoteName()||'Unbekannt';
   const cur=(probenstatus[probeId] && probenstatus[probeId][uid])?probenstatus[probeId][uid].status:null;
   if(cur===status){
-    await fetch(DB+'/probenstatus/'+probeId+'/'+uid+'.json',{method:'DELETE'});
+    await dbFetch(DB+'/probenstatus/'+probeId+'/'+uid+'.json',{method:'DELETE'});
   } else {
-    await fetch(DB+'/probenstatus/'+probeId+'/'+uid+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,status})});
+    await dbFetch(DB+'/probenstatus/'+probeId+'/'+uid+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,status})});
   }
   await loadProbenstatus();
 }
 
 // ===== ANWESENHEIT (nur Admin) =====
 async function loadAnwesenheit(){
-  try{ const r=await fetch(DB+'/anwesenheit.json'); anwesenheit=(r.ok?await r.json():null)||{}; }catch(e){}
+  try{ const r=await dbFetch(DB+'/anwesenheit.json'); anwesenheit=(r.ok?await r.json():null)||{}; }catch(e){}
 }
 function allProbenSorted(){
   if(!D) return [];
@@ -1341,7 +1349,7 @@ async function saveAnwesenheit(){
   if(!anwWork){ return; }
   const fehltObj={}; anwWork.fehlt.forEach(k=>fehltObj[k]=true);
   const data={erfasst:new Date().toISOString(), fehlt:fehltObj};
-  await fetch(DB+'/anwesenheit/'+anwWork.probeId+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  await dbFetch(DB+'/anwesenheit/'+anwWork.probeId+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
   anwesenheit[anwWork.probeId]=data;
   const r=document.getElementById('anw-save-result'); if(r){ r.style.color='#27ae60'; r.textContent='✅ Gespeichert'; setTimeout(()=>{if(r)r.textContent='';},2500); }
   renderAnwStats();
@@ -1520,7 +1528,7 @@ async function abstimmen(id,antwort){
   }
   
   t.abstimmungen[name]=antwort;
-  await fetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
+  await dbFetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
   // Update just this vote row for instant feedback
   const vrow=document.getElementById('vrow-'+id);
   if(vrow) vrow.innerHTML=buildVoteRow(t);
@@ -1533,7 +1541,7 @@ async function addTermin(){
   if(!titel||!datum){alert('Bezeichnung und Datum erforderlich.');return;}
   const tUhr=document.getElementById('t-uhrzeit').value.trim();
   termine.push({id:uid(),titel,datum,datum_ende:document.getElementById('t-datum-ende').value||'',uhrzeit:tUhr,typ:document.getElementById('t-typ').value,beschreibung:document.getElementById('t-beschreibung').value.trim(),abstimmungen:{}});
-  await fetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
+  await dbFetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
   ['t-titel','t-datum','t-datum-ende','t-uhrzeit','t-beschreibung'].forEach(id=>document.getElementById(id).value='');
   renderTermine(); renderKalender();
   notifyPush('termin','🗓️ Neuer Termin: '+titel, fmt(datum)+(tUhr?' um '+tUhr+' Uhr':''));
@@ -1542,7 +1550,7 @@ async function addTermin(){
 async function deleteTermin(id){
   if(!confirm('Termin löschen?'))return;
   termine=termine.filter(t=>t.id!==id);
-  await fetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
+  await dbFetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
   renderTermine(); renderKalender();
 }
 
@@ -1676,7 +1684,7 @@ async function saveMitglied(){
 }
 
 async function saveMitgliederToFB(){
-  await fetch(DB+'/mitglieder.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(mitglieder)}).catch(e=>console.warn(e));
+  await dbFetch(DB+'/mitglieder.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(mitglieder)}).catch(e=>console.warn(e));
 }
 
 function closeModal(){document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('open'));}
@@ -1689,11 +1697,11 @@ function populateLiedSelect(){
   D.seasons.flatMap(s=>s.songs||[]).forEach(song=>{const opt=document.createElement('option');opt.value=song.name;opt.textContent='🎵 '+song.name;sel.appendChild(opt);});
 }
 async function loadKommentare(){
-  try{const res=await fetch(DB+'/kommentare.json');if(!res.ok)return;const d=await res.json();kommentare=d?Object.entries(d).map(([k,v])=>Object.assign({},v,{_key:k})).sort((a,b)=>b.datum.localeCompare(a.datum)):[];renderKommentare();const cnt=document.getElementById('k-count');if(cnt)cnt.textContent=kommentare.length||'';}catch(e){console.warn(e);}
+  try{const res=await dbFetch(DB+'/kommentare.json');if(!res.ok)return;const d=await res.json();kommentare=d?Object.entries(d).map(([k,v])=>Object.assign({},v,{_key:k})).sort((a,b)=>b.datum.localeCompare(a.datum)):[];renderKommentare();const cnt=document.getElementById('k-count');if(cnt)cnt.textContent=kommentare.length||'';}catch(e){console.warn(e);}
 }
 async function deleteKommentar(key){
   if(!confirm('Kommentar löschen?'))return;
-  await fetch(DB+'/kommentare/'+key+'.json',{method:'DELETE'}).catch(e=>console.warn(e));
+  await dbFetch(DB+'/kommentare/'+key+'.json',{method:'DELETE'}).catch(e=>console.warn(e));
   await loadKommentare();
 }
 function renderKommentare(){
@@ -1712,7 +1720,7 @@ async function submitKommentar(){
   if(!name){alert('Bitte deinen Namen eingeben.');return;}
   if(!text){alert('Bitte einen Kommentar schreiben.');return;}
   const btn=document.getElementById('k-btn');btn.textContent='⏳';btn.disabled=true;
-  try{await fetch(DB+'/kommentare.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,text,lied:lied||'',datum:new Date().toISOString()})});document.getElementById('k-text').value='';document.getElementById('k-lied').value='';await loadKommentare();notifyPush('kommentar','💬 Neuer Kommentar von '+name,(lied?'['+lied+'] ':'')+text);btn.textContent='✅ Gesendet!';setTimeout(()=>{btn.textContent='💬 Abschicken';btn.disabled=false;},2000);}
+  try{await dbFetch(DB+'/kommentare.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,text,lied:lied||'',datum:new Date().toISOString()})});document.getElementById('k-text').value='';document.getElementById('k-lied').value='';await loadKommentare();notifyPush('kommentar','💬 Neuer Kommentar von '+name,(lied?'['+lied+'] ':'')+text);btn.textContent='✅ Gesendet!';setTimeout(()=>{btn.textContent='💬 Abschicken';btn.disabled=false;},2000);}
   catch(e){alert('Fehler: '+e.message);btn.textContent='💬 Abschicken';btn.disabled=false;}
 }
 
@@ -1726,14 +1734,14 @@ function konsoleNav(id){
 const NOTICE_DEFAULT='ℹ️ Diese Seite wird von der Chorleitung gepflegt und lädt Änderungen automatisch.';
 async function loadNotice(){
   try{
-    const r=await fetch(DB+'/settings/notice.json'); const t=r.ok?await r.json():null;
+    const r=await dbFetch(DB+'/settings/notice.json'); const t=r.ok?await r.json():null;
     const nb=document.getElementById('notice-bar'); if(nb) nb.textContent = t || NOTICE_DEFAULT;
     const ta=document.getElementById('notice-text'); if(ta) ta.value = (t!=null?t:'');
   }catch(e){}
 }
 async function saveNotice(){
   const ta=document.getElementById('notice-text'); const t=ta.value.trim();
-  await fetch(DB+'/settings/notice.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(t||null)});
+  await dbFetch(DB+'/settings/notice.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(t||null)});
   const nb=document.getElementById('notice-bar'); if(nb) nb.textContent = t || NOTICE_DEFAULT;
   const r=document.getElementById('notice-result'); if(r){ r.style.color='#27ae60'; r.textContent='✅ Gespeichert'; setTimeout(()=>{if(r)r.textContent='';},2500); }
 }
@@ -1769,11 +1777,11 @@ function applyAutoDelete(){
   const before=kommentare.length;
   const toDelete=kommentare.filter(k=>new Date(k.datum)<cutoff);
   if(!toDelete.length){document.getElementById('auto-delete-result').textContent='Keine alten Kommentare gefunden.';return;}
-  Promise.all(toDelete.map(k=>k._key?fetch(DB+'/kommentare/'+k._key+'.json',{method:'DELETE'}):Promise.resolve())).then(()=>{loadKommentare();document.getElementById('auto-delete-result').textContent=`${toDelete.length} Kommentar(e) gelöscht.`;renderKonsole();});
+  Promise.all(toDelete.map(k=>k._key?dbFetch(DB+'/kommentare/'+k._key+'.json',{method:'DELETE'}):Promise.resolve())).then(()=>{loadKommentare();document.getElementById('auto-delete-result').textContent=`${toDelete.length} Kommentar(e) gelöscht.`;renderKonsole();});
 }
 async function clearAllKommentare(){
   if(!confirm('ALLE Kommentare löschen? Das kann nicht rückgängig gemacht werden!'))return;
-  await fetch(DB+'/kommentare.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:'null'}).catch(e=>console.warn(e));
+  await dbFetch(DB+'/kommentare.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:'null'}).catch(e=>console.warn(e));
   kommentare=[];renderKommentare();renderKonsole();
 }
 function exportData(){
@@ -1810,7 +1818,7 @@ function onAuthChange(user) {
 
 async function loadUserProfile(uid, email) {
   try {
-    const res = await fetch(DB+'/userprofiles/'+uid+'.json');
+    const res = await dbFetch(DB+'/userprofiles/'+uid+'.json');
     const profile = res.ok ? await res.json() : null;
     currentUserProfile = profile;
     const displayName = profile?.anzeigename || profile?.username || email.split('@')[0];
@@ -1871,7 +1879,7 @@ async function doLogin() {
   let email = input;
   if(!input.includes('@')) {
     try {
-      const res = await fetch(DB+'/usernames/'+input.toLowerCase()+'.json');
+      const res = await dbFetch(DB+'/usernames/'+input.toLowerCase()+'.json');
       if(res.ok) {
         const data = await res.json();
         if(data && data.email) email = data.email;
@@ -1929,9 +1937,9 @@ async function doRegister() {
     
     // Store profile
     const profile = { uid, username, email, vorname, nachname, geburtstag, isAdmin:false, erstellt:new Date().toISOString() };
-    await fetch(DB+'/userprofiles/'+uid+'.json', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(profile)});
+    await dbFetch(DB+'/userprofiles/'+uid+'.json', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(profile)});
     // Store username lookup
-    await fetch(DB+'/usernames/'+username.toLowerCase()+'.json', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,uid})});
+    await dbFetch(DB+'/usernames/'+username.toLowerCase()+'.json', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,uid})});
     
     // onAuthChange handles the rest
   } catch(e) {
@@ -1968,7 +1976,7 @@ async function showResetPw() {
   // If no @ → treat as username, look up email in DB
   if(!input.includes('@')) {
     try {
-      const r = await fetch(DB + '/usernames/' + input.toLowerCase() + '.json');
+      const r = await dbFetch(DB + '/usernames/' + input.toLowerCase() + '.json');
       const d = r.ok ? await r.json() : null;
       if(!d?.email) { errEl.textContent = 'Benutzername nicht gefunden.'; return; }
       email = d.email;
@@ -2060,12 +2068,12 @@ async function createUserAccount(mitglied) {
       erstellt: new Date().toISOString()
     };
     
-    await fetch(DB+'/userprofiles/'+uid+'.json', {
+    await dbFetch(DB+'/userprofiles/'+uid+'.json', {
       method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(profile)
     });
     
     // Store username->email mapping
-    await fetch(DB+'/usernames/'+username.toLowerCase()+'.json', {
+    await dbFetch(DB+'/usernames/'+username.toLowerCase()+'.json', {
       method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email, uid})
     });
     
@@ -2077,7 +2085,7 @@ async function createUserAccount(mitglied) {
 }
 
 async function loadUserProfiles() {
-  const res = await fetch(DB+'/userprofiles.json');
+  const res = await dbFetch(DB+'/userprofiles.json');
   if(!res.ok) return {};
   return await res.json() || {};
 }
@@ -2142,8 +2150,8 @@ async function renderUserVerwaltung() {
 async function saveUserPerms(uid) {
   const isAdmin = document.getElementById('perm-'+uid+'-admin')?.checked||false;
   const perms = ['proben','termine','mitglieder','kommentare','lieder'].filter(p=>document.getElementById('perm-'+uid+'-'+p)?.checked);
-  await fetch(DB+'/userprofiles/'+uid+'/isAdmin.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(isAdmin)});
-  await fetch(DB+'/userprofiles/'+uid+'/permissions.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(perms)});
+  await dbFetch(DB+'/userprofiles/'+uid+'/isAdmin.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(isAdmin)});
+  await dbFetch(DB+'/userprofiles/'+uid+'/permissions.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(perms)});
   const res = document.getElementById('perm-result-'+uid);
   if(res){res.style.color='#27ae60';res.textContent='✅ Gespeichert!';setTimeout(()=>{if(res)res.textContent='';},2500);}
   renderUserVerwaltung();
@@ -2151,8 +2159,8 @@ async function saveUserPerms(uid) {
 
 async function deleteUserAccount(uid, username) {
   if(!confirm('Nutzerkonto wirklich löschen?')) return;
-  await fetch(DB+'/userprofiles/'+uid+'.json', {method:'DELETE'});
-  await fetch(DB+'/usernames/'+username.toLowerCase()+'.json', {method:'DELETE'});
+  await dbFetch(DB+'/userprofiles/'+uid+'.json', {method:'DELETE'});
+  await dbFetch(DB+'/usernames/'+username.toLowerCase()+'.json', {method:'DELETE'});
   renderUserVerwaltung();
 }
 
@@ -2294,7 +2302,7 @@ function exportAlleTermineICS(){
 // ===== LIEDWÜNSCHE =====
 async function loadLiedwuensche(){
   try{
-    const res=await fetch(DB+'/liedwuensche.json');
+    const res=await dbFetch(DB+'/liedwuensche.json');
     if(!res.ok)return;
     const d=await res.json();
     liedwuensche=d?Object.entries(d).map(([k,v])=>Object.assign({},v,{_key:k})).sort((a,b)=>b.datum.localeCompare(a.datum)):[];
@@ -2312,7 +2320,7 @@ async function submitLiedwunsch(){
   if(!titel){res.style.color='#e74c3c';res.textContent='❌ Bitte Liedtitel eingeben.';return;}
   const btn=event.target; btn.disabled=true;
   try{
-    await fetch(DB+'/liedwuensche.json',{method:'POST',headers:{'Content-Type':'application/json'},
+    await dbFetch(DB+'/liedwuensche.json',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({titel,interpret,chorsatz,saison,name,datum:new Date().toISOString(),erledigt:false})});
     document.getElementById('lw-titel').value='';
     document.getElementById('lw-interpret').value='';
@@ -2327,14 +2335,14 @@ async function submitLiedwunsch(){
 
 async function toggleLiedwunschErledigt(key, current){
   if(!hasPermission('lieder')) return;
-  await fetch(DB+'/liedwuensche/'+key+'/erledigt.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(!current)});
+  await dbFetch(DB+'/liedwuensche/'+key+'/erledigt.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(!current)});
   await loadLiedwuensche();
 }
 
 async function deleteLiedwunsch(key){
   if(!hasPermission('lieder')) return;
   if(!confirm('Liedwunsch löschen?'))return;
-  await fetch(DB+'/liedwuensche/'+key+'.json',{method:'DELETE'});
+  await dbFetch(DB+'/liedwuensche/'+key+'.json',{method:'DELETE'});
   await loadLiedwuensche();
 }
 
@@ -2408,19 +2416,19 @@ async function saveLiedwunschEdit(){
   const interpret=document.getElementById('elw-interpret').value.trim();
   const saison=document.getElementById('elw-saison').value;
   const chorsatz=document.getElementById('elw-chorsatz').checked;
-  await fetch(DB+'/liedwuensche/'+key+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({titel,interpret,saison,chorsatz})});
+  await dbFetch(DB+'/liedwuensche/'+key+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({titel,interpret,saison,chorsatz})});
   closeModal();
   await loadLiedwuensche();
 }
 
 // ===== BENACHRICHTIGUNGEN (Glocke / Verlauf) =====
 async function logNotification(title, body){
-  try{ await fetch(DB+'/benachrichtigungen.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title, body, ts:Date.now()})}); }
+  try{ await dbFetch(DB+'/benachrichtigungen.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title, body, ts:Date.now()})}); }
   catch(e){ console.warn('Log-Benachrichtigung', e); }
 }
 async function loadBenachrichtigungen(){
   try{
-    const r=await fetch(DB+'/benachrichtigungen.json');
+    const r=await dbFetch(DB+'/benachrichtigungen.json');
     const d=r.ok?await r.json():null;
     benachrichtigungen=d?Object.entries(d).map(([k,v])=>Object.assign({},v,{_key:k})).sort((a,b)=>(b.ts||0)-(a.ts||0)):[];
     updateBellBadge();
@@ -2469,7 +2477,7 @@ async function openNotifications(){
 // ===== PLAKATE =====
 async function loadPlakate(){
   try{
-    const res=await fetch(DB+'/plakate.json');
+    const res=await dbFetch(DB+'/plakate.json');
     if(!res.ok)return;
     const d=await res.json();
     plakate=d?Object.entries(d).map(([k,v])=>Object.assign({},v,{_key:k})).sort((a,b)=>(a.ort||'').localeCompare(b.ort||'')):[];
@@ -2482,26 +2490,26 @@ async function addPlakat(){
   const anzahl=document.getElementById('pl-anzahl').value.trim();
   const adresse=document.getElementById('pl-adresse').value.trim();
   const notiz=document.getElementById('pl-notiz').value.trim();
-  await fetch(DB+'/plakate.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ort,anzahl,adresse,notiz,von:'',erstellt:new Date().toISOString()})});
+  await dbFetch(DB+'/plakate.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ort,anzahl,adresse,notiz,von:'',erstellt:new Date().toISOString()})});
   ['pl-ort','pl-anzahl','pl-adresse','pl-notiz'].forEach(id=>document.getElementById(id).value='');
   await loadPlakate();
 }
 async function deletePlakat(key){
   if(!uiEdit('termine')) return;
   if(!confirm('Standort löschen?'))return;
-  await fetch(DB+'/plakate/'+key+'.json',{method:'DELETE'});
+  await dbFetch(DB+'/plakate/'+key+'.json',{method:'DELETE'});
   await loadPlakate();
 }
 async function claimPlakat(key){
   const inp=document.getElementById('pl-name-'+key);
   const name=(inp&&inp.value.trim())||getUserVoteName()||'';
   if(!name){alert('Bitte deinen Namen eingeben.');inp&&inp.focus();return;}
-  await fetch(DB+'/plakate/'+key+'/von.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(name)});
+  await dbFetch(DB+'/plakate/'+key+'/von.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(name)});
   await loadPlakate();
 }
 async function releasePlakat(key){
   if(!confirm('Eintrag wirklich entfernen?'))return;
-  await fetch(DB+'/plakate/'+key+'/von.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify('')});
+  await dbFetch(DB+'/plakate/'+key+'/von.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify('')});
   await loadPlakate();
 }
 function renderPlakate(){
@@ -2686,7 +2694,7 @@ async function saveSetliste(){
   // Get custom entries
   const customs = [...document.querySelectorAll('#setliste-custom-list span')].map(s=>s.textContent.replace('✏️ ','').trim()).filter(Boolean);
   t.setliste = [...checked, ...customs];
-  await fetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)});
+  await dbFetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)});
   closeModal();
   renderTermine();
 }
@@ -2715,7 +2723,7 @@ async function saveHausaufgaben(){
     if(val) newHw[g] = val;
   });
   p.hausaufgaben = newHw;
-  await fetch(DB+'/chorproben.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seasons:D.seasons,proben:D.proben})});
+  await dbFetch(DB+'/chorproben.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seasons:D.seasons,proben:D.proben})});
   closeModal();
   renderProben();
 }
@@ -2725,7 +2733,7 @@ let _editUserUid = null;
 let _editUserData = null;
 async function openEditUser(uid){
   _editUserUid = uid;
-  const res = await fetch(DB+'/userprofiles/'+uid+'.json');
+  const res = await dbFetch(DB+'/userprofiles/'+uid+'.json');
   const u = await res.json();
   if(!u) return;
   _editUserData = u;
@@ -2759,13 +2767,13 @@ async function saveEditUser(){
   // Update username if changed
   const oldUsername = _editUserData?.username;
   if(newUsername !== oldUsername){
-    await fetch(DB+'/userprofiles/'+uid+'/username.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newUsername)});
-    await fetch(DB+'/usernames/'+newUsername.toLowerCase()+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:_editUserData?.email,uid})});
-    if(oldUsername) await fetch(DB+'/usernames/'+oldUsername.toLowerCase()+'.json',{method:'DELETE'});
+    await dbFetch(DB+'/userprofiles/'+uid+'/username.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newUsername)});
+    await dbFetch(DB+'/usernames/'+newUsername.toLowerCase()+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:_editUserData?.email,uid})});
+    if(oldUsername) await dbFetch(DB+'/usernames/'+oldUsername.toLowerCase()+'.json',{method:'DELETE'});
   }
   
   // Update permissions
-  await fetch(DB+'/userprofiles/'+uid+'/permissions.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(perms)});
+  await dbFetch(DB+'/userprofiles/'+uid+'/permissions.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(perms)});
   
   closeModal();
   renderUserVerwaltung();
@@ -2853,7 +2861,7 @@ async function saveAnzeigename(){
   const uid = currentUser?.uid;
   if(!uid) return;
   try{
-    await fetch(DB+'/userprofiles/'+uid+'/anzeigename.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(val||null)});
+    await dbFetch(DB+'/userprofiles/'+uid+'/anzeigename.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(val||null)});
     if(currentUserProfile) currentUserProfile.anzeigename = val||null;
     // Update header chip
     const chip = document.getElementById('user-display');
@@ -2925,14 +2933,14 @@ async function togglePush(){
     let sub=await reg.pushManager.getSubscription();
     if(sub){
       try{ await sub.unsubscribe(); }catch(e){}
-      await fetch(DB+'/pushsubs/'+currentUser.uid+'.json',{method:'DELETE'});
+      await dbFetch(DB+'/pushsubs/'+currentUser.uid+'.json',{method:'DELETE'});
       res.style.color='#888'; res.textContent='🔕 Benachrichtigungen deaktiviert.';
       renderPushStatus(); return;
     }
     const perm=await Notification.requestPermission();
     if(perm!=='granted'){ res.style.color='#e74c3c'; res.textContent='❌ Erlaubnis nicht erteilt. Bitte im Browser für diese Seite freigeben.'; return; }
     sub=await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: urlB64ToUint8(VAPID_PUBLIC) });
-    await fetch(DB+'/pushsubs/'+currentUser.uid+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ sub: sub.toJSON(), name:(getUserVoteName()||''), ts:Date.now() })});
+    await dbFetch(DB+'/pushsubs/'+currentUser.uid+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ sub: sub.toJSON(), name:(getUserVoteName()||''), ts:Date.now() })});
     res.style.color='#27ae60'; res.textContent='✅ Benachrichtigungen aktiviert!';
     // Sofortige lokale Bestätigung – zeigt direkt, dass Benachrichtigungen ankommen
     try{ await reg.showNotification('🎵 Chor Dölau', { body:'✅ Benachrichtigungen sind jetzt aktiviert!', icon:'/icon-192.png', badge:'/icon-192.png', tag:'welcome' }); }catch(e){}
@@ -2942,16 +2950,16 @@ async function togglePush(){
 
 async function loadPushSettings(){
   try{
-    const r=await fetch(DB+'/settings/push.json'); pushSettings=(r.ok?await r.json():null)||{};
+    const r=await dbFetch(DB+'/settings/push.json'); pushSettings=(r.ok?await r.json():null)||{};
     const m={termin:'push-ev-termin',probe:'push-ev-probe',liedwunsch:'push-ev-liedwunsch',kommentar:'push-ev-kommentar'};
     for(const k in m){ const el=document.getElementById(m[k]); if(el) el.checked=!!pushSettings[k]; }
     const c=document.getElementById('push-subs-count');
-    if(c){ const sr=await fetch(DB+'/pushsubs.json'); const so=sr.ok?await sr.json():null; c.textContent='📱 '+(so?Object.keys(so).length:0)+' Gerät(e) abonniert'; }
+    if(c){ const sr=await dbFetch(DB+'/pushsubs.json'); const so=sr.ok?await sr.json():null; c.textContent='📱 '+(so?Object.keys(so).length:0)+' Gerät(e) abonniert'; }
   }catch(e){}
 }
 async function savePushSettings(){
   const s={ termin:document.getElementById('push-ev-termin').checked, probe:document.getElementById('push-ev-probe').checked, liedwunsch:document.getElementById('push-ev-liedwunsch').checked, kommentar:document.getElementById('push-ev-kommentar').checked };
-  await fetch(DB+'/settings/push.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(s)});
+  await dbFetch(DB+'/settings/push.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(s)});
   pushSettings=s;
   const r=document.getElementById('push-settings-result'); r.style.color='#27ae60'; r.textContent='✅ Gespeichert'; setTimeout(()=>{if(r)r.textContent='';},2000);
 }
@@ -2959,7 +2967,7 @@ async function sendTestPush(){
   const r=document.getElementById('push-settings-result');
   r.style.color='#2980b9'; r.textContent='⏳ Test wird verschickt…';
   try{
-    await fetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'Chor Dölau', body:'🔔 Test-Benachrichtigung', ts:Date.now()})});
+    await dbFetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'Chor Dölau', body:'🔔 Test-Benachrichtigung', ts:Date.now()})});
     r.style.color='#27ae60'; r.textContent='✅ Test gesendet – kommt in 1–5 Min. auf abonnierten Geräten an.';
     setTimeout(()=>{if(r)r.textContent='';},7000);
   }catch(e){ r.style.color='#e74c3c'; r.textContent='❌ Fehler'; }
@@ -2978,7 +2986,7 @@ async function sendBroadcast(){
   r.style.color='#2980b9'; r.textContent='⏳ wird gesendet…';
   try{
     const bTitel=titel||'📢 Chor Dölau';
-    await fetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:bTitel, body:text, ts:Date.now()})});
+    await dbFetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:bTitel, body:text, ts:Date.now()})});
     logNotification(bTitel, text);
     titelEl.value=''; textEl.value='';
     r.style.color='#27ae60'; r.textContent='✅ Gesendet – kommt gleich bei allen an.';
@@ -2989,7 +2997,7 @@ async function sendBroadcast(){
 async function notifyPush(eventKey, title, body){
   logNotification(title, body);           // immer im Glocken-Verlauf anzeigen
   if(!pushSettings || !pushSettings[eventKey]) return;   // Push nur wenn aktiviert
-  try{ await fetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title, body, ts:Date.now()})}); }
+  try{ await dbFetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title, body, ts:Date.now()})}); }
   catch(e){ console.warn('Push-Queue fehlgeschlagen', e); }
 }
 
@@ -3027,13 +3035,13 @@ const _origRenderKonsole = typeof renderKonsole !== 'undefined' ? renderKonsole 
 // LOAD ALL
 async function loadAll(){
   try{
-    const r1=await fetch(DB+'/chorproben.json');
+    const r1=await dbFetch(DB+'/chorproben.json');
     if(r1.ok){const d=await r1.json();if(d&&d.seasons){D=d;D.seasons=D.seasons.map(s=>Object.assign({},s,{songs:Array.isArray(s.songs)?s.songs:[]}));D.proben=Array.isArray(D.proben)?D.proben:[];}}
-    const r2=await fetch(DB+'/termine.json');
+    const r2=await dbFetch(DB+'/termine.json');
     if(r2.ok){const d=await r2.json();if(d&&Array.isArray(d)&&d.length)termine=d;else termine=INIT_TERMINE;}else termine=INIT_TERMINE;
-    const r3=await fetch(DB+'/probenplan.json');
+    const r3=await dbFetch(DB+'/probenplan.json');
     if(r3.ok){const d=await r3.json();if(d&&Array.isArray(d))probenplan=d;}
-    const r4=await fetch(DB+'/mitglieder.json');
+    const r4=await dbFetch(DB+'/mitglieder.json');
     if(r4.ok){const d=await r4.json();if(d&&Array.isArray(d)&&d.length)mitglieder=d;else mitglieder=INIT_MITGLIEDER;}else mitglieder=INIT_MITGLIEDER;
   }catch(e){termine=INIT_TERMINE;mitglieder=INIT_MITGLIEDER;console.warn(e);}
   const d=new Date();
@@ -3054,9 +3062,9 @@ async function loadAll(){
   applyAdminMode();
   // Auto-delete on load
   const autoDays=parseInt(localStorage.getItem('auto_delete_days')||'0');
-  if(autoDays>0&&kommentare.length){const cutoff=new Date();cutoff.setDate(cutoff.getDate()-autoDays);const toDelete=kommentare.filter(k=>new Date(k.datum)<cutoff);if(toDelete.length)Promise.all(toDelete.map(k=>k._key?fetch(DB+'/kommentare/'+k._key+'.json',{method:'DELETE'}):Promise.resolve())).then(()=>loadKommentare());}
+  if(autoDays>0&&kommentare.length){const cutoff=new Date();cutoff.setDate(cutoff.getDate()-autoDays);const toDelete=kommentare.filter(k=>new Date(k.datum)<cutoff);if(toDelete.length)Promise.all(toDelete.map(k=>k._key?dbFetch(DB+'/kommentare/'+k._key+'.json',{method:'DELETE'}):Promise.resolve())).then(()=>loadKommentare());}
   // Save initial Mitglieder to Firebase if empty
-  if(mitglieder===INIT_MITGLIEDER){fetch(DB+'/mitglieder.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(INIT_MITGLIEDER)}).catch(e=>console.warn(e));}
+  if(mitglieder===INIT_MITGLIEDER){dbFetch(DB+'/mitglieder.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(INIT_MITGLIEDER)}).catch(e=>console.warn(e));}
 }
 
 // loadAll is called by onAuthChange when user logs in
