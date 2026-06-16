@@ -132,6 +132,16 @@ textarea:focus{outline:none;border-color:#2980b9}
 .modal h3{font-size:1rem;margin-bottom:16px}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 input[type=checkbox]{accent-color:#2980b9}
+/* Schriftgröße (Barrierefreiheit) */
+html.fs-gross{font-size:18px}
+html.fs-sehrgross{font-size:20.5px}
+/* Ladeanzeige */
+#loading-overlay{position:fixed;inset:0;background:#f0f2f5;z-index:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.spinner{width:42px;height:42px;border:4px solid #d6e0ea;border-top-color:#2980b9;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Suche */
+.search-result{display:flex;align-items:center;gap:10px;padding:9px 11px;border-bottom:1px solid #f0f0f0;cursor:pointer;border-radius:6px}
+.search-result:hover{background:#f4f6f8}
 
 /* AUTH */
 .login-overlay{position:fixed;inset:0;background:#2c3e50;z-index:1000;display:flex;align-items:center;justify-content:center}
@@ -181,6 +191,13 @@ input[type=checkbox]{accent-color:#2980b9}
 <body>
 
 
+<!-- LADEANZEIGE -->
+<div id="loading-overlay" style="display:none">
+  <img src="logo.png" alt="Dö Laudate" style="width:150px;height:auto;opacity:.92">
+  <div class="spinner"></div>
+  <div style="color:#888;font-size:.85rem">Wird geladen…</div>
+</div>
+
 <!-- LOGIN OVERLAY -->
 <div id="login-overlay" class="login-overlay">
   <div class="login-box">
@@ -221,6 +238,7 @@ input[type=checkbox]{accent-color:#2980b9}
   </div>
   <div class="header-right">
     <span id="admin-badge" class="admin-badge" style="display:none">🔑 Admin</span>
+    <button id="search-btn" onclick="openSearch()" title="Suche" style="display:none;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:8px;padding:3px 9px;cursor:pointer;font-size:1.05rem;line-height:1.4">🔍</button>
     <button id="bell-btn" onclick="openNotifications()" title="Benachrichtigungen" style="display:none;position:relative;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:8px;padding:3px 9px;cursor:pointer;font-size:1.05rem;line-height:1.4">
       🔔<span id="bell-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:#e74c3c;color:white;font-size:.6rem;font-weight:700;min-width:16px;height:16px;border-radius:8px;padding:0 4px;line-height:16px;text-align:center">0</span>
     </button>
@@ -643,6 +661,16 @@ input[type=checkbox]{accent-color:#2980b9}
   </div>
 
   <div class="card" style="max-width:480px">
+    <div class="card-title">🔤 Schriftgröße</div>
+    <div style="font-size:.83rem;color:#666;margin-bottom:10px">Macht die ganze App größer und besser lesbar.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="fs-btn btn btn-sm" data-fs="normal" onclick="setFontSize('normal')">Normal</button>
+      <button class="fs-btn btn btn-sm" data-fs="gross" onclick="setFontSize('gross')">Groß</button>
+      <button class="fs-btn btn btn-sm" data-fs="sehrgross" onclick="setFontSize('sehrgross')">Sehr groß</button>
+    </div>
+  </div>
+
+  <div class="card" style="max-width:480px">
     <div class="card-title">🔔 Push-Benachrichtigungen</div>
     <div style="font-size:.84rem;color:#666;margin-bottom:12px;line-height:1.5">
       Lass dich auf diesem Gerät benachrichtigen, wenn es neue Termine, Proben oder Liedwünsche gibt – auch wenn die App geschlossen ist.
@@ -657,6 +685,15 @@ input[type=checkbox]{accent-color:#2980b9}
 </div>
 
 </div><!-- /content -->
+
+<div class="modal-overlay" id="modal-search">
+  <div class="modal">
+    <h3>🔍 Suche</h3>
+    <input type="text" id="search-input" class="fl-input" placeholder="Lied, Mitglied oder Termin…" oninput="runSearch()" autocomplete="off">
+    <div id="search-results" style="max-height:60vh;overflow-y:auto;margin-top:10px"></div>
+    <div class="modal-actions"><button class="btn btn-gray" onclick="closeModal()">Schließen</button></div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="modal-notifications">
   <div class="modal">
@@ -854,6 +891,41 @@ async function dbFetch(url, opts){
   }catch(e){}
   return fetch(url, opts);
 }
+
+// ===== BEDIENUNG: Schriftgröße, Suche, Ladeanzeige =====
+function applyFontSize(){
+  const fs=localStorage.getItem('chor_fontsize')||'normal';
+  document.documentElement.classList.remove('fs-gross','fs-sehrgross');
+  if(fs==='gross') document.documentElement.classList.add('fs-gross');
+  else if(fs==='sehrgross') document.documentElement.classList.add('fs-sehrgross');
+  document.querySelectorAll('.fs-btn').forEach(b=>{ const on=b.getAttribute('data-fs')===fs; b.style.background=on?'#2980b9':'#ecf0f1'; b.style.color=on?'#fff':'#555'; });
+}
+function setFontSize(fs){ localStorage.setItem('chor_fontsize',fs); applyFontSize(); }
+
+function showPageByName(id){
+  const tab=[...document.querySelectorAll('.mtab')].find(t=>{const o=t.getAttribute('onclick');return o&&o.indexOf("showPage('"+id+"'")>=0;});
+  showPage(id, tab||null);
+}
+function openSearch(){
+  const inp=document.getElementById('search-input'); if(inp) inp.value='';
+  const r=document.getElementById('search-results'); if(r) r.innerHTML='<div style="color:#aaa;font-size:.85rem;padding:10px">Tippe einen Suchbegriff ein…</div>';
+  document.getElementById('modal-search').classList.add('open');
+  setTimeout(()=>{ if(inp) inp.focus(); },120);
+}
+function runSearch(){
+  const q=(document.getElementById('search-input').value||'').trim().toLowerCase();
+  const el=document.getElementById('search-results'); if(!el) return;
+  if(q.length<2){ el.innerHTML='<div style="color:#aaa;font-size:.85rem;padding:10px">Mindestens 2 Zeichen…</div>'; return; }
+  const res=[];
+  if(D) D.seasons.forEach(s=>(s.songs||[]).forEach(song=>{ if((song.name||'').toLowerCase().includes(q)) res.push({icon:'🎵',label:song.name,sub:s.name,go:()=>{closeModal();showPageByName('lieder');}}); }));
+  mitglieder.forEach(m=>{ const n=memberName(m); if(n.toLowerCase().includes(q)||(m.email||'').toLowerCase().includes(q)||(m.telefon||'').includes(q)||(m.handy||'').includes(q)) res.push({icon:'👤',label:n,sub:[m.stimme,(m.handy||m.telefon)].filter(Boolean).join(' · '),go:()=>{closeModal();showPageByName('mitglieder');const s=document.getElementById('m-search');if(s){s.value=n;renderMitglieder();}}}); });
+  termine.forEach(t=>{ if((t.titel||'').toLowerCase().includes(q)) res.push({icon:'📆',label:t.titel,sub:fmt(t.datum),go:()=>{closeModal();showPageByName('termine');}}); });
+  if(!res.length){ el.innerHTML='<div style="color:#aaa;font-size:.85rem;padding:10px">Nichts gefunden.</div>'; return; }
+  el.innerHTML='';
+  res.slice(0,40).forEach(r=>{ const d=document.createElement('div'); d.className='search-result'; d.innerHTML=`<span style="font-size:1.15rem">${r.icon}</span><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:.88rem">${esc(r.label)}</div>${r.sub?`<div style="font-size:.76rem;color:#888">${esc(r.sub)}</div>`:''}</div>`; d.onclick=r.go; el.appendChild(d); });
+}
+function showLoading(on){ const lo=document.getElementById('loading-overlay'); if(lo) lo.style.display=on?'flex':'none'; }
+applyFontSize();
 const ADMIN_PW='Asf06217';
 const TYP_LABEL={"konzert": "🎵 Konzert", "fest": "🎪 Fest", "chorlager": "🏕️ Chorlager", "gottesdienst": "⛪ Gottesdienst", "probe": "🎹 Probe", "sonstiges": "📌 Sonstiges"};
 const TYP_COLOR={"konzert": "#2980b9", "fest": "#e67e22", "chorlager": "#27ae60", "gottesdienst": "#8e44ad", "probe": "#c0392b", "sonstiges": "#7f8c8d"};
@@ -2880,6 +2952,7 @@ function renderEinstellungen(){
   if(pw1) pw1.value='';
   if(pw2) pw2.value='';
   const pr = document.getElementById('push-result'); if(pr) pr.textContent='';
+  applyFontSize();
   renderPushStatus();
   // Bearbeiten-Modus-Karte nur für Bearbeiter (Admin oder mit Berechtigung) zeigen
   const emCard = document.getElementById('editmode-card');
@@ -3069,6 +3142,7 @@ const _origRenderKonsole = typeof renderKonsole !== 'undefined' ? renderKonsole 
 
 // LOAD ALL
 async function loadAll(){
+  showLoading(true);
   try{
     const [r1,r2,r3,r4]=await Promise.all([
       dbFetch(DB+'/chorproben.json'),
@@ -3099,6 +3173,9 @@ async function loadAll(){
   if(!window._notifPoll){ window._notifPoll=setInterval(loadBenachrichtigungen, 90000); }
   loadPushSettings();
   applyAdminMode();
+  applyFontSize();
+  const _sb=document.getElementById('search-btn'); if(_sb) _sb.style.display='block';
+  showLoading(false);
   // Auto-delete on load
   const autoDays=parseInt(localStorage.getItem('auto_delete_days')||'0');
   if(autoDays>0&&kommentare.length){const cutoff=new Date();cutoff.setDate(cutoff.getDate()-autoDays);const toDelete=kommentare.filter(k=>new Date(k.datum)<cutoff);if(toDelete.length)Promise.all(toDelete.map(k=>k._key?dbFetch(DB+'/kommentare/'+k._key+'.json',{method:'DELETE'}):Promise.resolve())).then(()=>loadKommentare());}
