@@ -576,6 +576,14 @@ input[type=checkbox]{accent-color:#2980b9}
       <div id="user-verwaltung"></div>
     </div>
     </div>
+    <div class="konsole-pane" id="kp-stimmen">
+    <div class="konsole-section">
+      <div class="konsole-title">🎚️ Stimmen zuweisen (S/A/T/B)</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:8px">Tippe pro Mitglied die Stimme an – wird sofort gespeichert. Nötig für die SATB-Gruppierung in der Anwesenheit.</div>
+      <div id="stimmen-summary" style="font-size:.8rem;color:#888;margin-bottom:8px"></div>
+      <div id="stimmen-list"></div>
+    </div>
+    </div>
     </div><!-- /konsole-content -->
     <div class="konsole-menu">
       <button class="km active" data-kp="bearbeiten" onclick="konsoleNav('bearbeiten')">✏️ Bearbeiten</button>
@@ -586,6 +594,7 @@ input[type=checkbox]{accent-color:#2980b9}
       <button class="km" data-kp="daten" onclick="konsoleNav('daten')">💾 Daten &amp; Backup</button>
       <button class="km" data-kp="sicherheit" onclick="konsoleNav('sicherheit')">🔑 Sicherheit</button>
       <button class="km" data-kp="benutzer" onclick="konsoleNav('benutzer')">👥 Benutzer</button>
+      <button class="km" data-kp="stimmen" onclick="konsoleNav('stimmen')">🎚️ Stimmen</button>
     </div>
     </div><!-- /konsole-layout -->
   </div>
@@ -1747,6 +1756,31 @@ async function saveNotice(){
 }
 function resetNotice(){ const ta=document.getElementById('notice-text'); if(ta) ta.value=''; saveNotice(); }
 
+// Stimmen (S/A/T/B) schnell zuweisen
+function renderStimmenZuweisen(){
+  const el=document.getElementById('stimmen-list'); if(!el) return;
+  const voices=[['Sopran','S','#e67e22'],['Alt','A','#2980b9'],['Tenor','T','#27ae60'],['Bass','B','#8e44ad']];
+  const sorted=[...mitglieder].sort((a,b)=>memberName(a).localeCompare(memberName(b)));
+  el.innerHTML=sorted.map(m=>{
+    const cur=m.stimme||'';
+    const btns=voices.map(([v,ab,c])=>`<button onclick="setStimme('${memberKey(m)}','${v}')" title="${v}" style="border:1.5px solid ${cur===v?c:'#ddd'};background:${cur===v?c:'#fff'};color:${cur===v?'#fff':'#888'};border-radius:6px;width:30px;height:30px;font-size:.8rem;font-weight:700;cursor:pointer">${ab}</button>`).join('');
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0f0"><span style="flex:1;font-size:.86rem;min-width:0">${esc(memberName(m))}</span><div style="display:flex;gap:4px;flex-shrink:0">${btns}</div></div>`;
+  }).join('');
+  const sum=document.getElementById('stimmen-summary');
+  if(sum){
+    const c={Sopran:0,Alt:0,Tenor:0,Bass:0,ohne:0};
+    mitglieder.forEach(m=>{ const s=m.stimme; if(c[s]!==undefined) c[s]++; else c.ohne++; });
+    sum.textContent=`🟠 ${c.Sopran} · 🔵 ${c.Alt} · 🟢 ${c.Tenor} · 🟣 ${c.Bass} · 👤 ohne: ${c.ohne}`;
+  }
+}
+async function setStimme(key, voice){
+  const idx=mitglieder.findIndex(m=>memberKey(m)===key); if(idx<0) return;
+  const neu = (mitglieder[idx].stimme===voice) ? '' : voice; // nochmal tippen = entfernen
+  mitglieder[idx].stimme=neu;
+  await dbFetch(DB+'/mitglieder/'+idx+'/stimme.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(neu||null)});
+  renderStimmenZuweisen();
+}
+
 function renderKonsole(){
   // Restore saved settings
   const alMin = document.getElementById('auto-logout-min');
@@ -1754,6 +1788,7 @@ function renderKonsole(){
 
   loadPushSettings();
   loadNotice();
+  renderStimmenZuweisen();
   renderUserVerwaltung();
 
   const el=document.getElementById('konsole-stats');if(!el)return;
@@ -3035,13 +3070,15 @@ const _origRenderKonsole = typeof renderKonsole !== 'undefined' ? renderKonsole 
 // LOAD ALL
 async function loadAll(){
   try{
-    const r1=await dbFetch(DB+'/chorproben.json');
+    const [r1,r2,r3,r4]=await Promise.all([
+      dbFetch(DB+'/chorproben.json'),
+      dbFetch(DB+'/termine.json'),
+      dbFetch(DB+'/probenplan.json'),
+      dbFetch(DB+'/mitglieder.json')
+    ]);
     if(r1.ok){const d=await r1.json();if(d&&d.seasons){D=d;D.seasons=D.seasons.map(s=>Object.assign({},s,{songs:Array.isArray(s.songs)?s.songs:[]}));D.proben=Array.isArray(D.proben)?D.proben:[];}}
-    const r2=await dbFetch(DB+'/termine.json');
     if(r2.ok){const d=await r2.json();if(d&&Array.isArray(d)&&d.length)termine=d;else termine=INIT_TERMINE;}else termine=INIT_TERMINE;
-    const r3=await dbFetch(DB+'/probenplan.json');
     if(r3.ok){const d=await r3.json();if(d&&Array.isArray(d))probenplan=d;}
-    const r4=await dbFetch(DB+'/mitglieder.json');
     if(r4.ok){const d=await r4.json();if(d&&Array.isArray(d)&&d.length)mitglieder=d;else mitglieder=INIT_MITGLIEDER;}else mitglieder=INIT_MITGLIEDER;
   }catch(e){termine=INIT_TERMINE;mitglieder=INIT_MITGLIEDER;console.warn(e);}
   const d=new Date();
@@ -3050,12 +3087,14 @@ async function loadAll(){
   else document.getElementById('lieder-list').innerHTML='<div class="empty">Noch keine Daten. Tracker öffnen und synchronisieren.</div>';
   renderTermine();
   renderMitglieder();
-  await loadKommentare();
-  await loadLiedwuensche();
-  await loadPlakate();
-  await loadProbenstatus();
-  await loadAnwesenheit();
-  await loadBenachrichtigungen();
+  await Promise.all([
+    loadKommentare(),
+    loadLiedwuensche(),
+    loadPlakate(),
+    loadProbenstatus(),
+    loadAnwesenheit(),
+    loadBenachrichtigungen()
+  ]);
   loadNotice();
   if(!window._notifPoll){ window._notifPoll=setInterval(loadBenachrichtigungen, 90000); }
   loadPushSettings();
