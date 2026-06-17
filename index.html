@@ -704,6 +704,18 @@ html.fs-sehrgross{font-size:20.5px}
   </div>
 
   <div class="card" style="max-width:480px">
+    <div class="card-title">🏖️ Abwesenheit (z. B. Urlaub)</div>
+    <div style="font-size:.83rem;color:#666;margin-bottom:10px">Trag einen Zeitraum ein, in dem du nicht da bist. Du wirst dann für alle Proben und Termine in dieser Zeit automatisch als abwesend geführt.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px">
+      <div style="flex:1;min-width:130px"><label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:4px;color:#444">Von</label><input type="date" id="abw-von" class="fl-input"></div>
+      <div style="flex:1;min-width:130px"><label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:4px;color:#444">Bis</label><input type="date" id="abw-bis" class="fl-input"></div>
+      <button class="btn btn-primary btn-sm" onclick="addAbwesenheit()">＋ Eintragen</button>
+    </div>
+    <div id="abw-result" style="font-size:.82rem;min-height:16px;margin-bottom:6px"></div>
+    <div id="abw-list"></div>
+  </div>
+
+  <div class="card" style="max-width:480px">
     <div class="card-title">🔔 Push-Benachrichtigungen</div>
     <div style="font-size:.84rem;color:#666;margin-bottom:12px;line-height:1.5">
       Lass dich auf diesem Gerät benachrichtigen, wenn es neue Termine, Proben oder Liedwünsche gibt – auch wenn die App geschlossen ist.
@@ -965,7 +977,7 @@ const TYP_COLOR={"konzert": "#2980b9", "fest": "#e67e22", "chorlager": "#27ae60"
 const INIT_MITGLIEDER=[{"nr": 1, "nachname": "Arnold", "vorname": "Christiane", "telefon": "0345/6801481", "handy": "0175/5369335", "email": "nck_arnold@t-online.de", "geburtstag": "11.07.58", "adresse": "Ellen-Weber-Str. 97", "plz": "06120", "username": "CA110758"}, {"nr": 2, "nachname": "Balbach", "vorname": "Jochen", "telefon": "0345/6802913", "handy": "0151/15336411", "email": "jochen.balbach@physik.uni-halle.de", "geburtstag": "17.05.66", "adresse": "Otto-Kanning-Str. 30", "plz": "", "username": "JB170566"}, {"nr": 3, "nachname": "Balbach", "vorname": "Petra", "telefon": "0345/6802913", "handy": "0151/12811946", "email": "felixaustria@gmx.de", "geburtstag": "04.09.64", "adresse": "Otto-Kanning-Str. 30", "plz": "", "username": "PB040964"}, {"nr": 4, "nachname": "Bromann", "vorname": "Birte", "telefon": "", "handy": "0163/5039756", "email": "birte.bromann@t-online.de", "geburtstag": "25.05.88", "adresse": "", "plz": "", "username": "BB250588"}, {"nr": 5, "nachname": "Dicty", "vorname": "Hannah", "telefon": "", "handy": "0176/94960900", "email": "hannah.dicty@gmail.com", "geburtstag": "16.03.01", "adresse": "Adolph-von-Harnack-Str. 4", "plz": "06114", "username": "HD160301"}, {"nr": 6, "nachname": "Durka", "vorname": "Walter", "telefon": "0345/5321345", "handy": "0170/9489446", "email": "walter.durka@ufz.de", "geburtstag": "20.12.62", "adresse": "Edmund-Husserl-Str. 4", "plz": "06120", "username": "WD201262"}, {"nr": 7, "nachname": "Engel", "vorname": "Jeanette", "telefon": "", "handy": "0171/2134188", "email": "jeanette.engel@gmx.de", "geburtstag": "29.01.87", "adresse": "Brüderstr. 13", "plz": "06108", "username": "JE290187"}, {"nr": 8, "nachname": "Fliegner", "vorname": "Antje", "telefon": "", "handy": "0176/51970719", "email": "antjefliegner@web.de", "geburtstag": "03.07.70", "adresse": "", "plz": "", "username": "AF030770"}, {"nr": 9, "nachname": "Göricke", "vorname": "Petra", "telefon": "", "handy": "0170/6047997", "email": "petra-goericke@web.de", "geburtstag": "31.01.61", "adresse": "Ellen-Weber-Str. 10", "plz": "06120", "username": "PG310161"}, {"nr": 10, "nachname": "Hähndel", "vorname": "Ursula", "telefon": "", "handy": "0176/62432938", "email": "ursula.haehndel@tele2.de", "geburtstag": "20.05.57", "adresse": "Lunzbergring 3", "plz": "06120", "username": "UH200557"}, {"nr": 11, "nachname": "Herrmann", "vorname": "Doris", "telefon": "", "handy": "0176/55243597", "email": "dorisherrmann4@gmail.com", "geburtstag": "", "adresse": "Angerweg 8b", "plz": "06120", "username": "DH"}, {"nr": 12, "nachname": "Heise", "vorname": "Matthias", "telefon": "", "handy": "0162/33865177", "email": "tjhm.heise@arcor.de", "geburtstag": "29.05.66", "adresse": "Bergschenkenweg 52a", "plz": "06118", "username": "MH290566"}, {"nr": 13, "nachname": "Jäckel", "vorname": "Eckhard", "telefon": "", "handy": "0173/9140294", "email": "ecki.jaeckel@gmail.com", "geburtstag": "", "adresse": "Waldmeisterstr. 5", "plz": "06120", "username": "EJ"}, {"nr": 14, "nachname": "Koser", "vorname": "Susanne", "telefon": "0345/6829880", "handy": "0152/34551426", "email": "susannekoser@web.de", "geburtstag": "29.09.69", "adresse": "Otto-Kanning-Str. 53", "plz": "06120", "username": "SK290969"}, {"nr": 15, "nachname": "Krause", "vorname": "Bianca", "telefon": "", "handy": "0157/54146071", "email": "krause.beibei@gmail.com", "geburtstag": "07.01.82", "adresse": "", "plz": "", "username": "BK070182"}, {"nr": 16, "nachname": "Kühn", "vorname": "Elisabeth", "telefon": "0345/6802868", "handy": "0170/2249383", "email": "Elisabeth@spa-house.de", "geburtstag": "04.02.66", "adresse": "Otto-Kanning-Str. 49", "plz": "06120", "username": "EK040266"}, {"nr": 17, "nachname": "Kühn", "vorname": "Ingolf", "telefon": "0345/6802868", "handy": "0176/51248157", "email": "Ingolf@spa-house.de", "geburtstag": "21.01.67", "adresse": "Otto-Kanning-Str. 49", "plz": "06120", "username": "IK210167"}, {"nr": 18, "nachname": "Kulig", "vorname": "Nadja", "telefon": "0345/6856196", "handy": "0151/44556194", "email": "nadja.kulig@gmx.de", "geburtstag": "30.04.76", "adresse": "Brandbergweg 29", "plz": "06120", "username": "NK300476"}, {"nr": 19, "nachname": "Kull", "vorname": "Eberhard", "telefon": "0345/5504206", "handy": "", "email": "ekk38@gmx.de", "geburtstag": "11.03.38", "adresse": "Alfred-Oelsner-Str. 15", "plz": "06120", "username": "EK110338"}, {"nr": 20, "nachname": "Kursawe", "vorname": "Josephiene", "telefon": "", "handy": "0176/84507517", "email": "josephiene.kursawe@mailbox.org", "geburtstag": "19.01.87", "adresse": "", "plz": "", "username": "JK190187"}, {"nr": 21, "nachname": "Lamm", "vorname": "Marco", "telefon": "0345/6800536", "handy": "0160/93147286", "email": "mclamm@t-online.de", "geburtstag": "", "adresse": "Otto-Kanning-Str. 45", "plz": "06120", "username": "ML"}, {"nr": 22, "nachname": "Linke", "vorname": "Susanne", "telefon": "", "handy": "0152/03866999", "email": "susanne-linke@gmx.de", "geburtstag": "27.04.91", "adresse": "Ellen-Weber-Str. 131", "plz": "", "username": "SL270491"}, {"nr": 23, "nachname": "Moeller", "vorname": "Regina", "telefon": "", "handy": "0173/3494549", "email": "regina.moeller.halle@freenet.de", "geburtstag": "", "adresse": "Blumenau 25", "plz": "06120", "username": "RM"}, {"nr": 24, "nachname": "Mothes", "vorname": "Rosi", "telefon": "", "handy": "0151/23952005", "email": "rosi.mothes@web.de", "geburtstag": "09.07.69", "adresse": "W.-v.-Kügelgen-Str. 7", "plz": "06120", "username": "RM090769"}, {"nr": 25, "nachname": "Niebuhr", "vorname": "Sören", "telefon": "0345/6140672", "handy": "0173/5660181", "email": "snh@gmx.de", "geburtstag": "13.07.71", "adresse": "", "plz": "06198", "username": "SN130771"}, {"nr": 26, "nachname": "Ortlieb", "vorname": "Stefanie", "telefon": "", "handy": "0152/28616121", "email": "stef94.ortlieb@web.de", "geburtstag": "19.07.94", "adresse": "Aalweg 15", "plz": "06120", "username": "SO190794"}, {"nr": 27, "nachname": "Rödel", "vorname": "Klaus", "telefon": "0345/5508505", "handy": "0178/3095264", "email": "ledeor.klaus@gmail.com", "geburtstag": "", "adresse": "Franz-Mehring-Str. 6", "plz": "06120", "username": "KR"}, {"nr": 28, "nachname": "Rohde", "vorname": "Ida", "telefon": "", "handy": "0178/6841991", "email": "ida.rohde@outlook.de", "geburtstag": "10.07.01", "adresse": "Hoher Weg 6", "plz": "06120", "username": "IR100701"}, {"nr": 29, "nachname": "Schild von Spannenberg", "vorname": "Ulrike", "telefon": "", "handy": "0171/9985650", "email": "SVShome@gmx.de", "geburtstag": "04.11.62", "adresse": "Ellen-Weber-Str. 98", "plz": "06120", "username": "US041162"}, {"nr": 30, "nachname": "Skaliks", "vorname": "Ulrike", "telefon": "", "handy": "0177/8999020", "email": "uljoe@gmx.de", "geburtstag": "09.07.73", "adresse": "Smaragdweg 21", "plz": "06120", "username": "US090773"}, {"nr": 31, "nachname": "Steinborn", "vorname": "Danny", "telefon": "", "handy": "0177/5776157", "email": "dannysteinborn@gmail.com", "geburtstag": "05.02.02", "adresse": "Heideweg 21", "plz": "06120", "username": "DS050202"}, {"nr": 32, "nachname": "Stubbs", "vorname": "Milton", "telefon": "", "handy": "0176/32715256", "email": "stubbs@biochemtech.uni-halle.de", "geburtstag": "15.05.62", "adresse": "Ammernweg 2", "plz": "", "username": "MS150562"}, {"nr": 33, "nachname": "von Borell", "vorname": "Susanne", "telefon": "0345/5500330", "handy": "0176/56809120", "email": "svbdv@posteo.de", "geburtstag": "", "adresse": "Schwedenweg 9", "plz": "06120", "username": "SV"}, {"nr": 34, "nachname": "von Nessen", "vorname": "Rita", "telefon": "", "handy": "0172/3741626", "email": "eselsmilch@web.de", "geburtstag": "18.12.69", "adresse": "Irisweg 5", "plz": "06118", "username": "RV181269"}, {"nr": 35, "nachname": "Werge", "vorname": "Kerstin", "telefon": "0345/5503231", "handy": "0160/1202414", "email": "werge@t-online.de", "geburtstag": "14.01.68", "adresse": "Fichtenstr. 10", "plz": "06198", "username": "KW140168"}, {"nr": 36, "nachname": "Wolff", "vorname": "Martin", "telefon": "", "handy": "0176/54482520", "email": "Doelaudate@martinwolff-tenor.de", "geburtstag": "29.04.98", "adresse": "Geiststr. 21", "plz": "06108", "username": "MW290498"}];
 const INIT_TERMINE=[{"id": "23r7du2kk", "titel": "4 Chöre Konzert", "datum": "2026-06-07", "datum_ende": "", "uhrzeit": "15:00", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "8vfz808c1", "titel": "Lieskauer Sommerfest", "datum": "2026-06-21", "datum_ende": "", "uhrzeit": "11:00", "typ": "fest", "beschreibung": "", "abstimmungen": {}}, {"id": "79976fwpi", "titel": "Sommerkonzert", "datum": "2026-06-28", "datum_ende": "", "uhrzeit": "15:00", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "fympt3vrg", "titel": "Gemeindefest", "datum": "2026-09-20", "datum_ende": "", "uhrzeit": "14:00 / 15:00 / 16:00", "typ": "fest", "beschreibung": "Uhrzeit noch nicht festgelegt", "abstimmungen": {}}, {"id": "ru26ly3p6", "titel": "Chorlager Schierke", "datum": "2026-11-06", "datum_ende": "2026-11-08", "uhrzeit": "", "typ": "chorlager", "beschreibung": "", "abstimmungen": {}}, {"id": "c81poy77r", "titel": "Lichtergottesdienst", "datum": "2026-11-29", "datum_ende": "", "uhrzeit": "", "typ": "gottesdienst", "beschreibung": "", "abstimmungen": {}}, {"id": "fwktqtez8", "titel": "Weihnachtskonzert", "datum": "2026-12-05", "datum_ende": "", "uhrzeit": "", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "h5k00tkj8", "titel": "Chorlager", "datum": "2027-10-14", "datum_ende": "2027-10-16", "uhrzeit": "", "typ": "chorlager", "beschreibung": "", "abstimmungen": {}}];
 
-let D=null, termine=[], kommentare=[], probenplan=[], mitglieder=[], liedwuensche=[], plakate=[], probenstatus={}, benachrichtigungen=[], anwesenheit={}, anwWork=null, userprofilesCache={};
+let D=null, termine=[], kommentare=[], probenplan=[], mitglieder=[], liedwuensche=[], plakate=[], probenstatus={}, benachrichtigungen=[], anwesenheit={}, anwWork=null, userprofilesCache={}, abwesenheiten={};
 let adminMode = sessionStorage.getItem('chor_admin')==='1';
 let editMode = sessionStorage.getItem('chor_editmode')==='1';
 // Sichtbarkeit von Admin-Bearbeitungs-Elementen: nur wenn Bearbeiten-Modus AN und Berechtigung vorhanden
@@ -1335,22 +1347,77 @@ async function deleteProbe(id,geplant=false){
 async function loadProbenstatus(){
   try{ const r=await dbFetch(DB+'/probenstatus.json'); probenstatus=(r.ok?await r.json():null)||{}; renderProben(); }catch(e){}
 }
+// ===== ABWESENHEIT (Zeiträume, z. B. Urlaub) =====
+async function loadAbwesenheit(){
+  try{ const r=await dbFetch(DB+'/abwesenheit.json'); abwesenheiten=(r.ok?await r.json():null)||{}; }catch(e){}
+}
+function _periodsOf(rec){ if(!rec) return []; const p=rec.periods; return Array.isArray(p)?p:Object.values(p||{}); }
+function absenceCovers(rec, datum){ return _periodsOf(rec).some(p=> p&&p.von&&p.bis && datum>=p.von && datum<=p.bis); }
+function myAbsent(datum){ const uid=currentUser&&currentUser.uid; return uid?absenceCovers(abwesenheiten[uid], datum):false; }
+function absentNamesForDate(datum){
+  const names=[];
+  Object.values(abwesenheiten||{}).forEach(rec=>{ if(rec && rec.name && absenceCovers(rec,datum)) names.push(rec.name); });
+  return names;
+}
 function buildProbeAttendance(p){
   const st=(probenstatus && probenstatus[p.id])||{};
   const nein=Object.values(st).filter(e=>e&&e.status==='nein').map(e=>e.name);
+  const urlaub=absentNamesForDate(p.datum);
+  const alle=[...new Set([...nein, ...urlaub])];
   const myUid=currentUser&&currentUser.uid;
-  const abgemeldet=(myUid && st[myUid] && st[myUid].status==='nein');
+  const selfNein=(myUid && st[myUid] && st[myUid].status==='nein');
+  const selfUrlaub=myAbsent(p.datum);
+  let ctrl;
+  if(selfUrlaub){
+    ctrl=`<span style="font-size:.8rem;color:#8a6d3b">🏖️ Du bist in diesem Zeitraum als abwesend eingetragen</span>`;
+  } else if(selfNein){
+    ctrl=`<span style="font-size:.8rem;color:#922b21;font-weight:600">❌ Du bist abgemeldet</span>
+           <button class="btn btn-sm" style="font-size:.74rem;background:#d5f5e3;color:#1a7a40" onclick="setProbeStatus('${p.id}','nein')">↩ Doch dabei</button>`;
+  } else {
+    ctrl=`<span style="font-size:.78rem;color:#555">Kannst du nicht?</span>
+           <button class="btn btn-sm" style="font-size:.74rem;background:#fdecea;color:#922b21" onclick="setProbeStatus('${p.id}','nein')">❌ Abmelden</button>`;
+  }
   return `<div style="margin-top:8px;border-top:1px dashed #d9e6d0;padding-top:8px">
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      ${abgemeldet
-        ? `<span style="font-size:.8rem;color:#922b21;font-weight:600">❌ Du bist abgemeldet</span>
-           <button class="btn btn-sm" style="font-size:.74rem;background:#d5f5e3;color:#1a7a40" onclick="setProbeStatus('${p.id}','nein')">↩ Doch dabei</button>`
-        : `<span style="font-size:.78rem;color:#555">Kannst du nicht?</span>
-           <button class="btn btn-sm" style="font-size:.74rem;background:#fdecea;color:#922b21" onclick="setProbeStatus('${p.id}','nein')">❌ Abmelden</button>`
-      }
-    </div>
-    ${nein.length?`<div style="font-size:.76rem;color:#922b21;margin-top:5px">❌ Abgemeldet (${nein.length}): ${nein.map(esc).join(', ')}</div>`:''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${ctrl}</div>
+    ${alle.length?`<div style="font-size:.76rem;color:#922b21;margin-top:5px">❌ Abgemeldet (${alle.length}): ${alle.map(esc).join(', ')}</div>`:''}
   </div>`;
+}
+function renderAbwesenheit(){
+  const el=document.getElementById('abw-list'); if(!el) return;
+  const uid=currentUser&&currentUser.uid;
+  const periods=_periodsOf(uid?abwesenheiten[uid]:null).slice().sort((a,b)=>(a.von||'').localeCompare(b.von||''));
+  if(!periods.length){ el.innerHTML='<div style="font-size:.82rem;color:#aaa">Noch keine Abwesenheit eingetragen.</div>'; return; }
+  const today=localToday();
+  el.innerHTML=periods.map((p,i)=>{
+    const aktiv = today>=p.von && today<=p.bis;
+    const vorbei = today>p.bis;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0;${vorbei?'opacity:.5':''}">
+      <span style="font-size:.85rem">🏖️ ${fmt(p.von)} – ${fmt(p.bis)} ${aktiv?'<span style="color:#e67e22;font-weight:600">· aktiv</span>':''}</span>
+      <button class="btn btn-danger btn-sm" onclick="deleteAbwesenheit(${i})">✕</button>
+    </div>`;
+  }).join('');
+}
+async function addAbwesenheit(){
+  const von=document.getElementById('abw-von').value, bis=document.getElementById('abw-bis').value;
+  const res=document.getElementById('abw-result');
+  if(!von||!bis){ res.style.color='#e74c3c'; res.textContent='❌ Bitte Von und Bis wählen.'; return; }
+  if(bis<von){ res.style.color='#e74c3c'; res.textContent='❌ „Bis" muss nach „Von" liegen.'; return; }
+  const uid=currentUser&&currentUser.uid; if(!uid){ res.textContent='❌ Bitte anmelden.'; return; }
+  const rec=abwesenheiten[uid]||{name:'',periods:[]};
+  const periods=_periodsOf(rec); periods.push({von,bis});
+  rec.periods=periods; rec.name=getUserVoteName()||rec.name||'';
+  await dbFetch(DB+'/abwesenheit/'+uid+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(rec)});
+  abwesenheiten[uid]=rec;
+  document.getElementById('abw-von').value=''; document.getElementById('abw-bis').value='';
+  res.style.color='#27ae60'; res.textContent='✅ Eingetragen'; setTimeout(()=>{if(res)res.textContent='';},2500);
+  renderAbwesenheit();
+}
+async function deleteAbwesenheit(i){
+  const uid=currentUser&&currentUser.uid; if(!uid) return;
+  const rec=abwesenheiten[uid]; if(!rec) return;
+  const periods=_periodsOf(rec); periods.splice(i,1); rec.periods=periods;
+  await dbFetch(DB+'/abwesenheit/'+uid+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(rec)});
+  abwesenheiten[uid]=rec; renderAbwesenheit();
 }
 async function setProbeStatus(probeId, status){
   if(!currentUser){ alert('Bitte zuerst anmelden.'); return; }
@@ -1378,32 +1445,40 @@ function memberKey(m){ return String(m.id||m.nr); }
 function memberName(m){ return ((m.vorname||'')+' '+(m.nachname||'')).trim(); }
 // Vorab-Selbstabmeldungen ('nein') einem Mitglied zuordnen (über Benutzerprofil + Namens-Fallbacks)
 function _norm(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9äöüß]/g,''); }
+function _matchMemberByProfile(uid, nm){
+  const prof=userprofilesCache[uid]; let m=null;
+  if(prof && prof.vorname && prof.nachname) m=mitglieder.find(x=> _norm(x.vorname)===_norm(prof.vorname) && _norm(x.nachname)===_norm(prof.nachname));
+  if(!m && prof && prof.username) m=mitglieder.find(x=> x.username && _norm(x.username)===_norm(prof.username));
+  if(!m && nm){ const n=_norm(nm); m=mitglieder.find(x=> x.vorname&&x.nachname && n.includes(_norm(x.vorname)) && n.includes(_norm(x.nachname))); }
+  if(!m && nm){ m=mitglieder.find(x=> x.username && _norm(x.username)===_norm(nm)); }
+  if(!m && nm){ const n=_norm(nm); const c=mitglieder.filter(x=>x.vorname && n.includes(_norm(x.vorname))); if(c.length===1) m=c[0]; }
+  return m;
+}
+function probeDatumById(probeId){
+  let p=(probenplan||[]).find(x=>x.id===probeId); if(p) return p.datum;
+  p=((D&&D.proben)||[]).find(x=>x.id===probeId); return p?p.datum:null;
+}
 function selbstabmeldungen(probeId){
   const st=probenstatus[probeId]||{};
   const matchedKeys=new Set();
   const names=[];
+  // Selbst-Abmeldungen ('nein')
   Object.entries(st).forEach(([uid,e])=>{
     if(!e || e.status!=='nein') return;
-    const nm=e.name||'';
-    if(nm) names.push(nm);
-    let m=null;
-    // 1) Über Benutzerprofil (uid -> Vor-/Nachname -> Mitglied) – am zuverlässigsten
-    const prof=userprofilesCache[uid];
-    if(prof && prof.vorname && prof.nachname){
-      m=mitglieder.find(x=> _norm(x.vorname)===_norm(prof.vorname) && _norm(x.nachname)===_norm(prof.nachname));
-    }
-    // 2) Profil-Benutzername == Mitglieds-Benutzername
-    if(!m && prof && prof.username){
-      m=mitglieder.find(x=> x.username && _norm(x.username)===_norm(prof.username));
-    }
-    // 3) Anzeigename enthält Vor- UND Nachname
-    if(!m && nm){ const n=_norm(nm); m=mitglieder.find(x=> x.vorname&&x.nachname && n.includes(_norm(x.vorname)) && n.includes(_norm(x.nachname))); }
-    // 4) Anzeigename == Benutzername eines Mitglieds
-    if(!m && nm){ m=mitglieder.find(x=> x.username && _norm(x.username)===_norm(nm)); }
-    // 5) Anzeigename enthält einen eindeutigen Vornamen
-    if(!m && nm){ const n=_norm(nm); const c=mitglieder.filter(x=>x.vorname && n.includes(_norm(x.vorname))); if(c.length===1) m=c[0]; }
-    if(m) matchedKeys.add(memberKey(m));
+    const nm=e.name||''; if(nm) names.push(nm);
+    const m=_matchMemberByProfile(uid, nm); if(m) matchedKeys.add(memberKey(m));
   });
+  // Eingetragene Abwesenheit (Urlaub) für das Probendatum
+  const datum=probeDatumById(probeId);
+  if(datum){
+    Object.entries(abwesenheiten||{}).forEach(([uid,rec])=>{
+      if(absenceCovers(rec, datum)){
+        const m=_matchMemberByProfile(uid, rec.name||'');
+        if(m) matchedKeys.add(memberKey(m));
+        if(rec.name && !names.includes(rec.name)) names.push(rec.name);
+      }
+    });
+  }
   return {matchedKeys, names};
 }
 async function renderAnwesenheitPage(){
@@ -1579,9 +1654,10 @@ function terminHtml(t,past=false){
   const label=TYP_LABEL[t.typ]||t.typ;
   const dateStr=t.datum_ende?fmt(t.datum)+' – '+fmt(t.datum_ende):fmt(t.datum);
   const abs=t.abstimmungen||{};
-  const jaL=Object.entries(abs).filter(([,v])=>v==='ja').map(([k])=>k);
-  const nL=Object.entries(abs).filter(([,v])=>v==='nein').map(([k])=>k);
-  const vL=Object.entries(abs).filter(([,v])=>v==='vielleicht').map(([k])=>k);
+  const urlaubT=absentNamesForDate(t.datum);
+  const jaL=Object.entries(abs).filter(([,v])=>v==='ja').map(([k])=>k).filter(n=>!urlaubT.includes(n));
+  const nL=[...new Set([...Object.entries(abs).filter(([,v])=>v==='nein').map(([k])=>k), ...urlaubT])];
+  const vL=Object.entries(abs).filter(([,v])=>v==='vielleicht').map(([k])=>k).filter(n=>!urlaubT.includes(n));
   return`<div class="termin-card" style="border-left-color:${color};${past?'opacity:.6':''}">
     <span class="t-badge" style="background:${color}">${label}</span>
     <div class="t-title">${esc(t.titel)}</div>
@@ -1607,6 +1683,9 @@ function getUserVoteName(){
 }
 
 function buildVoteRow(t){
+  if(myAbsent(t.datum)){
+    return `<div style="font-size:.82rem;color:#8a6d3b">🏖️ Du bist in diesem Zeitraum als abwesend eingetragen – zählt automatisch als „kommt nicht".</div>`;
+  }
   const userName = getUserVoteName();
   const abs = t.abstimmungen||{};
   const myVote = userName ? (abs[userName]||null) : null;
@@ -2986,6 +3065,7 @@ function renderEinstellungen(){
   if(pw2) pw2.value='';
   const pr = document.getElementById('push-result'); if(pr) pr.textContent='';
   applyFontSize();
+  renderAbwesenheit();
   renderPushStatus();
   // Bearbeiten-Modus-Karte nur für Bearbeiter (Admin oder mit Berechtigung) zeigen
   const emCard = document.getElementById('editmode-card');
@@ -3200,6 +3280,7 @@ async function loadAll(){
     loadPlakate(),
     loadProbenstatus(),
     loadAnwesenheit(),
+    loadAbwesenheit(),
     loadBenachrichtigungen()
   ]);
   loadNotice();
