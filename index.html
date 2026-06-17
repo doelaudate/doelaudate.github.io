@@ -1455,7 +1455,8 @@ function memberName(m){ return ((m.vorname||'')+' '+(m.nachname||'')).trim(); }
 // Vorab-Selbstabmeldungen ('nein') einem Mitglied zuordnen (über Benutzerprofil + Namens-Fallbacks)
 function _norm(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9äöüß]/g,''); }
 function _matchMemberByProfile(uid, nm){
-  const prof=userprofilesCache[uid]; let m=null;
+  let m=mitglieder.find(x=>x.uid && x.uid===uid); if(m) return m;  // explizite Verknüpfung zuerst
+  const prof=userprofilesCache[uid];
   if(prof && prof.vorname && prof.nachname) m=mitglieder.find(x=> _norm(x.vorname)===_norm(prof.vorname) && _norm(x.nachname)===_norm(prof.nachname));
   if(!m && prof && prof.username) m=mitglieder.find(x=> x.username && _norm(x.username)===_norm(prof.username));
   if(!m && nm){ const n=_norm(nm); m=mitglieder.find(x=> x.vorname&&x.nachname && n.includes(_norm(x.vorname)) && n.includes(_norm(x.nachname))); }
@@ -2318,6 +2319,32 @@ async function loadUserProfiles() {
   return await res.json() || {};
 }
 
+// Findet den zu einem Benutzer gehörenden Mitglieder-Eintrag (uid > Name > E-Mail > Benutzername)
+function findMemberForUser(u){
+  if(!u) return null;
+  let m=mitglieder.find(x=>x.uid && x.uid===u.uid); if(m) return m;
+  if(u.vorname&&u.nachname){ m=mitglieder.find(x=>_norm(x.vorname)===_norm(u.vorname)&&_norm(x.nachname)===_norm(u.nachname)); if(m) return m; }
+  if(u.email){ m=mitglieder.find(x=>x.email&&x.email.toLowerCase()===u.email.toLowerCase()); if(m) return m; }
+  if(u.username){ m=mitglieder.find(x=>x.username&&_norm(x.username)===_norm(u.username)); if(m) return m; }
+  return null;
+}
+async function createMemberFromUser(userId){
+  const r=await dbFetch(DB+'/userprofiles/'+userId+'.json'); const u=r.ok?await r.json():null; if(!u) return;
+  const maxNr=mitglieder.reduce((mx,x)=>Math.max(mx,parseInt(x.nr)||0),0);
+  const newM={ id:uid(), nr:maxNr+1, uid:userId,
+    vorname:u.vorname||'', nachname:u.nachname|| (u.vorname?'':(u.username||'')),
+    email:u.email||'', geburtstag:u.geburtstag||'', handy:'', telefon:'', adresse:'', plz:'', stimme:'' };
+  mitglieder.push(newM);
+  await dbFetch(DB+'/mitglieder.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(mitglieder)});
+  renderMitglieder(); renderUserVerwaltung();
+}
+async function linkUserToMember(userId, idx){
+  if(idx===''||idx==null) return;
+  idx=parseInt(idx); if(isNaN(idx)||!mitglieder[idx]) return;
+  mitglieder[idx].uid=userId;
+  await dbFetch(DB+'/mitglieder/'+idx+'/uid.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(userId)});
+  renderMitglieder(); renderUserVerwaltung();
+}
 async function renderUserVerwaltung() {
   const el = document.getElementById('user-verwaltung');
   if(!el) return;
@@ -2333,16 +2360,29 @@ async function renderUserVerwaltung() {
 
   // "Allen senden"-Button oben
   const allEmails = users.map(u=>u.email).filter(Boolean);
-  el.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;padding:10px 14px;background:#fff8f0;border:1.5px solid #f39c12;border-radius:8px">
+  const banner = `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;padding:10px 14px;background:#fff8f0;border:1.5px solid #f39c12;border-radius:8px">
     <div style="font-size:.84rem;color:#7d6608">📧 Passwort-Reset-Mail an alle ${allEmails.length} Nutzer senden</div>
     <button class="btn btn-sm" style="background:#f39c12;color:white;font-weight:600" onclick="sendResetAll()">📧 Allen senden</button>
   </div>`;
-  
+  const memberOptions = mitglieder.map((m,i)=>({m,i})).sort((a,b)=>memberName(a.m).localeCompare(memberName(b.m)))
+    .map(({m,i})=>`<option value="${i}">${esc(memberName(m)||('Nr. '+m.nr))}</option>`).join('');
   const permLabels = {proben:'📅 Proben',termine:'📆 Termine',mitglieder:'👥 Mitglieder',kommentare:'💬 Kommentare',lieder:'🎵 Lieder'};
-  el.innerHTML = users.map(u => {
+  el.innerHTML = banner + users.map(u => {
     const perms = u.permissions||[];
     const uid = u.uid;
     const chk = (key) => perms.includes(key) ? 'checked' : '';
+    const linkedM = findMemberForUser(u);
+    const linkHtml = linkedM
+      ? `<div style="font-size:.78rem;color:#1a7a40;margin-bottom:8px">✅ Mitglied: <strong>${esc(memberName(linkedM)||'(ohne Name)')}</strong></div>`
+      : `<div style="background:#fff8e7;border:1px solid #f9ca8b;border-radius:6px;padding:8px 10px;margin-bottom:8px">
+           <div style="font-size:.78rem;color:#7d6608;margin-bottom:6px">⚠️ Noch kein Mitglieder-Eintrag verknüpft</div>
+           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+             <button class="btn btn-sm btn-success" onclick="createMemberFromUser('${uid}')">➕ Als Mitglied anlegen</button>
+             <select onchange="linkUserToMember('${uid}',this.value)" style="font-size:.8rem;padding:6px 8px;border:1.5px solid #ddd;border-radius:6px">
+               <option value="">🔗 mit Mitglied verknüpfen…</option>${memberOptions}
+             </select>
+           </div>
+         </div>`;
     return `
     <div style="background:white;border-radius:8px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.07);overflow:hidden">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
@@ -2355,6 +2395,7 @@ async function renderUserVerwaltung() {
         <button class="btn btn-danger btn-sm" onclick="deleteUserAccount('${uid}','${esc(u.username||'')}')">✕</button>
       </div>
       <div style="border-top:1px solid #f0f0f0;padding:10px 14px;background:#fafafa">
+        ${linkHtml}
         <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#999;margin-bottom:8px">🛡️ Berechtigungen</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
           <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer;padding:5px 8px;border-radius:5px;background:white;border:1.5px solid ${u.isAdmin?'#e74c3c':'#eee'}">
