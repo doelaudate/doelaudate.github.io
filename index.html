@@ -158,6 +158,39 @@ html.fs-sehrgross{font-size:20.5px}
 .user-chip{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;padding:4px 12px;border-radius:20px;font-size:.8rem;cursor:pointer;display:flex;align-items:center;gap:6px}
 .user-chip:hover{background:rgba(255,255,255,.25)}
 
+/* ===== HANDY-OPTIMIERUNG ===== */
+@media(max-width:640px){
+  body{padding-bottom:env(safe-area-inset-bottom)}
+  .content{padding:12px 10px}
+  /* iOS: verhindert Auto-Zoom beim Tippen in Eingabefelder */
+  input, select, textarea, .fl-input, .login-input, .vote-name, .search-box{font-size:16px}
+  /* Header kompakter, kein Überlauf */
+  .header{padding:10px 12px;gap:6px}
+  .header img{height:34px}
+  .header h1{font-size:1rem}
+  .header-right{gap:6px}
+  .user-chip{padding:4px 9px}
+  /* Tab-Leiste angenehm scrollen */
+  .main-tabs{-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .main-tabs::-webkit-scrollbar{display:none}
+  .mtab{padding:11px 14px;font-size:.9rem}
+  /* Tabellen: lesbarer + bei Bedarf seitlich scrollbar */
+  .card{padding:14px 13px}
+  table{font-size:.82rem}
+  th,td{padding:7px 6px}
+  #lieder-list,#anw-stats,#konsole-stats{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  /* größere Tap-Ziele */
+  .btn{padding:9px 15px}
+  .btn-sm{padding:7px 12px;font-size:.8rem}
+  /* Modale fast vollflächig */
+  .modal{width:94%;max-width:94%;padding:18px}
+  /* Karten-Titel etwas größer */
+  .card-title{font-size:1rem}
+}
+@media(max-width:430px){
+  /* sehr schmale Handys: Datumsspalte in der Liederliste ausblenden (Status zeigt Frische) */
+  #lieder-list th:nth-child(2),#lieder-list td:nth-child(2){display:none}
+}
 </style>
 </head>
 
