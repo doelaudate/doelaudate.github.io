@@ -272,6 +272,7 @@ html.fs-sehrgross{font-size:20.5px}
   <div class="header-right">
     <span id="admin-badge" class="admin-badge" style="display:none">🔑 Admin</span>
     <button id="search-btn" onclick="openSearch()" title="Suche" style="display:none;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:8px;padding:3px 9px;cursor:pointer;font-size:1.05rem;line-height:1.4">🔍</button>
+    <button id="abw-btn" onclick="openAbwesenheit()" title="Meine Abwesenheit" style="display:none;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:8px;padding:3px 9px;cursor:pointer;font-size:1.05rem;line-height:1.4">🏖️</button>
     <button id="bell-btn" onclick="openNotifications()" title="Benachrichtigungen" style="display:none;position:relative;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:8px;padding:3px 9px;cursor:pointer;font-size:1.05rem;line-height:1.4">
       🔔<span id="bell-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:#e74c3c;color:white;font-size:.6rem;font-weight:700;min-width:16px;height:16px;border-radius:8px;padding:0 4px;line-height:16px;text-align:center">0</span>
     </button>
@@ -704,18 +705,6 @@ html.fs-sehrgross{font-size:20.5px}
   </div>
 
   <div class="card" style="max-width:480px">
-    <div class="card-title">🏖️ Abwesenheit (z. B. Urlaub)</div>
-    <div style="font-size:.83rem;color:#666;margin-bottom:10px">Trag einen Zeitraum ein, in dem du nicht da bist. Du wirst dann für alle Proben und Termine in dieser Zeit automatisch als abwesend geführt.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px">
-      <div style="flex:1;min-width:130px"><label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:4px;color:#444">Von</label><input type="date" id="abw-von" class="fl-input"></div>
-      <div style="flex:1;min-width:130px"><label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:4px;color:#444">Bis</label><input type="date" id="abw-bis" class="fl-input"></div>
-      <button class="btn btn-primary btn-sm" onclick="addAbwesenheit()">＋ Eintragen</button>
-    </div>
-    <div id="abw-result" style="font-size:.82rem;min-height:16px;margin-bottom:6px"></div>
-    <div id="abw-list"></div>
-  </div>
-
-  <div class="card" style="max-width:480px">
     <div class="card-title">🔔 Push-Benachrichtigungen</div>
     <div style="font-size:.84rem;color:#666;margin-bottom:12px;line-height:1.5">
       Lass dich auf diesem Gerät benachrichtigen, wenn es neue Termine, Proben oder Liedwünsche gibt – auch wenn die App geschlossen ist.
@@ -730,6 +719,21 @@ html.fs-sehrgross{font-size:20.5px}
 </div>
 
 </div><!-- /content -->
+
+<div class="modal-overlay" id="modal-abwesenheit">
+  <div class="modal">
+    <h3>🏖️ Meine Abwesenheit</h3>
+    <div style="font-size:.83rem;color:#666;margin-bottom:10px">Trag einen Zeitraum ein, in dem du nicht da bist (z. B. Urlaub). Du wirst dann für alle Proben und Termine in dieser Zeit automatisch als abwesend geführt.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px">
+      <div style="flex:1;min-width:130px"><label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:4px;color:#444">Von</label><input type="date" id="abw-von" class="fl-input"></div>
+      <div style="flex:1;min-width:130px"><label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:4px;color:#444">Bis</label><input type="date" id="abw-bis" class="fl-input"></div>
+      <button class="btn btn-primary btn-sm" onclick="addAbwesenheit()">＋ Eintragen</button>
+    </div>
+    <div id="abw-result" style="font-size:.82rem;min-height:16px;margin-bottom:6px"></div>
+    <div id="abw-list"></div>
+    <div class="modal-actions"><button class="btn btn-gray" onclick="closeModal()">Schließen</button></div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="modal-search">
   <div class="modal">
@@ -950,6 +954,11 @@ function setFontSize(fs){ localStorage.setItem('chor_fontsize',fs); applyFontSiz
 function showPageByName(id){
   const tab=[...document.querySelectorAll('.mtab')].find(t=>{const o=t.getAttribute('onclick');return o&&o.indexOf("showPage('"+id+"'")>=0;});
   showPage(id, tab||null);
+}
+function openAbwesenheit(){
+  const res=document.getElementById('abw-result'); if(res) res.textContent='';
+  renderAbwesenheit();
+  document.getElementById('modal-abwesenheit').classList.add('open');
 }
 function openSearch(){
   const inp=document.getElementById('search-input'); if(inp) inp.value='';
@@ -3065,7 +3074,6 @@ function renderEinstellungen(){
   if(pw2) pw2.value='';
   const pr = document.getElementById('push-result'); if(pr) pr.textContent='';
   applyFontSize();
-  renderAbwesenheit();
   renderPushStatus();
   // Bearbeiten-Modus-Karte nur für Bearbeiter (Admin oder mit Berechtigung) zeigen
   const emCard = document.getElementById('editmode-card');
@@ -3289,6 +3297,7 @@ async function loadAll(){
   applyAdminMode();
   applyFontSize();
   const _sb=document.getElementById('search-btn'); if(_sb) _sb.style.display='block';
+  const _ab=document.getElementById('abw-btn'); if(_ab) _ab.style.display='block';
   showLoading(false);
   // Auto-delete on load
   const autoDays=parseInt(localStorage.getItem('auto_delete_days')||'0');
