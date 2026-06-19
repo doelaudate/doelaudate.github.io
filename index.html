@@ -356,6 +356,21 @@ html.fs-sehrgross{font-size:20.5px}
         </select>
       </div>
     </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <div style="flex:1;min-width:150px">
+        <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:3px;color:#444">Wiederholen (nur bei geplant)</label>
+        <select id="probe-wdh" class="fl-input">
+          <option value="">Einmalig</option>
+          <option value="7">Wöchentlich</option>
+          <option value="14">Alle 2 Wochen</option>
+          <option value="month">Monatlich</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:150px">
+        <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:3px;color:#444">… bis Enddatum</label>
+        <input class="fl-input" type="date" id="probe-wdh-bis">
+      </div>
+    </div>
     <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:5px;color:#444">Lieder</label>
     <div id="probe-song-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
     <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:4px;color:#444">Notizen</label>
@@ -391,7 +406,10 @@ html.fs-sehrgross{font-size:20.5px}
       <div style="flex:1;min-width:130px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Bis (optional)</label><input class="fl-input" type="date" id="t-datum-ende"></div>
       <div style="flex:1;min-width:100px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Uhrzeit</label><input class="fl-input" type="text" id="t-uhrzeit" placeholder="15:00"></div>
     </div>
-    <input class="fl-input" type="text" id="t-beschreibung" placeholder="Beschreibung (optional)">
+    <input class="fl-input" type="text" id="t-beschreibung" placeholder="Beschreibung (optional)" style="margin-bottom:8px">
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">
+      <div style="flex:1;min-width:150px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Rückmeldefrist (optional)</label><input class="fl-input" type="date" id="t-frist"></div>
+    </div>
     <button class="btn btn-primary" onclick="addTermin()">＋ Termin hinzufügen</button>
   </div>
   <div class="card">
@@ -539,6 +557,16 @@ html.fs-sehrgross{font-size:20.5px}
         <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-probe" style="accent-color:#2980b9;width:16px;height:16px"> 🎹 Neue Probe geplant</label>
         <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-liedwunsch" style="accent-color:#2980b9;width:16px;height:16px"> 🎵 Neuer Liedwunsch</label>
         <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-kommentar" style="accent-color:#2980b9;width:16px;height:16px"> 💬 Neuer Kommentar</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-absage" style="accent-color:#2980b9;width:16px;height:16px"> ❌ Chorleitung bei Absagen benachrichtigen</label>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <span style="font-size:.84rem;color:#444">🔔 Erinnerung vor Proben/Terminen:</span>
+        <select id="push-remind-days" class="fl-input" style="width:auto;font-size:.82rem;padding:5px 8px">
+          <option value="0">aus</option>
+          <option value="1">1 Tag vorher</option>
+          <option value="2">2 Tage vorher</option>
+          <option value="3">3 Tage vorher</option>
+        </select>
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
         <button class="btn btn-primary btn-sm" onclick="savePushSettings()">💾 Speichern</button>
@@ -1322,21 +1350,34 @@ async function saveProbe(){
   if(art==='vergangen' && datum>localToday()){
     art='geplant';
   }
-  const entry={id:uid(),datum,songIds,notiz};
   if(art==='vergangen'){
     if(!songIds.length){alert('Bitte mindestens ein Lied auswählen.');return;}
     if(!D.proben) D.proben=[];
-    D.proben.push(entry);
+    D.proben.push({id:uid(),datum,songIds,notiz});
     await dbFetch(DB+'/chorproben.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seasons:D.seasons,proben:D.proben})});
   } else {
-    probenplan.push(entry);
+    // Wiederkehrende Proben generieren
+    const wdh=document.getElementById('probe-wdh').value;
+    const bis=document.getElementById('probe-wdh-bis').value;
+    const daten=[datum];
+    if(wdh && bis && bis>=datum){
+      let d=new Date(datum+'T12:00:00'); const end=new Date(bis+'T12:00:00'); let guard=0;
+      while(guard++<260){
+        if(wdh==='month'){ d.setMonth(d.getMonth()+1); } else { d.setDate(d.getDate()+parseInt(wdh)); }
+        if(d>end) break;
+        daten.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+      }
+    }
+    daten.forEach(dt=>probenplan.push({id:uid(),datum:dt,songIds,notiz}));
     await dbFetch(DB+'/probenplan.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(probenplan)});
+    document.getElementById('probe-wdh').value=''; document.getElementById('probe-wdh-bis').value='';
+    if(daten.length===1) notifyPush('probe','🎹 Neue Probe geplant', fmt(datum));
+    else notifyPush('probe','🎹 '+daten.length+' Proben geplant', fmt(daten[0])+' bis '+fmt(daten[daten.length-1]));
   }
   document.getElementById('probe-datum').value='';
   document.getElementById('probe-notiz').value='';
   clearSongPicker();
   renderProben(); renderLieder();
-  if(art!=='vergangen') notifyPush('probe','🎹 Neue Probe geplant', fmt(datum));
   alert('✅ Gespeichert!');
 }
 
@@ -1437,6 +1478,7 @@ async function setProbeStatus(probeId, status){
     await dbFetch(DB+'/probenstatus/'+probeId+'/'+uid+'.json',{method:'DELETE'});
   } else {
     await dbFetch(DB+'/probenstatus/'+probeId+'/'+uid+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,status})});
+    if(status==='nein'){ const dt=probeDatumById(probeId); notifyAdminAbsage('❌ Absage Probe', name+' hat sich für die Probe'+(dt?' am '+fmt(dt):'')+' abgemeldet.'); }
   }
   await loadProbenstatus();
 }
@@ -1673,6 +1715,7 @@ function terminHtml(t,past=false){
     <div class="t-title">${esc(t.titel)}</div>
     <div class="t-meta">📅 ${dateStr}${t.uhrzeit?' &nbsp;🕐 '+esc(t.uhrzeit):''}</div>
     ${t.beschreibung?`<div style="font-size:.78rem;color:#888;margin-bottom:5px">ℹ️ ${esc(t.beschreibung)}</div>`:''}
+    ${t.frist&&!past?`<div style="font-size:.78rem;color:${t.frist<localToday()?'#e74c3c':'#7d6608'};margin-bottom:5px">⏳ Bitte bis <strong>${fmt(t.frist)}</strong> zurückmelden${t.frist<localToday()?' (Frist abgelaufen)':''}</div>`:''}
     ${t.setliste&&t.setliste.length?`<div style="margin-bottom:8px"><div style="font-size:.76rem;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:3px">Setliste</div>${t.setliste.map((s,i)=>`<div style="font-size:.82rem;color:#555">🎵 ${i+1}. ${esc(s)}</div>`).join('')}</div>`:''}
     ${jaL.length||nL.length||vL.length?`<div class="tally">${jaL.length?`<span style="color:#27ae60">✅ ${jaL.length}: ${jaL.join(', ')}</span><br>`:''}${nL.length?`<span style="color:#e74c3c">❌ ${nL.length}: ${nL.join(', ')}</span><br>`:''}${vL.length?`<span style="color:#f39c12">❓ ${vL.length}: ${vL.join(', ')}</span>`:''}</div>`:''}
     ${!past?`<div class="vote-row" id="vrow-${t.id}">${buildVoteRow(t)}</div>`:''}
@@ -1732,6 +1775,7 @@ async function abstimmen(id,antwort){
   
   t.abstimmungen[name]=antwort;
   await dbFetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
+  if(antwort==='nein'){ notifyAdminAbsage('❌ Absage Termin', name+' kommt nicht zu „'+(t.titel||'Termin')+'" am '+fmt(t.datum)+'.'); }
   // Update just this vote row for instant feedback
   const vrow=document.getElementById('vrow-'+id);
   if(vrow) vrow.innerHTML=buildVoteRow(t);
@@ -1743,9 +1787,10 @@ async function addTermin(){
   const datum=document.getElementById('t-datum').value;
   if(!titel||!datum){alert('Bezeichnung und Datum erforderlich.');return;}
   const tUhr=document.getElementById('t-uhrzeit').value.trim();
-  termine.push({id:uid(),titel,datum,datum_ende:document.getElementById('t-datum-ende').value||'',uhrzeit:tUhr,typ:document.getElementById('t-typ').value,beschreibung:document.getElementById('t-beschreibung').value.trim(),abstimmungen:{}});
+  const tFrist=document.getElementById('t-frist').value||'';
+  termine.push({id:uid(),titel,datum,datum_ende:document.getElementById('t-datum-ende').value||'',uhrzeit:tUhr,typ:document.getElementById('t-typ').value,beschreibung:document.getElementById('t-beschreibung').value.trim(),frist:tFrist,abstimmungen:{}});
   await dbFetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
-  ['t-titel','t-datum','t-datum-ende','t-uhrzeit','t-beschreibung'].forEach(id=>document.getElementById(id).value='');
+  ['t-titel','t-datum','t-datum-ende','t-uhrzeit','t-beschreibung','t-frist'].forEach(id=>document.getElementById(id).value='');
   renderTermine(); renderKalender();
   notifyPush('termin','🗓️ Neuer Termin: '+titel, fmt(datum)+(tUhr?' um '+tUhr+' Uhr':''));
   alert('✅ Termin gespeichert!');
@@ -2169,7 +2214,24 @@ async function doRegister() {
     await dbFetch(DB+'/userprofiles/'+uid+'.json', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(profile)});
     // Store username lookup
     await dbFetch(DB+'/usernames/'+username.toLowerCase()+'.json', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,uid})});
-    
+
+    // Mitglieder-Eintrag sicherstellen: passenden verknüpfen oder neu anlegen
+    try{
+      const mr=await dbFetch(DB+'/mitglieder.json'); let liste=mr.ok?await mr.json():null; liste=Array.isArray(liste)?liste:[];
+      const mi=liste.findIndex(m=>
+        (m.email&&m.email.toLowerCase()===email) ||
+        (vorname&&nachname&&_norm(m.vorname)===_norm(vorname)&&_norm(m.nachname)===_norm(nachname)) ||
+        (username&&m.username&&_norm(m.username)===_norm(username)) );
+      if(mi>=0){
+        if(!liste[mi].uid){ await dbFetch(DB+'/mitglieder/'+mi+'/uid.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(uid)}); }
+      } else {
+        const maxNr=liste.reduce((mx,x)=>Math.max(mx,parseInt(x.nr)||0),0);
+        const newId='m'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+        liste.push({ id:newId, nr:maxNr+1, uid:uid, vorname, nachname, geburtstag, email, handy:'', telefon:'', adresse:'', plz:'', stimme:'', username });
+        await dbFetch(DB+'/mitglieder.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(liste)});
+      }
+    }catch(e){ console.warn('Mitglied-Anlage', e); }
+
     // onAuthChange handles the rest
   } catch(e) {
     let msg = 'Fehler bei der Registrierung.';
@@ -3223,12 +3285,14 @@ async function loadPushSettings(){
     const r=await dbFetch(DB+'/settings/push.json'); pushSettings=(r.ok?await r.json():null)||{};
     const m={termin:'push-ev-termin',probe:'push-ev-probe',liedwunsch:'push-ev-liedwunsch',kommentar:'push-ev-kommentar'};
     for(const k in m){ const el=document.getElementById(m[k]); if(el) el.checked=!!pushSettings[k]; }
+    const ab=document.getElementById('push-ev-absage'); if(ab) ab.checked = pushSettings.absage!==false; // Standard an
+    const rd=document.getElementById('push-remind-days'); if(rd) rd.value = String(pushSettings.remindDays||0);
     const c=document.getElementById('push-subs-count');
     if(c){ const sr=await dbFetch(DB+'/pushsubs.json'); const so=sr.ok?await sr.json():null; c.textContent='📱 '+(so?Object.keys(so).length:0)+' Gerät(e) abonniert'; }
   }catch(e){}
 }
 async function savePushSettings(){
-  const s={ termin:document.getElementById('push-ev-termin').checked, probe:document.getElementById('push-ev-probe').checked, liedwunsch:document.getElementById('push-ev-liedwunsch').checked, kommentar:document.getElementById('push-ev-kommentar').checked };
+  const s={ termin:document.getElementById('push-ev-termin').checked, probe:document.getElementById('push-ev-probe').checked, liedwunsch:document.getElementById('push-ev-liedwunsch').checked, kommentar:document.getElementById('push-ev-kommentar').checked, absage:document.getElementById('push-ev-absage').checked, remindDays:parseInt(document.getElementById('push-remind-days').value)||0 };
   await dbFetch(DB+'/settings/push.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(s)});
   pushSettings=s;
   const r=document.getElementById('push-settings-result'); r.style.color='#27ae60'; r.textContent='✅ Gespeichert'; setTimeout(()=>{if(r)r.textContent='';},2000);
@@ -3269,6 +3333,12 @@ async function notifyPush(eventKey, title, body){
   if(!pushSettings || !pushSettings[eventKey]) return;   // Push nur wenn aktiviert
   try{ await dbFetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title, body, ts:Date.now()})}); }
   catch(e){ console.warn('Push-Queue fehlgeschlagen', e); }
+}
+// Nur an die Chorleitung (Admins) – z. B. wenn sich jemand abmeldet
+async function notifyAdminAbsage(title, body){
+  if(pushSettings && pushSettings.absage===false) return; // Standard: an
+  try{ await dbFetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title, body, adminsOnly:true, ts:Date.now()})}); }
+  catch(e){ console.warn('Absage-Push fehlgeschlagen', e); }
 }
 
 // Zeigt beim Öffnen der App eine lokale Benachrichtigung (nur wenn erlaubt, 1x pro Sitzung)
