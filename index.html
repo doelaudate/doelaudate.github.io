@@ -5,57 +5,68 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Chor Dölau</title>
 <meta name="description" content="Chorproben-Übersicht für den Chor Dölau">
-<meta name="theme-color" content="#2c3e50">
+<meta name="theme-color" content="#1b3a6b">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Chor Dölau">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.png">
 <style>
-:root{color-scheme:light}*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:#1a1a1a;padding-bottom:env(safe-area-inset-bottom)}
-.header{background:#2c3e50;color:white;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
-.header h1{font-size:1.1rem;font-weight:700}
-.header-right{display:flex;align-items:center;gap:10px;font-size:.78rem;opacity:.8}
+:root{
+  color-scheme:light;
+  --navy:#1b3a6b; --primary:#2563b5; --primary-dark:#1d4e96; --sky:#4a90d9;
+  --primary-50:#eaf1fb; --primary-100:#dbe8f8;
+  --ink:#1a2330; --muted:#6b7685; --line:#e7ebf0;
+  --bg:#eef1f6; --card:#ffffff;
+  --radius:16px; --radius-sm:11px; --radius-pill:999px;
+  --shadow:0 1px 3px rgba(20,40,80,.06),0 6px 20px rgba(20,40,80,.05);
+  --shadow-lg:0 12px 40px rgba(20,40,80,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:env(safe-area-inset-bottom);-webkit-font-smoothing:antialiased}
+.header{background:linear-gradient(120deg,#16315c 0%,#1b3a6b 48%,#2563b5 135%);color:white;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;box-shadow:0 2px 16px rgba(20,40,80,.20);position:sticky;top:0;z-index:50}
+.header h1{font-size:1.1rem;font-weight:700;letter-spacing:-.01em}
+.header-right{display:flex;align-items:center;gap:10px;font-size:.78rem;opacity:.95}
 .live-dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;animation:pulse 2s infinite;display:inline-block}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .admin-badge{background:rgba(231,76,60,.8);color:white;padding:3px 10px;border-radius:10px;font-size:.75rem;font-weight:600}
-.notice{background:#eaf3fb;border-bottom:2px solid #aed6f1;padding:8px 20px;font-size:.8rem;color:#1a5276}
-.main-tabs{background:white;border-bottom:2px solid #e0e0e0;display:flex;overflow-x:auto}
-.mtab{padding:10px 14px;cursor:pointer;font-size:.85rem;font-weight:500;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:all .15s}
-.mtab:hover{color:#2c3e50}.mtab.active{color:#2980b9;border-bottom-color:#2980b9}
+.notice{background:var(--primary-50);border-bottom:1px solid var(--primary-100);padding:9px 20px;font-size:.8rem;color:#16315c}
+.main-tabs{background:white;border-bottom:1px solid var(--line);display:flex;overflow-x:auto;padding:0 6px;position:sticky;top:0;z-index:40}
+.mtab{padding:13px 15px;cursor:pointer;font-size:.86rem;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:all .15s}
+.mtab:hover{color:var(--navy)}.mtab.active{color:var(--primary);border-bottom-color:var(--primary)}
 .mtab.admin-tab{color:#c0392b}.mtab.admin-tab.active{color:#c0392b;border-bottom-color:#c0392b}
 .sub-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
-.stab{padding:5px 12px;border-radius:20px;border:1.5px solid #ddd;background:white;font-size:.8rem;font-weight:500;cursor:pointer;color:#555;transition:all .15s}
-.stab:hover{border-color:#2980b9;color:#2980b9}.stab.active{background:#2980b9;color:white;border-color:#2980b9}
-.stab.sommer.active{background:#e67e22;border-color:#e67e22}
+.stab{padding:7px 14px;border-radius:var(--radius-pill);border:1.5px solid var(--line);background:white;font-size:.8rem;font-weight:600;cursor:pointer;color:var(--muted);transition:all .15s}
+.stab:hover{border-color:var(--primary);color:var(--primary)}.stab.active{background:var(--primary);color:white;border-color:var(--primary);box-shadow:0 3px 10px rgba(37,99,181,.3)}
+.stab.sommer.active{background:#e67e22;border-color:#e67e22;box-shadow:0 3px 10px rgba(230,126,34,.3)}
 .stab.weihnachten.active{background:#1a6fa8;border-color:#1a6fa8}
 .stab.repertoire.active{background:#7f8c8d;border-color:#7f8c8d}
-.content{padding:18px;max-width:960px;margin:0 auto}
-.page{display:none}.page.active{display:block}
-.card{background:white;border-radius:10px;padding:16px 20px;box-shadow:0 1px 4px rgba(0,0,0,.07);margin-bottom:12px}
-.card-title{font-size:.95rem;font-weight:600;color:#2c3e50;margin-bottom:12px}
-.stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-.stat{background:white;border-radius:8px;padding:10px 14px;flex:1;min-width:90px;box-shadow:0 1px 3px rgba(0,0,0,.07);text-align:center}
-.stat-n{font-size:1.4rem;font-weight:700;color:#2c3e50}.stat-l{font-size:.7rem;color:#888;margin-top:2px}
+.content{padding:20px 18px;max-width:960px;margin:0 auto}
+.page{display:none}.page.active{display:block;animation:fadeIn .22s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.card{background:var(--card);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);margin-bottom:14px;border:1px solid rgba(20,40,80,.04)}
+.card-title{font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:13px;letter-spacing:-.01em}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.stat{background:var(--card);border-radius:var(--radius-sm);padding:14px 14px;flex:1;min-width:90px;box-shadow:var(--shadow);text-align:center;border:1px solid rgba(20,40,80,.04)}
+.stat-n{font-size:1.6rem;font-weight:800;color:var(--navy);letter-spacing:-.02em}.stat-l{font-size:.7rem;color:var(--muted);margin-top:3px;font-weight:500}
 table{width:100%;border-collapse:collapse;font-size:.85rem}
-th{text-align:left;padding:8px 10px;background:#f4f6f8;color:#555;font-weight:600;border-bottom:2px solid #ddd;font-size:.76rem;text-transform:uppercase;letter-spacing:.04em}
+th{text-align:left;padding:9px 10px;background:#f6f8fb;color:var(--muted);font-weight:700;border-bottom:1px solid var(--line);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em}
 td{padding:8px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
 tr:hover td{background:#fafbfc}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
 .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.74rem;font-weight:600}
-.probe-item{border-left:3px solid #2980b9;padding:10px 14px;margin-bottom:10px;background:#f8fbfe;border-radius:0 7px 7px 0;position:relative}
-.probe-date{font-weight:600;font-size:.88rem;color:#2c3e50;margin-bottom:3px}
+.probe-item{border-left:3px solid #2563b5;padding:11px 15px;margin-bottom:10px;background:#f6faff;border-radius:0 var(--radius-sm) var(--radius-sm) 0;position:relative}
+.probe-date{font-weight:600;font-size:.88rem;color:#1b3a6b;margin-bottom:3px}
 .probe-songs{font-size:.8rem;color:#555}.probe-notes{font-size:.8rem;color:#888;font-style:italic;margin-top:3px}
 .plan-item{border-left:4px solid #27ae60;padding:10px 14px;margin-bottom:10px;background:#f0fff4;border-radius:0 7px 7px 0;position:relative}
-.termin-card{background:white;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:10px;border-left:5px solid #ccc;position:relative}
+.termin-card{background:white;border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);margin-bottom:12px;border:1px solid rgba(20,40,80,.04);border-left:4px solid #ccc;position:relative}
 .t-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:600;color:white;margin-bottom:5px}
-.t-title{font-weight:700;font-size:.95rem;color:#2c3e50;margin-bottom:2px}
+.t-title{font-weight:700;font-size:.95rem;color:#1b3a6b;margin-bottom:2px}
 .t-meta{font-size:.8rem;color:#777;margin-bottom:6px}
 .vote-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px;align-items:center}
 .vote-name{padding:6px 10px;border:1.5px solid #ddd;border-radius:6px;font-size:.82rem;flex:1;min-width:110px;font-family:inherit}
-.vote-name:focus{outline:none;border-color:#2980b9}
-.vbtn{padding:6px 12px;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:500;transition:all .15s}
+.vote-name:focus{outline:none;border-color:#2563b5}
+.vbtn{padding:8px 14px;border:none;border-radius:var(--radius-pill);cursor:pointer;font-size:.8rem;font-weight:600;transition:all .15s}
 .vbtn-ja{background:#d5f5e3;color:#1a7a40}.vbtn-ja:hover{background:#27ae60;color:white}
 .vbtn-nein{background:#fdecea;color:#922b21}.vbtn-nein:hover{background:#e74c3c;color:white}
 .vbtn-vl{background:#fef9e7;color:#9a6b00}.vbtn-vl:hover{background:#f39c12;color:white}
@@ -70,8 +81,8 @@ tr:hover td{background:#fafbfc}
 .kal-day.has-ev{cursor:pointer;background:#eaf3fb;border:1px solid #aed6f1}
 .kal-day.has-probe{cursor:pointer;background:#f0fff4;border:1px solid #a9dfbf}
 .kal-day.has-both{cursor:pointer;background:#fef9e7;border:1px solid #f9ca8b}
-.kal-day.today{background:#2980b9!important;border-color:#2980b9!important;color:white}
-.kal-day.selected{outline:2px solid #2980b9}
+.kal-day.today{background:#2563b5!important;border-color:#2563b5!important;color:white}
+.kal-day.selected{outline:2px solid #2563b5}
 .kal-day-num{font-weight:500}
 .kal-ev-dot{font-size:.56rem;color:white;border-radius:3px;padding:1px 2px;margin-top:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .kal-detail{margin-top:12px;border-top:2px solid #e0e0e0;padding-top:10px}
@@ -80,20 +91,21 @@ tr:hover td{background:#fafbfc}
 .k-meta{font-size:.73rem;color:#aaa}
 .k-lied{display:inline-block;background:#f0e6f6;color:#6c3483;padding:1px 7px;border-radius:10px;font-size:.73rem;margin-bottom:3px}
 .k-text{font-size:.84rem;color:#444;line-height:1.4;margin-top:3px}
-.k-form-wrap{background:#f9f9f9;border-radius:8px;padding:14px;margin-bottom:14px}
+.k-form-wrap{background:#f6f8fb;border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px;margin-bottom:14px}
 .form-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-.form-row input,.form-row select{flex:1;min-width:130px;padding:7px 10px;border:1.5px solid #ddd;border-radius:6px;font-size:.86rem;font-family:inherit}
-.form-row input:focus,.form-row select:focus{outline:none;border-color:#2980b9}
-.fl-input{width:100%;padding:7px 10px;border:1.5px solid #ddd;border-radius:6px;font-size:.86rem;font-family:inherit;margin-bottom:8px}
-.fl-input:focus{outline:none;border-color:#2980b9}
-textarea{width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:6px;font-size:.88rem;resize:vertical;font-family:inherit}
-textarea:focus{outline:none;border-color:#2980b9}
-.btn{padding:7px 16px;border:none;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:500;transition:all .15s}
-.btn-primary{background:#2980b9;color:white}.btn-primary:hover{background:#2471a3}
-.btn-success{background:#27ae60;color:white}.btn-success:hover{background:#219a52}
+.form-row input,.form-row select{flex:1;min-width:130px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:.86rem;font-family:inherit;background:#fff;transition:border-color .15s,box-shadow .15s}
+.form-row input:focus,.form-row select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,181,.13)}
+.fl-input{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:.86rem;font-family:inherit;margin-bottom:8px;background:#fff;transition:border-color .15s,box-shadow .15s}
+.fl-input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,181,.13)}
+textarea{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:.88rem;resize:vertical;font-family:inherit;transition:border-color .15s,box-shadow .15s}
+textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,181,.13)}
+.btn{padding:9px 17px;border:none;border-radius:10px;cursor:pointer;font-size:.85rem;font-weight:600;transition:all .15s;letter-spacing:.01em}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--primary);color:white;box-shadow:0 3px 10px rgba(37,99,181,.28)}.btn-primary:hover{background:var(--primary-dark)}
+.btn-success{background:#22a559;color:white;box-shadow:0 3px 10px rgba(34,165,89,.26)}.btn-success:hover{background:#1c8f4c}
 .btn-danger{background:#e74c3c;color:white}.btn-danger:hover{background:#c0392b}
-.btn-gray{background:#ecf0f1;color:#555}.btn-gray:hover{background:#dde1e3}
-.btn-sm{padding:4px 9px;font-size:.76rem;border-radius:5px}
+.btn-gray{background:#eef1f5;color:#4a5562}.btn-gray:hover{background:#e2e7ec}
+.btn-sm{padding:6px 11px;font-size:.78rem;border-radius:8px;box-shadow:none}
 .btn-purple{background:#8e44ad;color:white}.btn-purple:hover{background:#7d3c98}
 .del-btn{position:absolute;top:8px;right:8px;opacity:0;transition:opacity .15s}
 .probe-item:hover .del-btn,.termin-card:hover .del-btn,.kommentar:hover .del-btn,.plan-item:hover .del-btn{opacity:1}
@@ -102,22 +114,22 @@ textarea:focus{outline:none;border-color:#2980b9}
 .loading{text-align:center;padding:40px;color:#aaa;font-size:.9rem}
 .empty{text-align:center;padding:30px;color:#bbb}
 .search-box{width:100%;padding:8px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:.9rem;margin-bottom:14px;font-family:inherit}
-.search-box:focus{outline:none;border-color:#2980b9}
+.search-box:focus{outline:none;border-color:#2563b5}
 .mitglied-card{background:white;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.07);margin-bottom:8px;display:flex;align-items:flex-start;gap:12px;position:relative}
-.mitglied-avatar{width:38px;height:38px;border-radius:50%;background:#2c3e50;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;flex-shrink:0}
+.mitglied-avatar{width:38px;height:38px;border-radius:50%;background:#1b3a6b;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;flex-shrink:0}
 .mitglied-info{flex:1;min-width:0}
-.mitglied-name{font-weight:600;font-size:.9rem;color:#2c3e50}
+.mitglied-name{font-weight:600;font-size:.9rem;color:#1b3a6b}
 .mitglied-detail{font-size:.78rem;color:#777;margin-top:2px}
-.mitglied-detail a{color:#2980b9;text-decoration:none}
+.mitglied-detail a{color:#2563b5;text-decoration:none}
 .mitglied-detail a:hover{text-decoration:underline}
 .konsole-section{border:1px solid #e0e0e0;border-radius:8px;padding:14px;margin-bottom:12px}
-.konsole-title{font-weight:600;font-size:.9rem;color:#2c3e50;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.konsole-title{font-weight:600;font-size:.9rem;color:#1b3a6b;margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .konsole-layout{display:flex;gap:14px;align-items:flex-start}
 .konsole-content{flex:1;min-width:0}
 .konsole-menu{flex:0 0 180px;display:flex;flex-direction:column;gap:5px;position:sticky;top:58px}
 .konsole-menu .km{display:flex;align-items:center;gap:7px;text-align:left;padding:9px 12px;border:1.5px solid #e6e6e6;background:white;border-radius:8px;cursor:pointer;font-size:.83rem;color:#555;transition:all .12s;width:100%}
-.konsole-menu .km:hover{border-color:#2980b9;color:#2980b9}
-.konsole-menu .km.active{background:#2980b9;color:#fff;border-color:#2980b9;font-weight:600}
+.konsole-menu .km:hover{border-color:#2563b5;color:#2563b5}
+.konsole-menu .km.active{background:#2563b5;color:#fff;border-color:#2563b5;font-weight:600}
 .konsole-pane{display:none}
 .konsole-pane.active{display:block}
 .konsole-pane .konsole-section{margin-bottom:0}
@@ -131,37 +143,83 @@ textarea:focus{outline:none;border-color:#2980b9}
 .modal{background:white;border-radius:12px;padding:22px;max-width:480px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto}
 .modal h3{font-size:1rem;margin-bottom:16px}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
-input[type=checkbox]{accent-color:#2980b9}
+input[type=checkbox]{accent-color:#2563b5}
 /* Schriftgröße (Barrierefreiheit) */
 html.fs-gross{font-size:18px}
 html.fs-sehrgross{font-size:20.5px}
 /* Ladeanzeige */
 #loading-overlay{position:fixed;inset:0;background:#f0f2f5;z-index:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
-.spinner{width:42px;height:42px;border:4px solid #d6e0ea;border-top-color:#2980b9;border-radius:50%;animation:spin 1s linear infinite}
+.spinner{width:42px;height:42px;border:4px solid #d6e0ea;border-top-color:#2563b5;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* Suche */
 .search-result{display:flex;align-items:center;gap:10px;padding:9px 11px;border-bottom:1px solid #f0f0f0;cursor:pointer;border-radius:6px}
 .search-result:hover{background:#f4f6f8}
 
 /* AUTH */
-.login-overlay{position:fixed;inset:0;background:#2c3e50;z-index:1000;display:flex;align-items:center;justify-content:center}
+.login-overlay{position:fixed;inset:0;background:#1b3a6b;z-index:1000;display:flex;align-items:center;justify-content:center}
 .login-box{overflow-y:auto;max-height:95vh}
 .login-box{background:white;border-radius:16px;padding:32px 28px;max-width:380px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.3)}
 .login-logo{text-align:center;font-size:2.5rem;margin-bottom:6px}
-.login-title{text-align:center;font-size:1.2rem;font-weight:700;color:#2c3e50;margin-bottom:4px}
+.login-title{text-align:center;font-size:1.2rem;font-weight:700;color:#1b3a6b;margin-bottom:4px}
 .login-sub{text-align:center;font-size:.82rem;color:#aaa;margin-bottom:22px}
 .login-input{width:100%;padding:11px 14px;border:1.5px solid #ddd;border-radius:8px;font-size:.9rem;margin-bottom:12px;font-family:inherit;transition:border-color .15s}
-.login-input:focus{outline:none;border-color:#2980b9}
-.login-btn{width:100%;padding:12px;background:#2980b9;color:white;border:none;border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .15s}
-.login-btn:hover{background:#2471a3}
+.login-input:focus{outline:none;border-color:#2563b5}
+.login-btn{width:100%;padding:12px;background:#2563b5;color:white;border:none;border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .15s}
+.login-btn:hover{background:#1d4e96}
 .login-err{color:#e74c3c;font-size:.82rem;text-align:center;margin-top:8px;min-height:18px}
 .user-chip{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;padding:4px 12px;border-radius:20px;font-size:.8rem;cursor:pointer;display:flex;align-items:center;gap:6px}
 .user-chip:hover{background:rgba(255,255,255,.25)}
 
+/* ===== UNTERE TAB-LEISTE (mobil) ===== */
+.bottomnav{display:none}
+.bnav{position:fixed;left:0;right:0;bottom:0;z-index:80;background:rgba(255,255,255,.96);backdrop-filter:saturate(160%) blur(12px);-webkit-backdrop-filter:saturate(160%) blur(12px);border-top:1px solid var(--line);box-shadow:0 -4px 20px rgba(20,40,80,.07);padding-bottom:env(safe-area-inset-bottom);justify-content:space-around}
+.bottomnav.bnav{display:none}
+.bnav-item{flex:1;background:none;border:none;cursor:pointer;padding:8px 2px 7px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--muted);font-size:.64rem;font-weight:600;transition:color .15s;position:relative;font-family:inherit}
+.bnav-ic{font-size:1.32rem;line-height:1;transition:transform .15s}
+.bnav-item.active{color:var(--primary)}
+.bnav-item.active .bnav-ic{transform:translateY(-1px) scale(1.06)}
+.bnav-item .bnav-badge{position:absolute;top:4px;left:calc(50% + 6px);min-width:15px;height:15px;border-radius:8px;background:#e74c3c;color:#fff;font-size:.58rem;font-weight:700;line-height:15px;text-align:center;padding:0 3px;display:none}
+/* Mehr-Sheet */
+.sheet-overlay{display:none;position:fixed;inset:0;z-index:95;background:rgba(15,25,45,.42);align-items:flex-end}
+.sheet-overlay.open{display:flex;animation:fadeIn .18s ease}
+.sheet{background:#fff;width:100%;border-radius:22px 22px 0 0;padding:10px 14px calc(18px + env(safe-area-inset-bottom));box-shadow:var(--shadow-lg);animation:sheetUp .24s cubic-bezier(.2,.8,.2,1)}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+.sheet-grip{width:40px;height:4px;border-radius:2px;background:#d3dae3;margin:6px auto 12px}
+.sheet h4{font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:6px 6px 8px}
+.sheet-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sheet-link{display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 6px;border-radius:var(--radius-sm);background:#f6f8fb;border:1px solid var(--line);cursor:pointer;color:var(--ink);font-size:.74rem;font-weight:600;text-align:center}
+.sheet-link:active{background:var(--primary-50)}
+.sheet-link .si{font-size:1.5rem;line-height:1}
+.sheet-link.adm{background:#fff5f5;border-color:#f6d6d2}
+
+/* ===== UMFRAGEN ===== */
+.umfrage-card{border-left:4px solid var(--primary)}
+.umfrage-frage{font-size:1.02rem;font-weight:700;color:var(--navy);line-height:1.3}
+.umfrage-status{flex:0 0 auto;font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 9px;border-radius:var(--radius-pill)}
+.umfrage-status.open{background:#e3f6ec;color:#1c8f4c}
+.umfrage-status.closed{background:#eef1f5;color:#7a8694}
+.umfrage-meta{font-size:.76rem;color:var(--muted);margin:3px 0 13px}
+.uf-opts{display:flex;flex-direction:column;gap:9px}
+.uf-opt-row{padding:9px 11px;border:1.5px solid var(--line);border-radius:11px;background:#fbfcfe;transition:all .12s}
+.uf-opt-row.clickable{cursor:pointer}
+.uf-opt-row.clickable:hover{border-color:var(--sky);background:var(--primary-50)}
+.uf-opt-row.mine{border-color:var(--primary);background:var(--primary-50)}
+.uf-opt-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.uf-check{font-size:1rem;line-height:1;flex:0 0 auto}
+.uf-opt-label{flex:1;font-size:.9rem;font-weight:600;color:var(--ink)}
+.uf-opt-count{flex:0 0 auto;font-size:.76rem;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.uf-bar{height:8px;border-radius:5px;background:#eaeef3;overflow:hidden}
+.uf-bar-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--sky),var(--primary));transition:width .4s cubic-bezier(.2,.8,.2,1)}
+.uf-bar-fill.mine{background:linear-gradient(90deg,var(--primary),var(--primary-dark))}
+.uf-voters{font-size:.72rem;color:var(--muted);margin-top:5px;line-height:1.4}
+
 /* ===== HANDY-OPTIMIERUNG ===== */
 @media(max-width:640px){
-  body{padding-bottom:env(safe-area-inset-bottom)}
-  .content{padding:12px 10px}
+  body{padding-bottom:calc(env(safe-area-inset-bottom) + 60px)}
+  .content{padding:14px 11px}
+  /* Konzertmeister-Stil: obere Tabs raus, untere Leiste rein */
+  .main-tabs{display:none}
+  .bottomnav.bnav{display:flex}
   /* iOS: verhindert Auto-Zoom beim Tippen in Eingabefelder */
   input, select, textarea, .fl-input, .login-input, .vote-name, .search-box{font-size:16px}
   /* Header kompakter, kein Überlauf */
@@ -238,7 +296,7 @@ html.fs-sehrgross{font-size:20.5px}
     <div class="login-title" style="display:none">Chor Dölau</div>
     <!-- Tabs -->
     <div style="display:flex;border-bottom:2px solid #eee;margin-bottom:18px">
-      <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;background:none;border:none;padding:8px;font-size:.88rem;font-weight:600;color:#2980b9;border-bottom:2px solid #2980b9;margin-bottom:-2px;cursor:pointer">Anmelden</button>
+      <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;background:none;border:none;padding:8px;font-size:.88rem;font-weight:600;color:#2563b5;border-bottom:2px solid #2563b5;margin-bottom:-2px;cursor:pointer">Anmelden</button>
       <button id="tab-register" onclick="switchAuthTab('register')" style="flex:1;background:none;border:none;padding:8px;font-size:.88rem;font-weight:500;color:#aaa;cursor:pointer">Registrieren</button>
     </div>
     <!-- Login Form -->
@@ -289,9 +347,10 @@ html.fs-sehrgross{font-size:20.5px}
   <div class="mtab active" onclick="showPage('lieder',this)">🎵 Lieder</div>
   <div class="mtab" onclick="showPage('proben',this)">📅 Proben</div>
   <div class="mtab" onclick="showPage('termine',this)">📆 Termine</div>
+  <div class="mtab" onclick="showPage('umfragen',this)">📊 Umfragen</div>
   <div class="mtab" onclick="showPage('mitglieder',this)">👥 Mitglieder</div>
   <div class="mtab" onclick="showPage('plakate',this)">📋 Plakate</div>
-  <div class="mtab" onclick="showPage('kommentare',this)">💬 Kommentare <span id="k-count" style="background:rgba(41,128,185,.15);color:#2980b9;padding:1px 6px;border-radius:10px;font-size:.72rem;margin-left:3px"></span></div>
+  <div class="mtab" onclick="showPage('kommentare',this)">💬 Kommentare <span id="k-count" style="background:rgba(41,128,185,.15);color:#2563b5;padding:1px 6px;border-radius:10px;font-size:.72rem;margin-left:3px"></span></div>
   <div class="mtab admin-tab admin-only" onclick="showPage('anwesenheit',this)">📊 Anwesenheit</div>
   <div class="mtab user-only" id="tab-einstellungen" style="display:none" onclick="showPage('einstellungen',this)">⚙️ Einstellungen</div>
   <div class="mtab admin-tab admin-only" onclick="showPage('konsole',this)">⚙️ Konsole</div>
@@ -432,6 +491,23 @@ html.fs-sehrgross{font-size:20.5px}
   </div>
 </div>
 
+<div class="page" id="p-umfragen">
+  <div class="admin-section admin-only" data-perm="termine">
+    <div class="admin-label">🔑 Admin: Neue Umfrage erstellen</div>
+    <input class="fl-input" type="text" id="uf-frage" placeholder="Frage * (z. B. Welcher Termin passt fürs Sommerfest?)" maxlength="160">
+    <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:5px;color:#444">Antwortmöglichkeiten</label>
+    <div id="uf-optionen"></div>
+    <button class="btn btn-gray btn-sm" type="button" onclick="addUmfrageOption()" style="margin-bottom:10px">＋ Option hinzufügen</button>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.86rem;cursor:pointer;margin-bottom:12px">
+      <input type="checkbox" id="uf-mehrfach" style="accent-color:#2563b5;width:16px;height:16px">
+      <span>Mehrfachauswahl erlauben (mehrere Antworten pro Person)</span>
+    </label>
+    <button class="btn btn-primary" onclick="createUmfrage()">📊 Umfrage starten</button>
+    <div id="uf-create-result" style="font-size:.82rem;min-height:16px;margin-top:6px"></div>
+  </div>
+  <div id="umfragen-list"></div>
+</div>
+
 <div class="page" id="p-mitglieder">
   <div class="admin-section admin-only" data-perm="mitglieder">
     <div class="admin-label">🔑 Admin: Mitglied hinzufügen</div>
@@ -553,11 +629,12 @@ html.fs-sehrgross{font-size:20.5px}
       <div class="konsole-title">🔔 Push-Benachrichtigungen</div>
       <div style="font-size:.83rem;color:#666;margin-bottom:10px">Bei welchen Ereignissen soll automatisch eine Push-Nachricht an alle Mitglieder gehen?</div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-termin" style="accent-color:#2980b9;width:16px;height:16px"> 🗓️ Neuer Termin hinzugefügt</label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-probe" style="accent-color:#2980b9;width:16px;height:16px"> 🎹 Neue Probe geplant</label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-liedwunsch" style="accent-color:#2980b9;width:16px;height:16px"> 🎵 Neuer Liedwunsch</label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-kommentar" style="accent-color:#2980b9;width:16px;height:16px"> 💬 Neuer Kommentar</label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-absage" style="accent-color:#2980b9;width:16px;height:16px"> ❌ Chorleitung bei Absagen benachrichtigen</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-termin" style="accent-color:#2563b5;width:16px;height:16px"> 🗓️ Neuer Termin hinzugefügt</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-probe" style="accent-color:#2563b5;width:16px;height:16px"> 🎹 Neue Probe geplant</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-liedwunsch" style="accent-color:#2563b5;width:16px;height:16px"> 🎵 Neuer Liedwunsch</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-kommentar" style="accent-color:#2563b5;width:16px;height:16px"> 💬 Neuer Kommentar</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-umfrage" style="accent-color:#2563b5;width:16px;height:16px"> 📊 Neue Umfrage</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-absage" style="accent-color:#2563b5;width:16px;height:16px"> ❌ Chorleitung bei Absagen benachrichtigen</label>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">
         <span style="font-size:.84rem;color:#444">🔔 Erinnerung vor Proben/Terminen:</span>
@@ -748,6 +825,31 @@ html.fs-sehrgross{font-size:20.5px}
 
 </div><!-- /content -->
 
+<!-- UNTERE TAB-LEISTE (mobil, Konzertmeister-Stil) -->
+<nav class="bottomnav bnav" id="bottomnav">
+  <button class="bnav-item active" data-page="lieder" onclick="bnav('lieder')"><span class="bnav-ic">🎵</span>Lieder</button>
+  <button class="bnav-item" data-page="proben" onclick="bnav('proben')"><span class="bnav-ic">📅</span>Proben</button>
+  <button class="bnav-item" data-page="termine" onclick="bnav('termine')"><span class="bnav-ic">📆</span>Termine</button>
+  <button class="bnav-item" data-page="umfragen" onclick="bnav('umfragen')"><span class="bnav-ic">📊</span>Umfragen</button>
+  <button class="bnav-item" data-page="__more__" onclick="openMoreSheet()"><span class="bnav-ic">☰</span>Mehr<span class="bnav-badge" id="bnav-more-badge">0</span></button>
+</nav>
+
+<!-- MEHR-SHEET -->
+<div class="sheet-overlay" id="more-sheet" onclick="if(event.target===this)closeMoreSheet()">
+  <div class="sheet">
+    <div class="sheet-grip"></div>
+    <h4>Mehr</h4>
+    <div class="sheet-grid">
+      <button class="sheet-link" onclick="bnavMore('mitglieder')"><span class="si">👥</span>Mitglieder</button>
+      <button class="sheet-link" onclick="bnavMore('plakate')"><span class="si">📋</span>Plakate</button>
+      <button class="sheet-link" onclick="bnavMore('kommentare')"><span class="si">💬</span>Kommentare</button>
+      <button class="sheet-link sheet-user" id="more-einst" style="display:none" onclick="bnavMore('einstellungen')"><span class="si">⚙️</span>Einstellungen</button>
+      <button class="sheet-link adm sheet-adm" style="display:none" onclick="bnavMore('anwesenheit')"><span class="si">📊</span>Anwesenheit</button>
+      <button class="sheet-link adm sheet-adm" style="display:none" onclick="bnavMore('konsole')"><span class="si">🔑</span>Konsole</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-abwesenheit">
   <div class="modal">
     <h3>🏖️ Meine Abwesenheit</h3>
@@ -796,19 +898,19 @@ html.fs-sehrgross{font-size:20.5px}
     <h3>📄 Noten – <span id="sp-songname"></span></h3>
     <input type="hidden" id="sp-songid">
     <div style="background:#f4f6f8;border-radius:8px;padding:12px 14px;margin-bottom:14px">
-      <div style="font-size:.82rem;font-weight:600;color:#2c3e50;margin-bottom:8px">📤 PDF hochladen</div>
+      <div style="font-size:.82rem;font-weight:600;color:#1b3a6b;margin-bottom:8px">📤 PDF hochladen</div>
       <input type="file" id="sp-file" accept="application/pdf,.pdf" style="font-size:.85rem;width:100%">
       <button class="btn btn-success btn-sm" style="margin-top:10px" onclick="uploadSongPdf()">⬆️ Hochladen & speichern</button>
-      <div id="sp-progress" style="font-size:.82rem;color:#2980b9;margin-top:8px;min-height:16px"></div>
+      <div id="sp-progress" style="font-size:.82rem;color:#2563b5;margin-top:8px;min-height:16px"></div>
     </div>
     <div style="text-align:center;font-size:.78rem;color:#aaa;margin:6px 0">— oder —</div>
     <div style="margin-bottom:6px">
-      <div style="font-size:.82rem;font-weight:600;color:#2c3e50;margin-bottom:6px">🔗 Link einfügen (z.B. OneDrive)</div>
+      <div style="font-size:.82rem;font-weight:600;color:#1b3a6b;margin-bottom:6px">🔗 Link einfügen (z.B. OneDrive)</div>
       <input type="text" id="sp-link" class="fl-input" placeholder="https://...">
       <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveSongPdfLink()">💾 Noten-Link speichern</button>
     </div>
     <div style="border-top:1px solid #eee;margin-top:14px;padding-top:12px">
-      <div style="font-size:.82rem;font-weight:600;color:#2c3e50;margin-bottom:6px">🎤 Übe-App / Stimmcoach (Link)</div>
+      <div style="font-size:.82rem;font-weight:600;color:#1b3a6b;margin-bottom:6px">🎤 Übe-App / Stimmcoach (Link)</div>
       <input type="text" id="sp-uebe" class="fl-input" placeholder="https://doelaudate.github.io/ueben/...">
       <button class="btn btn-primary btn-sm" style="margin-top:8px;background:#8e44ad" onclick="saveSongUebe()">💾 Übe-App speichern</button>
     </div>
@@ -892,7 +994,7 @@ html.fs-sehrgross{font-size:20.5px}
     <p style="font-size:.82rem;color:#888;margin-bottom:14px">Aufgaben pro Stimmgruppe (leer = keine Aufgabe):</p>
     <div style="display:grid;gap:10px">
       <div><label style="display:block;font-size:.82rem;font-weight:600;color:#e67e22;margin-bottom:4px">🎵 Sopran</label><textarea id="ha-sopran" placeholder="z.B. Takt 12-20 üben…" style="min-height:60px"></textarea></div>
-      <div><label style="display:block;font-size:.82rem;font-weight:600;color:#2980b9;margin-bottom:4px">🎵 Alt</label><textarea id="ha-alt" placeholder="z.B. Einsatz bei Refrain beachten…" style="min-height:60px"></textarea></div>
+      <div><label style="display:block;font-size:.82rem;font-weight:600;color:#2563b5;margin-bottom:4px">🎵 Alt</label><textarea id="ha-alt" placeholder="z.B. Einsatz bei Refrain beachten…" style="min-height:60px"></textarea></div>
       <div><label style="display:block;font-size:.82rem;font-weight:600;color:#27ae60;margin-bottom:4px">🎵 Tenor</label><textarea id="ha-tenor" placeholder="z.B. Melodie auswendig lernen…" style="min-height:60px"></textarea></div>
       <div><label style="display:block;font-size:.82rem;font-weight:600;color:#8e44ad;margin-bottom:4px">🎵 Bass</label><textarea id="ha-bass" placeholder="z.B. Rhythmus Strophe 2…" style="min-height:60px"></textarea></div>
     </div>
@@ -918,11 +1020,11 @@ html.fs-sehrgross{font-size:20.5px}
       <div>
         <label style="display:block;font-size:.82rem;font-weight:500;margin-bottom:6px;color:#444">🛡️ Berechtigungen</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="perm-termine" style="accent-color:#2980b9"> Termine verwalten</label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="perm-mitglieder" style="accent-color:#2980b9"> Mitglieder verwalten</label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="perm-proben" style="accent-color:#2980b9"> Proben verwalten</label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="perm-kommentare" style="accent-color:#2980b9"> Kommentare löschen</label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="perm-lieder" style="accent-color:#2980b9"> Lieder verwalten</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="perm-termine" style="accent-color:#2563b5"> Termine verwalten</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="perm-mitglieder" style="accent-color:#2563b5"> Mitglieder verwalten</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="perm-proben" style="accent-color:#2563b5"> Proben verwalten</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="perm-kommentare" style="accent-color:#2563b5"> Kommentare löschen</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="perm-lieder" style="accent-color:#2563b5"> Lieder verwalten</label>
         </div>
       </div>
     </div>
@@ -938,7 +1040,7 @@ html.fs-sehrgross{font-size:20.5px}
   <div class="modal" style="max-width:320px">
     <div style="text-align:center;margin-bottom:16px">
       <div style="font-size:2rem;margin-bottom:6px">👤</div>
-      <div id="menu-username" style="font-weight:700;font-size:1rem;color:#2c3e50"></div>
+      <div id="menu-username" style="font-weight:700;font-size:1rem;color:#1b3a6b"></div>
       <div id="menu-email" style="font-size:.8rem;color:#aaa"></div>
     </div>
     <div style="border-top:1px solid #eee;padding-top:12px">
@@ -975,7 +1077,7 @@ function applyFontSize(){
   document.documentElement.classList.remove('fs-gross','fs-sehrgross');
   if(fs==='gross') document.documentElement.classList.add('fs-gross');
   else if(fs==='sehrgross') document.documentElement.classList.add('fs-sehrgross');
-  document.querySelectorAll('.fs-btn').forEach(b=>{ const on=b.getAttribute('data-fs')===fs; b.style.background=on?'#2980b9':'#ecf0f1'; b.style.color=on?'#fff':'#555'; });
+  document.querySelectorAll('.fs-btn').forEach(b=>{ const on=b.getAttribute('data-fs')===fs; b.style.background=on?'#2563b5':'#ecf0f1'; b.style.color=on?'#fff':'#555'; });
 }
 function setFontSize(fs){ localStorage.setItem('chor_fontsize',fs); applyFontSize(); }
 
@@ -1010,7 +1112,7 @@ function showLoading(on){ const lo=document.getElementById('loading-overlay'); i
 applyFontSize();
 const ADMIN_PW='Asf06217';
 const TYP_LABEL={"konzert": "🎵 Konzert", "fest": "🎪 Fest", "chorlager": "🏕️ Chorlager", "gottesdienst": "⛪ Gottesdienst", "probe": "🎹 Probe", "sonstiges": "📌 Sonstiges"};
-const TYP_COLOR={"konzert": "#2980b9", "fest": "#e67e22", "chorlager": "#27ae60", "gottesdienst": "#8e44ad", "probe": "#c0392b", "sonstiges": "#7f8c8d"};
+const TYP_COLOR={"konzert": "#2563b5", "fest": "#e67e22", "chorlager": "#27ae60", "gottesdienst": "#8e44ad", "probe": "#c0392b", "sonstiges": "#7f8c8d"};
 const INIT_MITGLIEDER=[{"nr": 1, "nachname": "Arnold", "vorname": "Christiane", "telefon": "0345/6801481", "handy": "0175/5369335", "email": "nck_arnold@t-online.de", "geburtstag": "11.07.58", "adresse": "Ellen-Weber-Str. 97", "plz": "06120", "username": "CA110758"}, {"nr": 2, "nachname": "Balbach", "vorname": "Jochen", "telefon": "0345/6802913", "handy": "0151/15336411", "email": "jochen.balbach@physik.uni-halle.de", "geburtstag": "17.05.66", "adresse": "Otto-Kanning-Str. 30", "plz": "", "username": "JB170566"}, {"nr": 3, "nachname": "Balbach", "vorname": "Petra", "telefon": "0345/6802913", "handy": "0151/12811946", "email": "felixaustria@gmx.de", "geburtstag": "04.09.64", "adresse": "Otto-Kanning-Str. 30", "plz": "", "username": "PB040964"}, {"nr": 4, "nachname": "Bromann", "vorname": "Birte", "telefon": "", "handy": "0163/5039756", "email": "birte.bromann@t-online.de", "geburtstag": "25.05.88", "adresse": "", "plz": "", "username": "BB250588"}, {"nr": 5, "nachname": "Dicty", "vorname": "Hannah", "telefon": "", "handy": "0176/94960900", "email": "hannah.dicty@gmail.com", "geburtstag": "16.03.01", "adresse": "Adolph-von-Harnack-Str. 4", "plz": "06114", "username": "HD160301"}, {"nr": 6, "nachname": "Durka", "vorname": "Walter", "telefon": "0345/5321345", "handy": "0170/9489446", "email": "walter.durka@ufz.de", "geburtstag": "20.12.62", "adresse": "Edmund-Husserl-Str. 4", "plz": "06120", "username": "WD201262"}, {"nr": 7, "nachname": "Engel", "vorname": "Jeanette", "telefon": "", "handy": "0171/2134188", "email": "jeanette.engel@gmx.de", "geburtstag": "29.01.87", "adresse": "Brüderstr. 13", "plz": "06108", "username": "JE290187"}, {"nr": 8, "nachname": "Fliegner", "vorname": "Antje", "telefon": "", "handy": "0176/51970719", "email": "antjefliegner@web.de", "geburtstag": "03.07.70", "adresse": "", "plz": "", "username": "AF030770"}, {"nr": 9, "nachname": "Göricke", "vorname": "Petra", "telefon": "", "handy": "0170/6047997", "email": "petra-goericke@web.de", "geburtstag": "31.01.61", "adresse": "Ellen-Weber-Str. 10", "plz": "06120", "username": "PG310161"}, {"nr": 10, "nachname": "Hähndel", "vorname": "Ursula", "telefon": "", "handy": "0176/62432938", "email": "ursula.haehndel@tele2.de", "geburtstag": "20.05.57", "adresse": "Lunzbergring 3", "plz": "06120", "username": "UH200557"}, {"nr": 11, "nachname": "Herrmann", "vorname": "Doris", "telefon": "", "handy": "0176/55243597", "email": "dorisherrmann4@gmail.com", "geburtstag": "", "adresse": "Angerweg 8b", "plz": "06120", "username": "DH"}, {"nr": 12, "nachname": "Heise", "vorname": "Matthias", "telefon": "", "handy": "0162/33865177", "email": "tjhm.heise@arcor.de", "geburtstag": "29.05.66", "adresse": "Bergschenkenweg 52a", "plz": "06118", "username": "MH290566"}, {"nr": 13, "nachname": "Jäckel", "vorname": "Eckhard", "telefon": "", "handy": "0173/9140294", "email": "ecki.jaeckel@gmail.com", "geburtstag": "", "adresse": "Waldmeisterstr. 5", "plz": "06120", "username": "EJ"}, {"nr": 14, "nachname": "Koser", "vorname": "Susanne", "telefon": "0345/6829880", "handy": "0152/34551426", "email": "susannekoser@web.de", "geburtstag": "29.09.69", "adresse": "Otto-Kanning-Str. 53", "plz": "06120", "username": "SK290969"}, {"nr": 15, "nachname": "Krause", "vorname": "Bianca", "telefon": "", "handy": "0157/54146071", "email": "krause.beibei@gmail.com", "geburtstag": "07.01.82", "adresse": "", "plz": "", "username": "BK070182"}, {"nr": 16, "nachname": "Kühn", "vorname": "Elisabeth", "telefon": "0345/6802868", "handy": "0170/2249383", "email": "Elisabeth@spa-house.de", "geburtstag": "04.02.66", "adresse": "Otto-Kanning-Str. 49", "plz": "06120", "username": "EK040266"}, {"nr": 17, "nachname": "Kühn", "vorname": "Ingolf", "telefon": "0345/6802868", "handy": "0176/51248157", "email": "Ingolf@spa-house.de", "geburtstag": "21.01.67", "adresse": "Otto-Kanning-Str. 49", "plz": "06120", "username": "IK210167"}, {"nr": 18, "nachname": "Kulig", "vorname": "Nadja", "telefon": "0345/6856196", "handy": "0151/44556194", "email": "nadja.kulig@gmx.de", "geburtstag": "30.04.76", "adresse": "Brandbergweg 29", "plz": "06120", "username": "NK300476"}, {"nr": 19, "nachname": "Kull", "vorname": "Eberhard", "telefon": "0345/5504206", "handy": "", "email": "ekk38@gmx.de", "geburtstag": "11.03.38", "adresse": "Alfred-Oelsner-Str. 15", "plz": "06120", "username": "EK110338"}, {"nr": 20, "nachname": "Kursawe", "vorname": "Josephiene", "telefon": "", "handy": "0176/84507517", "email": "josephiene.kursawe@mailbox.org", "geburtstag": "19.01.87", "adresse": "", "plz": "", "username": "JK190187"}, {"nr": 21, "nachname": "Lamm", "vorname": "Marco", "telefon": "0345/6800536", "handy": "0160/93147286", "email": "mclamm@t-online.de", "geburtstag": "", "adresse": "Otto-Kanning-Str. 45", "plz": "06120", "username": "ML"}, {"nr": 22, "nachname": "Linke", "vorname": "Susanne", "telefon": "", "handy": "0152/03866999", "email": "susanne-linke@gmx.de", "geburtstag": "27.04.91", "adresse": "Ellen-Weber-Str. 131", "plz": "", "username": "SL270491"}, {"nr": 23, "nachname": "Moeller", "vorname": "Regina", "telefon": "", "handy": "0173/3494549", "email": "regina.moeller.halle@freenet.de", "geburtstag": "", "adresse": "Blumenau 25", "plz": "06120", "username": "RM"}, {"nr": 24, "nachname": "Mothes", "vorname": "Rosi", "telefon": "", "handy": "0151/23952005", "email": "rosi.mothes@web.de", "geburtstag": "09.07.69", "adresse": "W.-v.-Kügelgen-Str. 7", "plz": "06120", "username": "RM090769"}, {"nr": 25, "nachname": "Niebuhr", "vorname": "Sören", "telefon": "0345/6140672", "handy": "0173/5660181", "email": "snh@gmx.de", "geburtstag": "13.07.71", "adresse": "", "plz": "06198", "username": "SN130771"}, {"nr": 26, "nachname": "Ortlieb", "vorname": "Stefanie", "telefon": "", "handy": "0152/28616121", "email": "stef94.ortlieb@web.de", "geburtstag": "19.07.94", "adresse": "Aalweg 15", "plz": "06120", "username": "SO190794"}, {"nr": 27, "nachname": "Rödel", "vorname": "Klaus", "telefon": "0345/5508505", "handy": "0178/3095264", "email": "ledeor.klaus@gmail.com", "geburtstag": "", "adresse": "Franz-Mehring-Str. 6", "plz": "06120", "username": "KR"}, {"nr": 28, "nachname": "Rohde", "vorname": "Ida", "telefon": "", "handy": "0178/6841991", "email": "ida.rohde@outlook.de", "geburtstag": "10.07.01", "adresse": "Hoher Weg 6", "plz": "06120", "username": "IR100701"}, {"nr": 29, "nachname": "Schild von Spannenberg", "vorname": "Ulrike", "telefon": "", "handy": "0171/9985650", "email": "SVShome@gmx.de", "geburtstag": "04.11.62", "adresse": "Ellen-Weber-Str. 98", "plz": "06120", "username": "US041162"}, {"nr": 30, "nachname": "Skaliks", "vorname": "Ulrike", "telefon": "", "handy": "0177/8999020", "email": "uljoe@gmx.de", "geburtstag": "09.07.73", "adresse": "Smaragdweg 21", "plz": "06120", "username": "US090773"}, {"nr": 31, "nachname": "Steinborn", "vorname": "Danny", "telefon": "", "handy": "0177/5776157", "email": "dannysteinborn@gmail.com", "geburtstag": "05.02.02", "adresse": "Heideweg 21", "plz": "06120", "username": "DS050202"}, {"nr": 32, "nachname": "Stubbs", "vorname": "Milton", "telefon": "", "handy": "0176/32715256", "email": "stubbs@biochemtech.uni-halle.de", "geburtstag": "15.05.62", "adresse": "Ammernweg 2", "plz": "", "username": "MS150562"}, {"nr": 33, "nachname": "von Borell", "vorname": "Susanne", "telefon": "0345/5500330", "handy": "0176/56809120", "email": "svbdv@posteo.de", "geburtstag": "", "adresse": "Schwedenweg 9", "plz": "06120", "username": "SV"}, {"nr": 34, "nachname": "von Nessen", "vorname": "Rita", "telefon": "", "handy": "0172/3741626", "email": "eselsmilch@web.de", "geburtstag": "18.12.69", "adresse": "Irisweg 5", "plz": "06118", "username": "RV181269"}, {"nr": 35, "nachname": "Werge", "vorname": "Kerstin", "telefon": "0345/5503231", "handy": "0160/1202414", "email": "werge@t-online.de", "geburtstag": "14.01.68", "adresse": "Fichtenstr. 10", "plz": "06198", "username": "KW140168"}, {"nr": 36, "nachname": "Wolff", "vorname": "Martin", "telefon": "", "handy": "0176/54482520", "email": "Doelaudate@martinwolff-tenor.de", "geburtstag": "29.04.98", "adresse": "Geiststr. 21", "plz": "06108", "username": "MW290498"}];
 const INIT_TERMINE=[{"id": "23r7du2kk", "titel": "4 Chöre Konzert", "datum": "2026-06-07", "datum_ende": "", "uhrzeit": "15:00", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "8vfz808c1", "titel": "Lieskauer Sommerfest", "datum": "2026-06-21", "datum_ende": "", "uhrzeit": "11:00", "typ": "fest", "beschreibung": "", "abstimmungen": {}}, {"id": "79976fwpi", "titel": "Sommerkonzert", "datum": "2026-06-28", "datum_ende": "", "uhrzeit": "15:00", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "fympt3vrg", "titel": "Gemeindefest", "datum": "2026-09-20", "datum_ende": "", "uhrzeit": "14:00 / 15:00 / 16:00", "typ": "fest", "beschreibung": "Uhrzeit noch nicht festgelegt", "abstimmungen": {}}, {"id": "ru26ly3p6", "titel": "Chorlager Schierke", "datum": "2026-11-06", "datum_ende": "2026-11-08", "uhrzeit": "", "typ": "chorlager", "beschreibung": "", "abstimmungen": {}}, {"id": "c81poy77r", "titel": "Lichtergottesdienst", "datum": "2026-11-29", "datum_ende": "", "uhrzeit": "", "typ": "gottesdienst", "beschreibung": "", "abstimmungen": {}}, {"id": "fwktqtez8", "titel": "Weihnachtskonzert", "datum": "2026-12-05", "datum_ende": "", "uhrzeit": "", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "h5k00tkj8", "titel": "Chorlager", "datum": "2027-10-14", "datum_ende": "2027-10-16", "uhrzeit": "", "typ": "chorlager", "beschreibung": "", "abstimmungen": {}}];
 
@@ -1095,13 +1197,34 @@ function showPage(id,tab){
   if(tab) tab.classList.add('active');
   if(id==='proben'){renderProben();renderSongPicker();}
   if(id==='termine') renderTermine();
+  if(id==='umfragen') renderUmfragen();
   if(id==='mitglieder') renderMitglieder();
   if(id==='konsole') renderKonsole();
   if(id==='einstellungen') renderEinstellungen();
   if(id==='lieder') renderLiedwuensche();
   if(id==='plakate') renderPlakate();
   if(id==='anwesenheit') renderAnwesenheitPage();
+  syncBottomNav(id);
+  try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){}
 }
+
+// ===== UNTERE TAB-LEISTE (mobil) =====
+const BNAV_PRIMARY=['lieder','proben','termine','umfragen'];
+function syncBottomNav(id){
+  document.querySelectorAll('.bnav-item').forEach(b=>{
+    const p=b.getAttribute('data-page');
+    b.classList.toggle('active', p===id || (p==='__more__' && !BNAV_PRIMARY.includes(id)));
+  });
+}
+function bnav(id){ showPage(id, null); }
+function bnavMore(id){ closeMoreSheet(); showPage(id, null); }
+function openMoreSheet(){
+  const loggedIn = (typeof currentUser!=='undefined' && !!currentUser);
+  document.querySelectorAll('#more-sheet .sheet-adm').forEach(b=>b.style.display=adminMode?'flex':'none');
+  const me=document.getElementById('more-einst'); if(me) me.style.display=loggedIn?'flex':'none';
+  document.getElementById('more-sheet').classList.add('open');
+}
+function closeMoreSheet(){ document.getElementById('more-sheet').classList.remove('open'); }
 
 // LIEDER
 function renderStats(){
@@ -1190,7 +1313,7 @@ async function saveSongUebe(){
 }
 
 // ===== HÖRBEISPIELE (Aufnahme pro Stimme) =====
-const HOER_VOICES=[['S','Sopran','#e67e22'],['A','Alt','#2980b9'],['T','Tenor','#27ae60'],['B','Bass','#8e44ad']];
+const HOER_VOICES=[['S','Sopran','#e67e22'],['A','Alt','#2563b5'],['T','Tenor','#27ae60'],['B','Bass','#8e44ad']];
 let _hMediaRec=null, _hChunks=[], _hActive=null, _hTimer=null, _hStream=null;
 function openHoer(id){
   const song=findSongById(id); if(!song) return;
@@ -1211,7 +1334,7 @@ function renderHoer(){
     let ctrl='';
     if(canRec){
       if(_hActive===k){
-        ctrl=`<button class="btn btn-sm" style="background:#2c3e50;color:#fff;font-size:.72rem" onclick="stopHoerRecord()">⏹ Stopp & speichern</button>`;
+        ctrl=`<button class="btn btn-sm" style="background:#1b3a6b;color:#fff;font-size:.72rem" onclick="stopHoerRecord()">⏹ Stopp & speichern</button>`;
       } else if(_hActive){
         ctrl=`<button class="btn btn-sm btn-gray" style="font-size:.72rem;opacity:.5" disabled>🔴 Aufnehmen</button>`;
       } else {
@@ -1256,7 +1379,7 @@ async function uploadHoer(voice){
   const mime=(_hMediaRec&&_hMediaRec.mimeType)||'audio/webm';
   const blob=new Blob(_hChunks,{type:mime});
   if(!blob.size){ _hActive=null; renderHoer(); setHoerStatus('❌ Leere Aufnahme.','#e74c3c'); return; }
-  setHoerStatus('⏳ Wird gespeichert…','#2980b9');
+  setHoerStatus('⏳ Wird gespeichert…','#2563b5');
   try{
     const ref=window._fbStorage.ref('noten/hoer-'+id+'-'+voice);  // single-level Pfad (passt zu den Storage-Regeln)
     await ref.put(blob,{contentType:mime});
@@ -1304,7 +1427,7 @@ function uploadSongPdf(){
   if(!file){ prog.style.color='#e74c3c'; prog.textContent='❌ Bitte zuerst eine PDF-Datei auswählen.'; return; }
   if(file.type!=='application/pdf' && !/\.pdf$/i.test(file.name)){ prog.style.color='#e74c3c'; prog.textContent='❌ Bitte eine PDF-Datei wählen.'; return; }
   if(!window._fbStorage || !window._fbAuth.currentUser){ prog.style.color='#e74c3c'; prog.textContent='❌ Nicht angemeldet.'; return; }
-  prog.style.color='#2980b9'; prog.textContent='⏳ Wird hochgeladen…';
+  prog.style.color='#2563b5'; prog.textContent='⏳ Wird hochgeladen…';
   const ref=window._fbStorage.ref('noten/'+id+'.pdf');
   const task=ref.put(file,{contentType:'application/pdf'});
   task.on('state_changed',
@@ -1331,7 +1454,7 @@ function renderSongPicker(){
     s.songs.forEach(song=>{
       const cid='psp-'+song.id;
       el.innerHTML+=`<label id="${cid}" style="display:inline-flex;align-items:center;gap:5px;background:#f0f4f8;border-radius:20px;padding:4px 11px;cursor:pointer;border:1.5px solid transparent;font-size:.82rem;user-select:none;margin-bottom:3px">
-        <input type="checkbox" value="${song.id}" onchange="this.parentElement.style.background=this.checked?'#d6eaf8':'#f0f4f8';this.parentElement.style.borderColor=this.checked?'#2980b9':'transparent'">
+        <input type="checkbox" value="${song.id}" onchange="this.parentElement.style.background=this.checked?'#d6eaf8':'#f0f4f8';this.parentElement.style.borderColor=this.checked?'#2563b5':'transparent'">
         ${esc(song.name)}</label>`;
     });
   });
@@ -1569,7 +1692,7 @@ function renderAnwRoster(){
   const roster=document.getElementById('anw-roster'); if(!roster||!anwWork) return;
   const chip=(m)=>{ const k=memberKey(m); const absent=anwWork.fehlt.has(k);
     return `<button onclick="toggleAnw('${k}')" style="border:1.5px solid ${absent?'#e74c3c':'#27ae60'};background:${absent?'#fdecea':'#eafaf1'};color:${absent?'#922b21':'#1a7a40'};border-radius:16px;padding:5px 11px;font-size:.8rem;cursor:pointer;white-space:nowrap">${absent?'❌':'✅'} ${esc(memberName(m))}</button>`; };
-  const gruppen=[['Sopran','🟠','#e67e22'],['Alt','🔵','#2980b9'],['Tenor','🟢','#27ae60'],['Bass','🟣','#8e44ad']];
+  const gruppen=[['Sopran','🟠','#e67e22'],['Alt','🔵','#2563b5'],['Tenor','🟢','#27ae60'],['Bass','🟣','#8e44ad']];
   let html='';
   gruppen.forEach(([stimme,icon,color])=>{
     const ms=mitglieder.filter(m=>(m.stimme||'')===stimme).sort((a,b)=>memberName(a).localeCompare(memberName(b)));
@@ -1802,6 +1925,125 @@ async function deleteTermin(id){
   renderTermine(); renderKalender();
 }
 
+// ===== UMFRAGEN (mit Auswertung) =====
+let umfragen={};
+function ufSafeKey(name){ return String(name||'').replace(/[.#$\[\]\/]/g,'_').replace(/\s+/g,' ').trim().slice(0,180) || 'anon'; }
+async function loadUmfragen(){
+  try{
+    const r=await dbFetch(DB+'/umfragen.json');
+    umfragen=(r.ok?await r.json():null)||{};
+  }catch(e){ umfragen={}; }
+  renderUmfragen();
+}
+function addUmfrageOption(val){
+  const wrap=document.getElementById('uf-optionen'); if(!wrap)return;
+  const row=document.createElement('div');
+  row.className='form-row'; row.style.marginBottom='6px';
+  row.innerHTML=`<input class="fl-input uf-opt" type="text" maxlength="90" placeholder="Antwort…" style="margin-bottom:0" value="${val?esc(val):''}">
+    <button class="btn btn-gray btn-sm" type="button" title="Entfernen" onclick="this.parentNode.remove()" style="flex:0 0 auto;min-width:0">✕</button>`;
+  wrap.appendChild(row);
+}
+function resetUmfrageForm(){
+  document.getElementById('uf-frage').value='';
+  document.getElementById('uf-mehrfach').checked=false;
+  const wrap=document.getElementById('uf-optionen'); if(wrap) wrap.innerHTML='';
+  addUmfrageOption(); addUmfrageOption();
+}
+async function createUmfrage(){
+  if(!hasPermission('termine')) return;
+  const frage=document.getElementById('uf-frage').value.trim();
+  const opts=[...document.querySelectorAll('#uf-optionen .uf-opt')].map(i=>i.value.trim()).filter(Boolean);
+  const res=document.getElementById('uf-create-result');
+  if(!frage){ res.style.color='#e74c3c'; res.textContent='Bitte eine Frage eingeben.'; return; }
+  if(opts.length<2){ res.style.color='#e74c3c'; res.textContent='Bitte mindestens 2 Antwortmöglichkeiten.'; return; }
+  const id=uid();
+  const obj={ frage, optionen:opts, mehrfach:document.getElementById('uf-mehrfach').checked, geschlossen:false, erstellt:Date.now(), votes:{} };
+  umfragen[id]=obj;
+  await dbFetch(DB+'/umfragen/'+id+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(obj)}).catch(e=>console.warn(e));
+  res.style.color='#22a559'; res.textContent='✅ Umfrage gestartet';
+  setTimeout(()=>{ if(res)res.textContent=''; },2500);
+  resetUmfrageForm();
+  renderUmfragen();
+  notifyPush('umfrage','📊 Neue Umfrage', frage);
+}
+async function voteUmfrage(id, optIdx){
+  const u=umfragen[id]; if(!u||u.geschlossen) return;
+  const name=getUserVoteName();
+  if(!name){ alert('Bitte zuerst anmelden, um abzustimmen.'); return; }
+  const key=ufSafeKey(name);
+  if(!u.votes) u.votes={};
+  let cur=u.votes[key]?(u.votes[key].o||[]).slice():[];
+  if(u.mehrfach){
+    const pos=cur.indexOf(optIdx);
+    if(pos>=0) cur.splice(pos,1); else cur.push(optIdx);
+  } else {
+    cur=[optIdx];
+  }
+  if(cur.length) u.votes[key]={n:name,o:cur}; else delete u.votes[key];
+  await dbFetch(DB+'/umfragen/'+id+'/votes.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(u.votes||{})}).catch(e=>console.warn(e));
+  renderUmfragen();
+}
+async function closeUmfrage(id, off){
+  if(!hasPermission('termine')) return;
+  const u=umfragen[id]; if(!u) return;
+  u.geschlossen=!!off;
+  await dbFetch(DB+'/umfragen/'+id+'/geschlossen.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(!!off)}).catch(e=>console.warn(e));
+  renderUmfragen();
+}
+async function deleteUmfrage(id){
+  if(!hasPermission('termine')) return;
+  if(!confirm('Diese Umfrage und alle Stimmen löschen?')) return;
+  delete umfragen[id];
+  await dbFetch(DB+'/umfragen/'+id+'.json',{method:'DELETE'}).catch(e=>console.warn(e));
+  renderUmfragen();
+}
+function renderUmfragen(){
+  const el=document.getElementById('umfragen-list'); if(!el) return;
+  const canEdit=uiEdit('termine');
+  const myName=getUserVoteName();
+  const myKey=myName?ufSafeKey(myName):null;
+  const entries=Object.entries(umfragen||{}).sort((a,b)=>(b[1].erstellt||0)-(a[1].erstellt||0));
+  if(!entries.length){ el.innerHTML='<div class="empty">📊 Noch keine Umfragen. '+(canEdit?'Erstelle oben die erste!':'Die Chorleitung erstellt hier Umfragen zum Abstimmen.')+'</div>'; return; }
+  el.innerHTML=entries.map(([id,u])=>{
+    const votes=u.votes||{};
+    const voterKeys=Object.keys(votes);
+    const total=voterKeys.length;
+    const counts=(u.optionen||[]).map((_,i)=>voterKeys.filter(k=>(votes[k].o||[]).includes(i)).length);
+    const maxC=Math.max(1,...counts);
+    const myVotes=(myKey&&votes[myKey])?(votes[myKey].o||[]):[];
+    const closed=!!u.geschlossen;
+    const opts=(u.optionen||[]).map((opt,i)=>{
+      const c=counts[i];
+      const pct=total?Math.round(c/total*100):0;
+      const mine=myVotes.includes(i);
+      const namesArr=voterKeys.filter(k=>(votes[k].o||[]).includes(i)).map(k=>votes[k].n||k);
+      const names=namesArr.join(', ');
+      const clickable=!closed&&myName;
+      return `<div class="uf-opt-row${mine?' mine':''}${clickable?' clickable':''}" ${clickable?`onclick="voteUmfrage('${id}',${i})"`:''}>
+        <div class="uf-opt-head">
+          <span class="uf-check">${u.mehrfach?(mine?'☑':'☐'):(mine?'🔘':'⚪')}</span>
+          <span class="uf-opt-label">${esc(opt)}</span>
+          <span class="uf-opt-count">${c}·${pct}%</span>
+        </div>
+        <div class="uf-bar"><div class="uf-bar-fill${mine?' mine':''}" style="width:${total?Math.round(c/maxC*100):0}%"></div></div>
+        ${names?`<div class="uf-voters">${esc(names)}</div>`:''}
+      </div>`;
+    }).join('');
+    return `<div class="card umfrage-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div class="umfrage-frage">${esc(u.frage)}</div>
+        ${closed?'<span class="umfrage-status closed">Beendet</span>':'<span class="umfrage-status open">Läuft</span>'}
+      </div>
+      <div class="umfrage-meta">${u.mehrfach?'Mehrfachauswahl · ':''}${total} ${total===1?'Stimme':'Stimmen'}${!myName?' · zum Abstimmen anmelden':(closed?'':' · tippe zum Abstimmen')}</div>
+      <div class="uf-opts">${opts}</div>
+      ${canEdit?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;border-top:1px solid var(--line);padding-top:10px">
+        <button class="btn btn-gray btn-sm" onclick="closeUmfrage('${id}',${closed?'false':'true'})">${closed?'↩ Wieder öffnen':'⏹ Beenden'}</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteUmfrage('${id}')">🗑️ Löschen</button>
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+
 // KALENDER (Termine + Proben)
 function renderKalender(){
   const el=document.getElementById('kal-container');if(!el)return;
@@ -1876,7 +2118,7 @@ function renderMitglieder(){
   if(!filtered.length){el.innerHTML='<div class="empty">Keine Treffer.</div>';return;}
   el.innerHTML=filtered.map(m=>{
     const initials=(m.vorname.charAt(0)+(m.nachname.charAt(0)||'')).toUpperCase();
-    const colors=['#2980b9','#27ae60','#8e44ad','#e67e22','#c0392b','#16a085'];
+    const colors=['#2563b5','#27ae60','#8e44ad','#e67e22','#c0392b','#16a085'];
     const color=colors[(m.vorname.charCodeAt(0)||0)%colors.length];
     return`<div class="mitglied-card">
       <div class="mitglied-avatar" style="background:${color}">${initials}</div>
@@ -1998,7 +2240,7 @@ function resetNotice(){ const ta=document.getElementById('notice-text'); if(ta) 
 // Stimmen (S/A/T/B) schnell zuweisen
 function renderStimmenZuweisen(){
   const el=document.getElementById('stimmen-list'); if(!el) return;
-  const voices=[['Sopran','S','#e67e22'],['Alt','A','#2980b9'],['Tenor','T','#27ae60'],['Bass','B','#8e44ad']];
+  const voices=[['Sopran','S','#e67e22'],['Alt','A','#2563b5'],['Tenor','T','#27ae60'],['Bass','B','#8e44ad']];
   const sorted=[...mitglieder].sort((a,b)=>memberName(a).localeCompare(memberName(b)));
   el.innerHTML=sorted.map(m=>{
     const cur=m.stimme||'';
@@ -2123,7 +2365,7 @@ async function loadUserProfile(uid, email) {
 function switchAuthTab(tab) {
   document.getElementById('form-login').style.display = tab==='login' ? 'block' : 'none';
   document.getElementById('form-register').style.display = tab==='register' ? 'block' : 'none';
-  document.getElementById('tab-login').style.cssText = tab==='login' ? 'flex:1;background:none;border:none;padding:8px;font-size:.88rem;font-weight:600;color:#2980b9;border-bottom:2px solid #2980b9;margin-bottom:-2px;cursor:pointer' : 'flex:1;background:none;border:none;padding:8px;font-size:.88rem;font-weight:500;color:#aaa;cursor:pointer';
+  document.getElementById('tab-login').style.cssText = tab==='login' ? 'flex:1;background:none;border:none;padding:8px;font-size:.88rem;font-weight:600;color:#2563b5;border-bottom:2px solid #2563b5;margin-bottom:-2px;cursor:pointer' : 'flex:1;background:none;border:none;padding:8px;font-size:.88rem;font-weight:500;color:#aaa;cursor:pointer';
   document.getElementById('tab-register').style.cssText = tab==='register' ? 'flex:1;background:none;border:none;padding:8px;font-size:.88rem;font-weight:600;color:#27ae60;border-bottom:2px solid #27ae60;margin-bottom:-2px;cursor:pointer' : 'flex:1;background:none;border:none;padding:8px;font-size:.88rem;font-weight:500;color:#aaa;cursor:pointer';
   document.getElementById('login-err').textContent = '';
 }
@@ -2464,8 +2706,8 @@ async function renderUserVerwaltung() {
             <input type="checkbox" id="perm-${uid}-admin" ${u.isAdmin?'checked':''} style="accent-color:#e74c3c"> 🔑 Voller Admin
           </label>
           ${Object.entries(permLabels).map(([key,label])=>`
-          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer;padding:5px 8px;border-radius:5px;background:white;border:1.5px solid ${perms.includes(key)?'#2980b9':'#eee'}">
-            <input type="checkbox" id="perm-${uid}-${key}" ${chk(key)} style="accent-color:#2980b9"> ${label}
+          <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer;padding:5px 8px;border-radius:5px;background:white;border:1.5px solid ${perms.includes(key)?'#2563b5':'#eee'}">
+            <input type="checkbox" id="perm-${uid}-${key}" ${chk(key)} style="accent-color:#2563b5"> ${label}
           </label>`).join('')}
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -2509,7 +2751,7 @@ async function createAllAccounts() {
   document.getElementById('create-all-result').innerHTML = 
     '<div style="font-size:.82rem;margin-top:8px">'+
     '<strong>'+ok+' Konten erstellt</strong>, '+err+' Fehler<br>'+
-    '<details style="margin-top:6px"><summary style="cursor:pointer;color:#2980b9">Details anzeigen</summary>'+
+    '<details style="margin-top:6px"><summary style="cursor:pointer;color:#2563b5">Details anzeigen</summary>'+
     '<div style="margin-top:4px">'+results.map(r=>`<div>${r.name}: ${r.success?'✅ '+r.username+' / PW: '+r.defaultPw:'❌ '+r.error}</div>`).join('')+'</div></details></div>';
   btn.disabled = false; btn.textContent = '👥 Alle Mitglieder-Konten erstellen';
   renderUserVerwaltung();
@@ -2685,10 +2927,10 @@ function renderLiedwuensche(){
   function card(w){
     const d=new Date(w.datum);
     const ds=d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
-    return`<div style="border-left:3px solid ${w.erledigt?'#27ae60':'#2980b9'};padding:10px 14px;margin-bottom:8px;background:${w.erledigt?'#f0fff4':'#f8fbfe'};border-radius:0 7px 7px 0;position:relative;opacity:${w.erledigt?'.7':'1'}">
+    return`<div style="border-left:3px solid ${w.erledigt?'#27ae60':'#2563b5'};padding:10px 14px;margin-bottom:8px;background:${w.erledigt?'#f0fff4':'#f8fbfe'};border-radius:0 7px 7px 0;position:relative;opacity:${w.erledigt?'.7':'1'}">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
         <div style="flex:1">
-          <div style="font-weight:600;font-size:.9rem;color:#2c3e50">${esc(w.titel)}
+          <div style="font-weight:600;font-size:.9rem;color:#1b3a6b">${esc(w.titel)}
             ${w.erledigt?'<span style="background:#27ae60;color:white;font-size:.68rem;padding:1px 6px;border-radius:8px;margin-left:6px">✓ Erledigt</span>':''}
           </div>
           ${w.interpret?`<div style="font-size:.8rem;color:#666;margin-top:1px">🎤 ${esc(w.interpret)}</div>`:''}
@@ -2699,7 +2941,7 @@ function renderLiedwuensche(){
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
           ${canManage?`<button class="btn btn-sm" style="background:${w.erledigt?'#ecf0f1':'#d5f5e3'};color:${w.erledigt?'#555':'#1a7a40'};font-size:.72rem" onclick="toggleLiedwunschErledigt('${w._key}',${w.erledigt})">${w.erledigt?'↩ Öffnen':'✓ Erledigt'}</button>
-          <button class="btn btn-sm" style="background:#eaf3fb;color:#2980b9;font-size:.72rem" onclick="editLiedwunsch('${w._key}')">✏️ Bearbeiten</button>
+          <button class="btn btn-sm" style="background:#eaf3fb;color:#2563b5;font-size:.72rem" onclick="editLiedwunsch('${w._key}')">✏️ Bearbeiten</button>
           <button class="btn btn-danger btn-sm" style="font-size:.72rem" onclick="deleteLiedwunsch('${w._key}')">✕ Löschen</button>`:''}
         </div>
       </div>
@@ -2715,7 +2957,7 @@ function renderLiedwuensche(){
       <span style="font-size:.78rem;color:#aaa">(${items.length})</span>
     </div>`;
     if(offen.length){
-      h+=`<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#2980b9;margin-bottom:6px">Offen (${offen.length})</div>`;
+      h+=`<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#2563b5;margin-bottom:6px">Offen (${offen.length})</div>`;
       h+=offen.map(card).join('');
     }
     if(erledigt.length){
@@ -2788,7 +3030,7 @@ function renderNotifList(){
     return `<div style="display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid #f0f0f0;background:${neu?'#eaf3fb':'transparent'}">
       <div style="font-size:1.2rem;flex-shrink:0">🔔</div>
       <div style="flex:1;min-width:0">
-        <div style="font-weight:600;font-size:.88rem;color:#2c3e50">${esc(n.title||'Chor Dölau')}${neu?' <span style="color:#e74c3c;font-size:.62rem;font-weight:700">● NEU</span>':''}</div>
+        <div style="font-weight:600;font-size:.88rem;color:#1b3a6b">${esc(n.title||'Chor Dölau')}${neu?' <span style="color:#e74c3c;font-size:.62rem;font-weight:700">● NEU</span>':''}</div>
         ${n.body?`<div style="font-size:.83rem;color:#555;margin-top:1px;word-break:break-word">${esc(n.body)}</div>`:''}
         <div style="font-size:.72rem;color:#aaa;margin-top:2px">${n.ts?timeAgo(n.ts):''}</div>
       </div>
@@ -2854,11 +3096,11 @@ function renderPlakate(){
   const myName=getUserVoteName();
   el.innerHTML=plakate.map(p=>{
     const done=!!p.von;
-    const maps=p.adresse?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.adresse)}" target="_blank" rel="noopener" style="font-size:.78rem;color:#2980b9;text-decoration:none">🗺️ Karte</a>`:'';
+    const maps=p.adresse?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.adresse)}" target="_blank" rel="noopener" style="font-size:.78rem;color:#2563b5;text-decoration:none">🗺️ Karte</a>`:'';
     return `<div style="border-left:4px solid ${done?'#27ae60':'#f39c12'};padding:11px 14px;margin-bottom:8px;background:${done?'#f0fff4':'#fffdf5'};border-radius:0 8px 8px 0">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
         <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:.92rem;color:#2c3e50">📋 ${esc(p.ort)}${p.anzahl?` <span style="font-size:.78rem;color:#888;font-weight:400">· ${esc(p.anzahl)} Plakat(e)</span>`:''}</div>
+          <div style="font-weight:600;font-size:.92rem;color:#1b3a6b">📋 ${esc(p.ort)}${p.anzahl?` <span style="font-size:.78rem;color:#888;font-weight:400">· ${esc(p.anzahl)} Plakat(e)</span>`:''}</div>
           ${p.adresse?`<div style="font-size:.8rem;color:#666;margin-top:1px">📍 ${esc(p.adresse)} &nbsp; ${maps}</div>`:''}
           ${p.notiz?`<div style="font-size:.8rem;color:#888;font-style:italic;margin-top:1px">💬 ${esc(p.notiz)}</div>`:''}
           <div style="margin-top:6px">
@@ -2912,7 +3154,7 @@ function renderGeburtstage(){
   const untilProbe = all.filter(m => m.bdDate <= windowEnd).sort((a,b)=>a.daysUntil-b.daysUntil);
   const later      = all.filter(m => m.bdDate >  windowEnd).sort((a,b)=>a.daysUntil-b.daysUntil);
 
-  const stC = s=>({sopran:'#e67e22',alt:'#2980b9',tenor:'#27ae60',bass:'#8e44ad'}[s?.toLowerCase()]||'#95a5a6');
+  const stC = s=>({sopran:'#e67e22',alt:'#2563b5',tenor:'#27ae60',bass:'#8e44ad'}[s?.toLowerCase()]||'#95a5a6');
 
   function card(m){
     const isToday = m.daysUntil === 0;
@@ -2980,8 +3222,8 @@ function editSetliste(terminId){
   const currentList = t.setliste||[];
   picker.innerHTML = allSongs.map(s=>{
     const checked = currentList.includes(s.name);
-    return`<label style="display:inline-flex;align-items:center;gap:5px;background:${checked?'#d6eaf8':'#f0f4f8'};border:1.5px solid ${checked?'#2980b9':'transparent'};border-radius:20px;padding:4px 11px;cursor:pointer;font-size:.82rem;user-select:none">
-      <input type="checkbox" value="${esc(s.name)}" ${checked?'checked':''} style="accent-color:#2980b9">
+    return`<label style="display:inline-flex;align-items:center;gap:5px;background:${checked?'#d6eaf8':'#f0f4f8'};border:1.5px solid ${checked?'#2563b5':'transparent'};border-radius:20px;padding:4px 11px;cursor:pointer;font-size:.82rem;user-select:none">
+      <input type="checkbox" value="${esc(s.name)}" ${checked?'checked':''} style="accent-color:#2563b5">
       ${esc(s.name)}
     </label>`;
   }).join('');
@@ -3259,7 +3501,7 @@ async function togglePush(){
   const res=document.getElementById('push-result');
   if(!('serviceWorker' in navigator) || !('PushManager' in window)){ res.style.color='#e74c3c'; res.textContent='❌ Nicht unterstützt auf diesem Gerät.'; return; }
   if(!currentUser){ res.style.color='#e74c3c'; res.textContent='❌ Bitte zuerst anmelden.'; return; }
-  res.style.color='#2980b9'; res.textContent='⏳ …';
+  res.style.color='#2563b5'; res.textContent='⏳ …';
   try{
     const reg=await navigator.serviceWorker.ready;
     let sub=await reg.pushManager.getSubscription();
@@ -3283,7 +3525,7 @@ async function togglePush(){
 async function loadPushSettings(){
   try{
     const r=await dbFetch(DB+'/settings/push.json'); pushSettings=(r.ok?await r.json():null)||{};
-    const m={termin:'push-ev-termin',probe:'push-ev-probe',liedwunsch:'push-ev-liedwunsch',kommentar:'push-ev-kommentar'};
+    const m={termin:'push-ev-termin',probe:'push-ev-probe',liedwunsch:'push-ev-liedwunsch',kommentar:'push-ev-kommentar',umfrage:'push-ev-umfrage'};
     for(const k in m){ const el=document.getElementById(m[k]); if(el) el.checked=!!pushSettings[k]; }
     const ab=document.getElementById('push-ev-absage'); if(ab) ab.checked = pushSettings.absage!==false; // Standard an
     const rd=document.getElementById('push-remind-days'); if(rd) rd.value = String(pushSettings.remindDays||0);
@@ -3292,14 +3534,14 @@ async function loadPushSettings(){
   }catch(e){}
 }
 async function savePushSettings(){
-  const s={ termin:document.getElementById('push-ev-termin').checked, probe:document.getElementById('push-ev-probe').checked, liedwunsch:document.getElementById('push-ev-liedwunsch').checked, kommentar:document.getElementById('push-ev-kommentar').checked, absage:document.getElementById('push-ev-absage').checked, remindDays:parseInt(document.getElementById('push-remind-days').value)||0 };
+  const s={ termin:document.getElementById('push-ev-termin').checked, probe:document.getElementById('push-ev-probe').checked, liedwunsch:document.getElementById('push-ev-liedwunsch').checked, kommentar:document.getElementById('push-ev-kommentar').checked, umfrage:document.getElementById('push-ev-umfrage').checked, absage:document.getElementById('push-ev-absage').checked, remindDays:parseInt(document.getElementById('push-remind-days').value)||0 };
   await dbFetch(DB+'/settings/push.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(s)});
   pushSettings=s;
   const r=document.getElementById('push-settings-result'); r.style.color='#27ae60'; r.textContent='✅ Gespeichert'; setTimeout(()=>{if(r)r.textContent='';},2000);
 }
 async function sendTestPush(){
   const r=document.getElementById('push-settings-result');
-  r.style.color='#2980b9'; r.textContent='⏳ Test wird verschickt…';
+  r.style.color='#2563b5'; r.textContent='⏳ Test wird verschickt…';
   try{
     await dbFetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'Chor Dölau', body:'🔔 Test-Benachrichtigung', ts:Date.now()})});
     r.style.color='#27ae60'; r.textContent='✅ Test gesendet – kommt in 1–5 Min. auf abonnierten Geräten an.';
@@ -3317,7 +3559,7 @@ async function sendBroadcast(){
   const text=textEl.value.trim();
   if(!text){ r.style.color='#e74c3c'; r.textContent='❌ Bitte eine Nachricht eingeben.'; return; }
   if(!confirm('Push-Nachricht jetzt an ALLE Mitglieder senden?\n\n'+(titel?titel+'\n':'')+text)) return;
-  r.style.color='#2980b9'; r.textContent='⏳ wird gesendet…';
+  r.style.color='#2563b5'; r.textContent='⏳ wird gesendet…';
   try{
     const bTitel=titel||'📢 Chor Dölau';
     await dbFetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:bTitel, body:text, ts:Date.now()})});
@@ -3400,8 +3642,10 @@ async function loadAll(){
     loadProbenstatus(),
     loadAnwesenheit(),
     loadAbwesenheit(),
-    loadBenachrichtigungen()
+    loadBenachrichtigungen(),
+    loadUmfragen()
   ]);
+  if(document.getElementById('uf-optionen') && !document.querySelector('#uf-optionen .uf-opt')) resetUmfrageForm();
   loadNotice();
   if(!window._notifPoll){ window._notifPoll=setInterval(loadBenachrichtigungen, 90000); }
   loadPushSettings();
