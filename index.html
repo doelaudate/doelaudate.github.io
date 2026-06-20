@@ -1175,11 +1175,21 @@ function applyAdminMode(){
   document.querySelectorAll('.admin-only').forEach(el=>{
     const perm = el.getAttribute('data-perm');
     const inTabs = el.closest('.main-tabs');
+    const isPage = el.classList.contains('page');
     let show = false;
     if(perm) show = uiEdit(perm);       // Admin-Kästen (Formulare): nur im Bearbeiten-Modus
-    else show = adminMode;              // Konsole-Tab/-Seite: immer für Admins
+    else show = adminMode;              // Konsole-/Anwesenheit-Tab + -Seite: immer für Admins
+    if(isPage){
+      // Seiten-Sichtbarkeit steuert showPage über die .active-Klasse – nicht hart auf block zwingen,
+      // sonst erscheinen Anwesenheit/Konsole auf jeder Seite.
+      if(show) el.style.removeProperty('display');
+      else { el.classList.remove('active'); el.style.display='none'; }
+      return;
+    }
     el.style.display = show ? (inTabs ? '' : 'block') : 'none';
   });
+  // Falls die gerade aktive Seite ausgeblendet wurde (z. B. Admin-Modus verlassen): zurück zu Liedern
+  if(!document.querySelector('.page.active')) showPage('lieder');
   const _b=document.getElementById('admin-badge');if(_b)_b.style.display=(adminMode&&editMode)?'':'none';
   const _n=document.getElementById('notice-bar');if(_n)_n.style.display=adminMode?'none':'block';
   if(uiEdit('proben')){renderSongPicker();}
