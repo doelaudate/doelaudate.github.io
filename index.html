@@ -178,7 +178,6 @@ html.fs-sehrgross{font-size:20.5px}
 .bnav-ic{font-size:1.32rem;line-height:1;transition:transform .15s}
 .bnav-item.active{color:var(--primary)}
 .bnav-item.active .bnav-ic{transform:translateY(-1px) scale(1.06)}
-.bnav-item .bnav-badge{position:absolute;top:4px;left:calc(50% + 6px);min-width:15px;height:15px;border-radius:8px;background:#e74c3c;color:#fff;font-size:.58rem;font-weight:700;line-height:15px;text-align:center;padding:0 3px;display:none}
 /* Mehr-Sheet */
 .sheet-overlay{display:none;position:fixed;inset:0;z-index:95;background:rgba(15,25,45,.42);align-items:flex-end}
 .sheet-overlay.open{display:flex;animation:fadeIn .18s ease}
@@ -831,7 +830,7 @@ html.fs-sehrgross{font-size:20.5px}
   <button class="bnav-item" data-page="proben" onclick="bnav('proben')"><span class="bnav-ic">📅</span>Proben</button>
   <button class="bnav-item" data-page="termine" onclick="bnav('termine')"><span class="bnav-ic">📆</span>Termine</button>
   <button class="bnav-item" data-page="umfragen" onclick="bnav('umfragen')"><span class="bnav-ic">📊</span>Umfragen</button>
-  <button class="bnav-item" data-page="__more__" onclick="openMoreSheet()"><span class="bnav-ic">☰</span>Mehr<span class="bnav-badge" id="bnav-more-badge">0</span></button>
+  <button class="bnav-item" data-page="__more__" onclick="openMoreSheet()"><span class="bnav-ic">☰</span>Mehr</button>
 </nav>
 
 <!-- MEHR-SHEET -->
@@ -1664,6 +1663,10 @@ function getUserAliases(){
   if(currentUserProfile && (currentUserProfile.vorname||currentUserProfile.nachname))
     a.add(_norm(((currentUserProfile.vorname||'')+' '+(currentUserProfile.nachname||'')).trim()));
   a.delete(''); return a;
+}
+// Alle Ansichten, die Namen über prettyName() anzeigen, neu aufbauen
+function refreshNameDisplays(){
+  try{ renderTermine(); renderUmfragen(); renderKommentare(); renderLiedwuensche(); }catch(e){}
 }
 function _matchMemberByProfile(uid, nm){
   let m=mitglieder.find(x=>x.uid && x.uid===uid); if(m) return m;  // explizite Verknüpfung zuerst
@@ -3507,7 +3510,7 @@ async function saveAnzeigename(){
     const kn = document.getElementById('k-name');
     if(kn && val) kn.value = val;
     // Alle Namens-Anzeigen sofort neu aufbauen
-    try{ renderTermine(); renderUmfragen(); renderKommentare(); renderLiedwuensche(); }catch(e){}
+    refreshNameDisplays();
     res.style.color='#27ae60'; res.textContent='✅ Anzeigename gespeichert!';
     setTimeout(()=>{if(res)res.textContent='';},2500);
   }catch(e){
@@ -3712,7 +3715,7 @@ async function loadAll(){
     loadUserProfiles().then(p=>{ userprofilesCache=p||{}; }).catch(()=>{})
   ]);
   // Profile sind jetzt geladen -> Namens-Anzeigen mit aktuellen Anzeigenamen neu aufbauen
-  try{ renderTermine(); renderUmfragen(); renderKommentare(); renderLiedwuensche(); }catch(e){}
+  refreshNameDisplays();
   if(document.getElementById('uf-optionen') && !document.querySelector('#uf-optionen .uf-opt')) resetUmfrageForm();
   loadNotice();
   if(!window._notifPoll){ window._notifPoll=setInterval(loadBenachrichtigungen, 90000); }
