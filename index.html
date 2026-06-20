@@ -1619,6 +1619,52 @@ function memberKey(m){ return String(m.id||m.nr); }
 function memberName(m){ return ((m.vorname||'')+' '+(m.nachname||'')).trim(); }
 // Vorab-Selbstabmeldungen ('nein') einem Mitglied zuordnen (über Benutzerprofil + Namens-Fallbacks)
 function _norm(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9äöüß]/g,''); }
+
+// ===== ANZEIGENAMEN-AUFLÖSUNG (Kürzel/Benutzername -> aktueller Anzeigename, live) =====
+function _anzeigeForUsername(username){
+  if(!username) return null;
+  const n=_norm(username);
+  for(const uid in userprofilesCache){
+    const p=userprofilesCache[uid];
+    if(p && _norm(p.username)===n && p.anzeigename) return p.anzeigename;
+  }
+  return null;
+}
+// Gibt zu einem gespeicherten Namen (Benutzername/Kürzel, alter Anzeigename oder voller Name)
+// den aktuell besten Anzeigenamen zurück. Liest live aus userprofilesCache + mitglieder,
+// daher aktualisiert sich die Anzeige automatisch, sobald jemand seinen Anzeigenamen ändert.
+function prettyName(stored){
+  if(stored==null || stored==='') return stored;
+  const n=_norm(stored);
+  // 1) Profil, dessen Anzeigename ODER Benutzername passt
+  for(const uid in userprofilesCache){
+    const p=userprofilesCache[uid]; if(!p) continue;
+    if(_norm(p.anzeigename)===n || _norm(p.username)===n){
+      if(p.anzeigename) return p.anzeigename;
+      const fn=((p.vorname||'')+' '+(p.nachname||'')).trim(); if(fn) return fn;
+      break;
+    }
+  }
+  // 2) Mitglied per Benutzername -> Live-Anzeigename, sonst voller Name
+  let m=mitglieder.find(x=>x.username && _norm(x.username)===n);
+  if(m){ const an=_anzeigeForUsername(m.username); if(an) return an; const fn=memberName(m); if(fn) return fn; }
+  // 3) Bereits voller Mitgliedsname -> ggf. aktuellen Anzeigenamen bevorzugen
+  m=mitglieder.find(x=>memberName(x) && _norm(memberName(x))===n);
+  if(m){ const an=_anzeigeForUsername(m.username); if(an) return an; return memberName(m)||stored; }
+  // 4) Gast / frei eingetippter Name -> unverändert
+  return stored;
+}
+function prettyNames(arr){ return (arr||[]).map(prettyName); }
+// Alle Namens-Varianten, unter denen der aktuelle Benutzer evtl. früher gespeichert wurde
+function getUserAliases(){
+  const a=new Set();
+  if(currentUserProfile?.username) a.add(_norm(currentUserProfile.username));
+  if(currentUserProfile?.anzeigename) a.add(_norm(currentUserProfile.anzeigename));
+  if(currentUser?.email) a.add(_norm(currentUser.email.split('@')[0]));
+  if(currentUserProfile && (currentUserProfile.vorname||currentUserProfile.nachname))
+    a.add(_norm(((currentUserProfile.vorname||'')+' '+(currentUserProfile.nachname||'')).trim()));
+  a.delete(''); return a;
+}
 function _matchMemberByProfile(uid, nm){
   let m=mitglieder.find(x=>x.uid && x.uid===uid); if(m) return m;  // explizite Verknüpfung zuerst
   const prof=userprofilesCache[uid];
@@ -1840,7 +1886,7 @@ function terminHtml(t,past=false){
     ${t.beschreibung?`<div style="font-size:.78rem;color:#888;margin-bottom:5px">ℹ️ ${esc(t.beschreibung)}</div>`:''}
     ${t.frist&&!past?`<div style="font-size:.78rem;color:${t.frist<localToday()?'#e74c3c':'#7d6608'};margin-bottom:5px">⏳ Bitte bis <strong>${fmt(t.frist)}</strong> zurückmelden${t.frist<localToday()?' (Frist abgelaufen)':''}</div>`:''}
     ${t.setliste&&t.setliste.length?`<div style="margin-bottom:8px"><div style="font-size:.76rem;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:3px">Setliste</div>${t.setliste.map((s,i)=>`<div style="font-size:.82rem;color:#555">🎵 ${i+1}. ${esc(s)}</div>`).join('')}</div>`:''}
-    ${jaL.length||nL.length||vL.length?`<div class="tally">${jaL.length?`<span style="color:#27ae60">✅ ${jaL.length}: ${jaL.join(', ')}</span><br>`:''}${nL.length?`<span style="color:#e74c3c">❌ ${nL.length}: ${nL.join(', ')}</span><br>`:''}${vL.length?`<span style="color:#f39c12">❓ ${vL.length}: ${vL.join(', ')}</span>`:''}</div>`:''}
+    ${jaL.length||nL.length||vL.length?`<div class="tally">${jaL.length?`<span style="color:#27ae60">✅ ${jaL.length}: ${esc(prettyNames(jaL).join(', '))}</span><br>`:''}${nL.length?`<span style="color:#e74c3c">❌ ${nL.length}: ${esc(prettyNames(nL).join(', '))}</span><br>`:''}${vL.length?`<span style="color:#f39c12">❓ ${vL.length}: ${esc(prettyNames(vL).join(', '))}</span>`:''}</div>`:''}
     ${!past?`<div class="vote-row" id="vrow-${t.id}">${buildVoteRow(t)}</div>`:''}
     <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-sm" style="background:transparent;border:1px solid #8e44ad;color:#8e44ad;font-size:.72rem" onclick="exportTerminICS('${t.id}')">📥 .ics</button>
@@ -1851,10 +1897,12 @@ function terminHtml(t,past=false){
     </div>
   </div>`;
 }
+// Stabiler Schlüssel zum SPEICHERN von Stimmen: Benutzername (ändert sich nie).
+// Die ANZEIGE läuft über prettyName(), daher schlägt eine Anzeigenamen-Änderung automatisch durch.
 function getUserVoteName(){
-  if(currentUserProfile?.anzeigename) return currentUserProfile.anzeigename;
   if(currentUserProfile?.username) return currentUserProfile.username;
   if(currentUser?.email) return currentUser.email.split('@')[0];
+  if(currentUserProfile?.anzeigename) return currentUserProfile.anzeigename;
   return null;
 }
 
@@ -1894,8 +1942,12 @@ async function abstimmen(id,antwort){
     const nameEl=document.getElementById('vn-'+id);
     name=nameEl?nameEl.value.trim():'';
     if(!name){alert('Bitte deinen Namen eingeben.');nameEl&&nameEl.focus();return;}
+  } else {
+    // Alte Stimmen unter früheren Namens-Varianten (z. B. altem Anzeigenamen) entfernen -> keine Doppel-Stimmen
+    const aliases=getUserAliases();
+    Object.keys(t.abstimmungen).forEach(k=>{ if(_norm(k)!==_norm(name) && aliases.has(_norm(k))) delete t.abstimmungen[k]; });
   }
-  
+
   t.abstimmungen[name]=antwort;
   await dbFetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
   if(antwort==='nein'){ notifyAdminAbsage('❌ Absage Termin', name+' kommt nicht zu „'+(t.titel||'Termin')+'" am '+fmt(t.datum)+'.'); }
@@ -1972,7 +2024,14 @@ async function voteUmfrage(id, optIdx){
   if(!name){ alert('Bitte zuerst anmelden, um abzustimmen.'); return; }
   const key=ufSafeKey(name);
   if(!u.votes) u.votes={};
+  // Alte Stimmen unter früheren Namens-Varianten entfernen -> keine Doppel-Stimmen
+  const aliases=getUserAliases();
   let cur=u.votes[key]?(u.votes[key].o||[]).slice():[];
+  Object.keys(u.votes).forEach(k=>{
+    if(k===key) return;
+    const vn=u.votes[k]&&u.votes[k].n;
+    if(aliases.has(_norm(k)) || (vn&&aliases.has(_norm(vn)))){ if(!cur.length) cur=(u.votes[k].o||[]).slice(); delete u.votes[k]; }
+  });
   if(u.mehrfach){
     const pos=cur.indexOf(optIdx);
     if(pos>=0) cur.splice(pos,1); else cur.push(optIdx);
@@ -2016,7 +2075,7 @@ function renderUmfragen(){
       const c=counts[i];
       const pct=total?Math.round(c/total*100):0;
       const mine=myVotes.includes(i);
-      const namesArr=voterKeys.filter(k=>(votes[k].o||[]).includes(i)).map(k=>votes[k].n||k);
+      const namesArr=voterKeys.filter(k=>(votes[k].o||[]).includes(i)).map(k=>prettyName(votes[k].n||k));
       const names=namesArr.join(', ');
       const clickable=!closed&&myName;
       return `<div class="uf-opt-row${mine?' mine':''}${clickable?' clickable':''}" ${clickable?`onclick="voteUmfrage('${id}',${i})"`:''}>
@@ -2200,7 +2259,7 @@ function renderKommentare(){
   el.innerHTML=kommentare.map(k=>{
     const d=new Date(k.datum);
     const ds=d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-    return`<div class="kommentar"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span class="k-name">👤 ${esc(k.name)}</span><span class="k-meta">${ds}</span></div>${k.lied?`<div class="k-lied">🎵 ${esc(k.lied)}</div>`:''}<div class="k-text">${esc(k.text)}</div>${uiEdit('kommentare')&&k._key?`<button class="btn btn-danger btn-sm del-btn" onclick="deleteKommentar('${k._key}')">✕</button>`:''}</div>`;
+    return`<div class="kommentar"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span class="k-name">👤 ${esc(prettyName(k.name))}</span><span class="k-meta">${ds}</span></div>${k.lied?`<div class="k-lied">🎵 ${esc(k.lied)}</div>`:''}<div class="k-text">${esc(k.text)}</div>${uiEdit('kommentare')&&k._key?`<button class="btn btn-danger btn-sm del-btn" onclick="deleteKommentar('${k._key}')">✕</button>`:''}</div>`;
   }).join('');
 }
 async function submitKommentar(){
@@ -2888,7 +2947,7 @@ async function submitLiedwunsch(){
   const interpret=document.getElementById('lw-interpret').value.trim();
   const chorsatz=document.getElementById('lw-chorsatz').checked;
   const saison=document.getElementById('lw-saison').value;
-  const name=document.getElementById('lw-name').value.trim()||currentUserProfile?.username||'Anonym';
+  const name=document.getElementById('lw-name').value.trim()||currentUserProfile?.anzeigename||currentUserProfile?.username||'Anonym';
   const res=document.getElementById('lw-result');
   if(!titel){res.style.color='#e74c3c';res.textContent='❌ Bitte Liedtitel eingeben.';return;}
   const btn=event.target; btn.disabled=true;
@@ -2936,7 +2995,7 @@ function renderLiedwuensche(){
           ${w.interpret?`<div style="font-size:.8rem;color:#666;margin-top:1px">🎤 ${esc(w.interpret)}</div>`:''}
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;align-items:center">
             <span style="font-size:.76rem;padding:2px 8px;border-radius:10px;background:${w.chorsatz?'#d5f5e3':'#fdecea'};color:${w.chorsatz?'#1a7a40':'#922b21'};font-weight:500">${w.chorsatz?'✅ Chorsatz vorhanden':'❌ Kein Chorsatz'}</span>
-            <span style="font-size:.74rem;color:#aaa">👤 ${esc(w.name)} · ${ds}</span>
+            <span style="font-size:.74rem;color:#aaa">👤 ${esc(prettyName(w.name))} · ${ds}</span>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
@@ -3437,12 +3496,18 @@ async function saveAnzeigename(){
   try{
     await dbFetch(DB+'/userprofiles/'+uid+'/anzeigename.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(val||null)});
     if(currentUserProfile) currentUserProfile.anzeigename = val||null;
+    // Lokalen Profil-Cache sofort aktualisieren, damit Resolver überall den neuen Namen zeigt
+    if(!userprofilesCache[uid]) userprofilesCache[uid]={};
+    userprofilesCache[uid].anzeigename = val||null;
+    if(currentUserProfile?.username && !userprofilesCache[uid].username) userprofilesCache[uid].username=currentUserProfile.username;
     // Update header chip
     const chip = document.getElementById('user-display');
     if(chip) chip.textContent = '👤 ' + (val || currentUserProfile?.username || currentUser.email.split('@')[0]);
     // Pre-fill comment name field
     const kn = document.getElementById('k-name');
     if(kn && val) kn.value = val;
+    // Alle Namens-Anzeigen sofort neu aufbauen
+    try{ renderTermine(); renderUmfragen(); renderKommentare(); renderLiedwuensche(); }catch(e){}
     res.style.color='#27ae60'; res.textContent='✅ Anzeigename gespeichert!';
     setTimeout(()=>{if(res)res.textContent='';},2500);
   }catch(e){
@@ -3643,8 +3708,11 @@ async function loadAll(){
     loadAnwesenheit(),
     loadAbwesenheit(),
     loadBenachrichtigungen(),
-    loadUmfragen()
+    loadUmfragen(),
+    loadUserProfiles().then(p=>{ userprofilesCache=p||{}; }).catch(()=>{})
   ]);
+  // Profile sind jetzt geladen -> Namens-Anzeigen mit aktuellen Anzeigenamen neu aufbauen
+  try{ renderTermine(); renderUmfragen(); renderKommentare(); renderLiedwuensche(); }catch(e){}
   if(document.getElementById('uf-optionen') && !document.querySelector('#uf-optionen .uf-opt')) resetUmfrageForm();
   loadNotice();
   if(!window._notifPoll){ window._notifPoll=setInterval(loadBenachrichtigungen, 90000); }
