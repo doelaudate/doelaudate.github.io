@@ -226,6 +226,22 @@ html.fs-sehrgross{font-size:20.5px}
 .bq.paid{background:#22a559;border-color:#22a559;color:#fff}
 .bq.paid:hover{background:#1c8f4c;color:#fff}
 .bq.jahr{background:var(--primary-50);color:var(--primary-dark);border-color:var(--primary-100);min-width:0}
+/* Nur-Lese-Badge (normale Mitglieder) */
+.bq.ro{cursor:default}
+.bq.ro:hover{border-color:var(--line);color:var(--muted)}
+.bq.ro.paid:hover{background:#22a559;color:#fff}
+
+/* ===== CHORKASSE ===== */
+.kasse-balance{display:flex;align-items:baseline;justify-content:space-between;gap:10px;background:var(--primary-50);border:1px solid var(--primary-100);border-radius:var(--radius-sm);padding:14px 18px}
+.kasse-balance-l{font-size:.82rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.kasse-balance-n{font-size:1.75rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kasse-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 2px;border-bottom:1px solid var(--line)}
+.kasse-info{display:flex;flex-direction:column;min-width:0;flex:1}
+.kasse-text{font-weight:600;font-size:.9rem;color:var(--ink);word-break:break-word}
+.kasse-date{font-size:.74rem;color:var(--muted);margin-top:1px}
+.kasse-right{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.kasse-amt{font-weight:800;font-size:.92rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.kasse-amt.pos{color:#22a559}.kasse-amt.neg{color:#e74c3c}
 
 /* ===== HANDY-OPTIMIERUNG ===== */
 @media(max-width:640px){
@@ -368,7 +384,6 @@ html.fs-sehrgross{font-size:20.5px}
   <div class="mtab" onclick="showPage('plakate',this)">📋 Plakate</div>
   <div class="mtab" onclick="showPage('kommentare',this)">💬 Kommentare <span id="k-count" style="background:rgba(41,128,185,.15);color:#2563b5;padding:1px 6px;border-radius:10px;font-size:.72rem;margin-left:3px"></span></div>
   <div class="mtab admin-tab admin-only" onclick="showPage('anwesenheit',this)">📊 Anwesenheit</div>
-  <div class="mtab admin-tab admin-only" onclick="showPage('beitraege',this)">💶 Beiträge</div>
   <div class="mtab user-only" id="tab-einstellungen" style="display:none" onclick="showPage('einstellungen',this)">⚙️ Einstellungen</div>
   <div class="mtab admin-tab admin-only" onclick="showPage('konsole',this)">⚙️ Konsole</div>
 </div>
@@ -526,6 +541,12 @@ html.fs-sehrgross{font-size:20.5px}
 </div>
 
 <div class="page" id="p-mitglieder">
+  <div class="sub-tabs">
+    <button id="mtab-mitglieder" class="stab active" onclick="setMitgliederTab('mitglieder')">👥 Mitglieder</button>
+    <button id="mtab-beitraege" class="stab" onclick="setMitgliederTab('beitraege')">💶 Beiträge</button>
+    <button id="mtab-kasse" class="stab" onclick="setMitgliederTab('kasse')">💰 Chorkasse</button>
+  </div>
+  <div id="mv-mitglieder">
   <div class="admin-section admin-only" data-perm="mitglieder">
     <div class="admin-label">🔑 Admin: Mitglied hinzufügen</div>
     <div class="form-row">
@@ -552,6 +573,52 @@ html.fs-sehrgross{font-size:20.5px}
     </div>
     <input type="text" class="search-box" id="m-search" placeholder="🔍 Suchen nach Name, E-Mail, Telefon…" oninput="renderMitglieder()">
     <div id="mitglieder-list"></div>
+  </div>
+  </div><!-- /mv-mitglieder -->
+
+  <div id="mv-beitraege" style="display:none">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <span class="card-title" style="margin-bottom:0">💶 Chorbeiträge</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="btn btn-gray btn-sm" onclick="setBeitragJahr(-1)" title="Vorjahr">◀</button>
+          <strong id="beitrag-jahr" style="font-size:1.05rem;color:var(--navy);min-width:48px;text-align:center">—</strong>
+          <button class="btn btn-gray btn-sm" onclick="setBeitragJahr(1)" title="Nächstes Jahr">▶</button>
+        </div>
+      </div>
+      <div id="beitrag-hint" style="font-size:.82rem;color:#666;margin-bottom:12px">30 € pro Quartal · 120 € pro Jahr. Die Liste folgt automatisch der Mitgliederliste.</div>
+      <div class="stats" id="beitrag-stats"></div>
+      <input type="text" class="search-box" id="beitrag-search" placeholder="🔍 Mitglied suchen…" oninput="renderBeitraege()">
+      <div id="beitrag-list"></div>
+    </div>
+  </div>
+
+  <div id="mv-kasse" style="display:none">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:6px">💰 Chorkasse</div>
+      <div class="kasse-balance">
+        <span class="kasse-balance-l">Kassenstand</span>
+        <span id="kasse-stand" class="kasse-balance-n">— €</span>
+      </div>
+      <div id="kasse-summary" style="font-size:.8rem;color:var(--muted);margin-top:6px"></div>
+    </div>
+    <div class="admin-section admin-only" data-perm="mitglieder">
+      <div class="admin-label">🔑 Admin: Buchung hinzufügen</div>
+      <div class="form-row">
+        <input class="fl-input" type="date" id="kasse-datum" style="flex:1;min-width:140px">
+        <input class="fl-input" type="text" id="kasse-text" placeholder="Beschreibung (z. B. Noten gekauft)" style="flex:2;min-width:160px">
+      </div>
+      <div class="form-row" style="align-items:center">
+        <input class="fl-input" type="number" id="kasse-betrag" placeholder="Betrag in €" step="0.01" min="0" style="flex:1;min-width:120px">
+        <button class="btn btn-success" onclick="addKasse('ein')">➕ Einnahme</button>
+        <button class="btn btn-danger" onclick="addKasse('aus')">➖ Ausgabe</button>
+      </div>
+      <div id="kasse-add-result" style="font-size:.82rem;min-height:16px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📒 Buchungen</div>
+      <div id="kasse-list"></div>
+    </div>
   </div>
 </div>
 
@@ -614,23 +681,6 @@ html.fs-sehrgross{font-size:20.5px}
       </select>
     </div>
     <div id="anw-stats"></div>
-  </div>
-</div>
-
-<div class="page admin-only" id="p-beitraege">
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <span class="card-title" style="margin-bottom:0">💶 Chorbeiträge</span>
-      <div style="display:flex;align-items:center;gap:8px">
-        <button class="btn btn-gray btn-sm" onclick="setBeitragJahr(-1)" title="Vorjahr">◀</button>
-        <strong id="beitrag-jahr" style="font-size:1.05rem;color:var(--navy);min-width:48px;text-align:center">—</strong>
-        <button class="btn btn-gray btn-sm" onclick="setBeitragJahr(1)" title="Nächstes Jahr">▶</button>
-      </div>
-    </div>
-    <div style="font-size:.82rem;color:#666;margin-bottom:12px">30 € pro Quartal · 120 € pro Jahr. Tippe ein Quartal an, um „bezahlt" zu markieren. Die Liste folgt automatisch der Mitgliederliste.</div>
-    <div class="stats" id="beitrag-stats"></div>
-    <input type="text" class="search-box" id="beitrag-search" placeholder="🔍 Mitglied suchen…" oninput="renderBeitraege()">
-    <div id="beitrag-list"></div>
   </div>
 </div>
 
@@ -879,7 +929,6 @@ html.fs-sehrgross{font-size:20.5px}
       <button class="sheet-link" onclick="bnavMore('kommentare')"><span class="si">💬</span>Kommentare</button>
       <button class="sheet-link sheet-user" id="more-einst" style="display:none" onclick="bnavMore('einstellungen')"><span class="si">⚙️</span>Einstellungen</button>
       <button class="sheet-link adm sheet-adm" style="display:none" onclick="bnavMore('anwesenheit')"><span class="si">📊</span>Anwesenheit</button>
-      <button class="sheet-link adm sheet-adm" style="display:none" onclick="bnavMore('beitraege')"><span class="si">💶</span>Beiträge</button>
       <button class="sheet-link adm sheet-adm" style="display:none" onclick="bnavMore('konsole')"><span class="si">🔑</span>Konsole</button>
     </div>
   </div>
@@ -1267,7 +1316,6 @@ function showPage(id,tab){
   if(id==='lieder') renderLiedwuensche();
   if(id==='plakate') renderPlakate();
   if(id==='anwesenheit') renderAnwesenheitPage();
-  if(id==='beitraege') renderBeitraege();
   syncBottomNav(id);
   try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){}
 }
@@ -1722,7 +1770,7 @@ async function setProbeStatus(probeId, status){
   await loadProbenstatus();
 }
 
-// ===== CHORBEITRÄGE (nur Admin) =====
+// ===== CHORBEITRÄGE (für alle sichtbar; ändern nur Admin im Bearbeiten-Modus) =====
 const BEITRAG_QUARTAL = 30;            // € pro Quartal
 const BEITRAG_QS = ['q1','q2','q3','q4'];
 let beitraege = {};                    // { jahr: { memberKey: {q1,q2,q3,q4} } }
@@ -1730,11 +1778,25 @@ let beitragJahr = new Date().getFullYear();
 async function loadBeitraege(){
   try{ const r=await dbFetch(DB+'/beitraege.json'); beitraege=(r.ok?await r.json():null)||{}; }catch(e){ beitraege={}; }
 }
+// Unter-Tabs auf der Mitglieder-Seite (Mitglieder / Beiträge / Chorkasse)
+function setMitgliederTab(which){
+  const views={mitglieder:'mv-mitglieder', beitraege:'mv-beitraege', kasse:'mv-kasse'};
+  const tabs={mitglieder:'mtab-mitglieder', beitraege:'mtab-beitraege', kasse:'mtab-kasse'};
+  Object.keys(views).forEach(k=>{
+    const v=document.getElementById(views[k]); if(v) v.style.display = (k===which)?'':'none';
+    const t=document.getElementById(tabs[k]); if(t) t.classList.toggle('active', k===which);
+  });
+  if(which==='beitraege') renderBeitraege();
+  else if(which==='kasse') renderKasse();
+  else renderMitglieder();
+}
 function setBeitragJahr(delta){ beitragJahr+=delta; renderBeitraege(); }
 function beitragPaidCount(rec){ return BEITRAG_QS.filter(k=>rec&&rec[k]).length; }
 function renderBeitraege(){
-  if(!adminMode) return;                // Finanzdaten nur für Admins
+  const canEdit = uiEdit('mitglieder');   // ändern nur Admin im Bearbeiten-Modus
   const jahrEl=document.getElementById('beitrag-jahr'); if(jahrEl) jahrEl.textContent=beitragJahr;
+  const hintEl=document.getElementById('beitrag-hint');
+  if(hintEl) hintEl.textContent = '30 € pro Quartal · 120 € pro Jahr.' + (canEdit ? ' Tippe ein Quartal an, um „bezahlt" zu markieren.' : ' Die Liste folgt automatisch der Mitgliederliste.');
   const data=beitraege[beitragJahr]||{};
   // Statistik über ALLE Mitglieder (ungefiltert)
   let paidQ=0, fully=0;
@@ -1751,15 +1813,18 @@ function renderBeitraege(){
   list.innerHTML=members.map(m=>{
     const key=memberKey(m), rec=data[key]||{}, pc=beitragPaidCount(rec);
     const cls=pc===4?'ok':(pc===0?'none':'part');
-    const qbtns=BEITRAG_QS.map((k,i)=>`<button class="bq ${rec[k]?'paid':''}" onclick="toggleBeitrag('${key}','${k}')">Q${i+1}</button>`).join('');
+    const qs=BEITRAG_QS.map((k,i)=> canEdit
+      ? `<button class="bq ${rec[k]?'paid':''}" onclick="toggleBeitrag('${key}','${k}')">Q${i+1}</button>`
+      : `<span class="bq ro ${rec[k]?'paid':''}">Q${i+1}</span>`).join('');
+    const jahrBtn = canEdit ? `<button class="bq jahr" onclick="markBeitragJahr('${key}')" title="Ganzes Jahr umschalten">✓ Jahr</button>` : '';
     return `<div class="beitrag-row">
       <div class="beitrag-info"><span class="beitrag-name">${esc(memberName(m)||('Nr. '+(m.nr||'?')))}</span><span class="beitrag-amt ${cls}">${pc*BEITRAG_QUARTAL} € / ${4*BEITRAG_QUARTAL} €</span></div>
-      <div class="beitrag-qs">${qbtns}<button class="bq jahr" onclick="markBeitragJahr('${key}')" title="Ganzes Jahr umschalten">✓ Jahr</button></div>
+      <div class="beitrag-qs">${qs}${jahrBtn}</div>
     </div>`;
   }).join('');
 }
 async function toggleBeitrag(key, q){
-  if(!adminMode) return;
+  if(!uiEdit('mitglieder')) return;
   if(!beitraege[beitragJahr]) beitraege[beitragJahr]={};
   if(!beitraege[beitragJahr][key]) beitraege[beitragJahr][key]={};
   const val=!beitraege[beitragJahr][key][q];
@@ -1768,7 +1833,7 @@ async function toggleBeitrag(key, q){
   renderBeitraege();
 }
 async function markBeitragJahr(key){
-  if(!adminMode) return;
+  if(!uiEdit('mitglieder')) return;
   if(!beitraege[beitragJahr]) beitraege[beitragJahr]={};
   const rec=beitraege[beitragJahr][key]||{};
   const val=!BEITRAG_QS.every(k=>rec[k]);   // alle gesetzt? -> aus, sonst alle an
@@ -1776,6 +1841,60 @@ async function markBeitragJahr(key){
   beitraege[beitragJahr][key]=neu;
   await dbFetch(DB+'/beitraege/'+beitragJahr+'/'+key+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(neu)}).catch(e=>console.warn(e));
   renderBeitraege();
+}
+
+// ===== CHORKASSE (für alle sichtbar; buchen nur Admin im Bearbeiten-Modus) =====
+let kasse = [];   // [{id, datum, text, betrag}] – betrag: + Einnahme / − Ausgabe
+async function loadKasse(){
+  try{ const r=await dbFetch(DB+'/kasse.json'); const d=r.ok?await r.json():null; kasse=Array.isArray(d)?d:[]; }catch(e){ kasse=[]; }
+}
+function euro(n){ return (Number(n)||0).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
+function kasseStand(){ return kasse.reduce((s,b)=>s+(Number(b.betrag)||0),0); }
+function renderKasse(){
+  const canEdit=uiEdit('mitglieder');
+  const stand=kasseStand();
+  const standEl=document.getElementById('kasse-stand');
+  if(standEl){ standEl.textContent=(stand<0?'−':'')+euro(Math.abs(stand)); standEl.style.color = stand<0 ? '#e74c3c' : '#22a559'; }
+  const ein=kasse.filter(b=>Number(b.betrag)>0).reduce((s,b)=>s+Number(b.betrag),0);
+  const aus=kasse.filter(b=>Number(b.betrag)<0).reduce((s,b)=>s+Number(b.betrag),0);
+  const sumEl=document.getElementById('kasse-summary');
+  if(sumEl) sumEl.innerHTML=`Einnahmen: <strong style="color:#22a559">${euro(ein)}</strong> · Ausgaben: <strong style="color:#e74c3c">${euro(Math.abs(aus))}</strong> · ${kasse.length} Buchung${kasse.length===1?'':'en'}`;
+  const list=document.getElementById('kasse-list'); if(!list) return;
+  if(!kasse.length){ list.innerHTML='<div class="empty">Noch keine Buchungen.</div>'; return; }
+  const sorted=[...kasse].sort((a,b)=>(b.datum||'').localeCompare(a.datum||'') || String(b.id||'').localeCompare(String(a.id||'')));
+  list.innerHTML=sorted.map(b=>{
+    const pos=(Number(b.betrag)||0)>=0;
+    return `<div class="kasse-row">
+      <div class="kasse-info"><span class="kasse-text">${esc(b.text||'—')}</span><span class="kasse-date">${b.datum?fmt(b.datum):''}</span></div>
+      <div class="kasse-right">
+        <span class="kasse-amt ${pos?'pos':'neg'}">${pos?'+':'−'}${euro(Math.abs(Number(b.betrag)||0))}</span>
+        ${canEdit?`<button class="btn btn-danger btn-sm" onclick="deleteKasse('${b.id}')" title="Buchung löschen">✕</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+async function addKasse(typ){
+  if(!uiEdit('mitglieder')) return;
+  const datum=document.getElementById('kasse-datum').value || localToday();
+  const text=document.getElementById('kasse-text').value.trim();
+  const raw=parseFloat((document.getElementById('kasse-betrag').value||'').replace(',','.'));
+  const res=document.getElementById('kasse-add-result');
+  if(!text){ res.style.color='#e74c3c'; res.textContent='Bitte eine Beschreibung eingeben.'; return; }
+  if(!(raw>0)){ res.style.color='#e74c3c'; res.textContent='Bitte einen Betrag größer 0 eingeben.'; return; }
+  const betrag = typ==='aus' ? -Math.abs(raw) : Math.abs(raw);
+  kasse.push({id:uid(), datum, text, betrag});
+  await dbFetch(DB+'/kasse.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(kasse)}).catch(e=>console.warn(e));
+  document.getElementById('kasse-text').value=''; document.getElementById('kasse-betrag').value='';
+  res.style.color='#22a559'; res.textContent='✅ Buchung gespeichert';
+  setTimeout(()=>{ if(res)res.textContent=''; },2000);
+  renderKasse();
+}
+async function deleteKasse(id){
+  if(!uiEdit('mitglieder')) return;
+  if(!confirm('Buchung löschen?')) return;
+  kasse=kasse.filter(b=>b.id!==id);
+  await dbFetch(DB+'/kasse.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(kasse)}).catch(e=>console.warn(e));
+  renderKasse();
 }
 
 // ===== ANWESENHEIT (nur Admin) =====
@@ -3887,6 +4006,7 @@ async function loadAll(){
     loadBenachrichtigungen(),
     loadUmfragen(),
     loadBeitraege(),
+    loadKasse(),
     loadUserProfiles().then(p=>{ userprofilesCache=p||{}; }).catch(()=>{})
   ]);
   // Profile sind jetzt geladen -> Namens-Anzeigen mit aktuellen Anzeigenamen neu aufbauen
