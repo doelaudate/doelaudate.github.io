@@ -214,6 +214,19 @@ html.fs-sehrgross{font-size:20.5px}
 .uf-bar-fill.mine{background:linear-gradient(90deg,var(--primary),var(--primary-dark))}
 .uf-voters{font-size:.72rem;color:var(--muted);margin-top:5px;line-height:1.4}
 
+/* ===== CHORBEITRÄGE ===== */
+.beitrag-row{display:flex;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap;padding:11px 2px;border-bottom:1px solid var(--line)}
+.beitrag-info{display:flex;flex-direction:column;min-width:130px;flex:1}
+.beitrag-name{font-weight:600;font-size:.9rem;color:var(--ink)}
+.beitrag-amt{font-size:.74rem;font-weight:700;margin-top:1px}
+.beitrag-amt.ok{color:#22a559}.beitrag-amt.part{color:#c87f0a}.beitrag-amt.none{color:#e74c3c}
+.beitrag-qs{display:flex;gap:5px;flex-wrap:wrap}
+.bq{border:1.5px solid var(--line);background:#fff;color:var(--muted);border-radius:9px;padding:7px 11px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;min-width:42px;transition:all .12s}
+.bq:hover{border-color:var(--primary);color:var(--primary)}
+.bq.paid{background:#22a559;border-color:#22a559;color:#fff}
+.bq.paid:hover{background:#1c8f4c;color:#fff}
+.bq.jahr{background:var(--primary-50);color:var(--primary-dark);border-color:var(--primary-100);min-width:0}
+
 /* ===== HANDY-OPTIMIERUNG ===== */
 @media(max-width:640px){
   body{padding-bottom:calc(env(safe-area-inset-bottom) + 60px)}
@@ -355,6 +368,7 @@ html.fs-sehrgross{font-size:20.5px}
   <div class="mtab" onclick="showPage('plakate',this)">📋 Plakate</div>
   <div class="mtab" onclick="showPage('kommentare',this)">💬 Kommentare <span id="k-count" style="background:rgba(41,128,185,.15);color:#2563b5;padding:1px 6px;border-radius:10px;font-size:.72rem;margin-left:3px"></span></div>
   <div class="mtab admin-tab admin-only" onclick="showPage('anwesenheit',this)">📊 Anwesenheit</div>
+  <div class="mtab admin-tab admin-only" onclick="showPage('beitraege',this)">💶 Beiträge</div>
   <div class="mtab user-only" id="tab-einstellungen" style="display:none" onclick="showPage('einstellungen',this)">⚙️ Einstellungen</div>
   <div class="mtab admin-tab admin-only" onclick="showPage('konsole',this)">⚙️ Konsole</div>
 </div>
@@ -603,6 +617,23 @@ html.fs-sehrgross{font-size:20.5px}
   </div>
 </div>
 
+<div class="page admin-only" id="p-beitraege">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <span class="card-title" style="margin-bottom:0">💶 Chorbeiträge</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-gray btn-sm" onclick="setBeitragJahr(-1)" title="Vorjahr">◀</button>
+        <strong id="beitrag-jahr" style="font-size:1.05rem;color:var(--navy);min-width:48px;text-align:center">—</strong>
+        <button class="btn btn-gray btn-sm" onclick="setBeitragJahr(1)" title="Nächstes Jahr">▶</button>
+      </div>
+    </div>
+    <div style="font-size:.82rem;color:#666;margin-bottom:12px">30 € pro Quartal · 120 € pro Jahr. Tippe ein Quartal an, um „bezahlt" zu markieren. Die Liste folgt automatisch der Mitgliederliste.</div>
+    <div class="stats" id="beitrag-stats"></div>
+    <input type="text" class="search-box" id="beitrag-search" placeholder="🔍 Mitglied suchen…" oninput="renderBeitraege()">
+    <div id="beitrag-list"></div>
+  </div>
+</div>
+
 <div class="page admin-only" id="p-konsole">
   <div class="card">
     <div class="card-title">⚙️ Admin-Konsole</div>
@@ -848,6 +879,7 @@ html.fs-sehrgross{font-size:20.5px}
       <button class="sheet-link" onclick="bnavMore('kommentare')"><span class="si">💬</span>Kommentare</button>
       <button class="sheet-link sheet-user" id="more-einst" style="display:none" onclick="bnavMore('einstellungen')"><span class="si">⚙️</span>Einstellungen</button>
       <button class="sheet-link adm sheet-adm" style="display:none" onclick="bnavMore('anwesenheit')"><span class="si">📊</span>Anwesenheit</button>
+      <button class="sheet-link adm sheet-adm" style="display:none" onclick="bnavMore('beitraege')"><span class="si">💶</span>Beiträge</button>
       <button class="sheet-link adm sheet-adm" style="display:none" onclick="bnavMore('konsole')"><span class="si">🔑</span>Konsole</button>
     </div>
   </div>
@@ -1235,6 +1267,7 @@ function showPage(id,tab){
   if(id==='lieder') renderLiedwuensche();
   if(id==='plakate') renderPlakate();
   if(id==='anwesenheit') renderAnwesenheitPage();
+  if(id==='beitraege') renderBeitraege();
   syncBottomNav(id);
   try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){}
 }
@@ -1687,6 +1720,62 @@ async function setProbeStatus(probeId, status){
     if(status==='nein'){ const dt=probeDatumById(probeId); notifyAdminAbsage('❌ Absage Probe', name+' hat sich für die Probe'+(dt?' am '+fmt(dt):'')+' abgemeldet.'); }
   }
   await loadProbenstatus();
+}
+
+// ===== CHORBEITRÄGE (nur Admin) =====
+const BEITRAG_QUARTAL = 30;            // € pro Quartal
+const BEITRAG_QS = ['q1','q2','q3','q4'];
+let beitraege = {};                    // { jahr: { memberKey: {q1,q2,q3,q4} } }
+let beitragJahr = new Date().getFullYear();
+async function loadBeitraege(){
+  try{ const r=await dbFetch(DB+'/beitraege.json'); beitraege=(r.ok?await r.json():null)||{}; }catch(e){ beitraege={}; }
+}
+function setBeitragJahr(delta){ beitragJahr+=delta; renderBeitraege(); }
+function beitragPaidCount(rec){ return BEITRAG_QS.filter(k=>rec&&rec[k]).length; }
+function renderBeitraege(){
+  if(!adminMode) return;                // Finanzdaten nur für Admins
+  const jahrEl=document.getElementById('beitrag-jahr'); if(jahrEl) jahrEl.textContent=beitragJahr;
+  const data=beitraege[beitragJahr]||{};
+  // Statistik über ALLE Mitglieder (ungefiltert)
+  let paidQ=0, fully=0;
+  mitglieder.forEach(m=>{ const pc=beitragPaidCount(data[memberKey(m)]); paidQ+=pc; if(pc===4) fully++; });
+  const eingenommen=paidQ*BEITRAG_QUARTAL, soll=mitglieder.length*4*BEITRAG_QUARTAL, offen=soll-eingenommen;
+  const statsEl=document.getElementById('beitrag-stats');
+  if(statsEl) statsEl.innerHTML=`<div class="stat"><div class="stat-n" style="color:#22a559">${eingenommen} €</div><div class="stat-l">Eingenommen</div></div><div class="stat"><div class="stat-n" style="color:#e74c3c">${offen} €</div><div class="stat-l">Offen</div></div><div class="stat"><div class="stat-n">${fully}/${mitglieder.length}</div><div class="stat-l">Voll bezahlt</div></div>`;
+  // Liste (gefiltert + sortiert)
+  const q=(document.getElementById('beitrag-search')?.value||'').trim().toLowerCase();
+  let members=[...mitglieder].sort((a,b)=>memberName(a).localeCompare(memberName(b)));
+  if(q) members=members.filter(m=>memberName(m).toLowerCase().includes(q));
+  const list=document.getElementById('beitrag-list'); if(!list) return;
+  if(!members.length){ list.innerHTML='<div class="empty">Keine Mitglieder gefunden.</div>'; return; }
+  list.innerHTML=members.map(m=>{
+    const key=memberKey(m), rec=data[key]||{}, pc=beitragPaidCount(rec);
+    const cls=pc===4?'ok':(pc===0?'none':'part');
+    const qbtns=BEITRAG_QS.map((k,i)=>`<button class="bq ${rec[k]?'paid':''}" onclick="toggleBeitrag('${key}','${k}')">Q${i+1}</button>`).join('');
+    return `<div class="beitrag-row">
+      <div class="beitrag-info"><span class="beitrag-name">${esc(memberName(m)||('Nr. '+(m.nr||'?')))}</span><span class="beitrag-amt ${cls}">${pc*BEITRAG_QUARTAL} € / ${4*BEITRAG_QUARTAL} €</span></div>
+      <div class="beitrag-qs">${qbtns}<button class="bq jahr" onclick="markBeitragJahr('${key}')" title="Ganzes Jahr umschalten">✓ Jahr</button></div>
+    </div>`;
+  }).join('');
+}
+async function toggleBeitrag(key, q){
+  if(!adminMode) return;
+  if(!beitraege[beitragJahr]) beitraege[beitragJahr]={};
+  if(!beitraege[beitragJahr][key]) beitraege[beitragJahr][key]={};
+  const val=!beitraege[beitragJahr][key][q];
+  beitraege[beitragJahr][key][q]=val;
+  await dbFetch(DB+'/beitraege/'+beitragJahr+'/'+key+'/'+q+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(val)}).catch(e=>console.warn(e));
+  renderBeitraege();
+}
+async function markBeitragJahr(key){
+  if(!adminMode) return;
+  if(!beitraege[beitragJahr]) beitraege[beitragJahr]={};
+  const rec=beitraege[beitragJahr][key]||{};
+  const val=!BEITRAG_QS.every(k=>rec[k]);   // alle gesetzt? -> aus, sonst alle an
+  const neu={q1:val,q2:val,q3:val,q4:val};
+  beitraege[beitragJahr][key]=neu;
+  await dbFetch(DB+'/beitraege/'+beitragJahr+'/'+key+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(neu)}).catch(e=>console.warn(e));
+  renderBeitraege();
 }
 
 // ===== ANWESENHEIT (nur Admin) =====
@@ -3797,6 +3886,7 @@ async function loadAll(){
     loadAbwesenheit(),
     loadBenachrichtigungen(),
     loadUmfragen(),
+    loadBeitraege(),
     loadUserProfiles().then(p=>{ userprofilesCache=p||{}; }).catch(()=>{})
   ]);
   // Profile sind jetzt geladen -> Namens-Anzeigen mit aktuellen Anzeigenamen neu aufbauen
