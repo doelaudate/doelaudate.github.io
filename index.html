@@ -109,6 +109,8 @@ textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgb
 .btn-purple{background:#8e44ad;color:white}.btn-purple:hover{background:#7d3c98}
 .del-btn{position:absolute;top:8px;right:8px;opacity:0;transition:opacity .15s}
 .probe-item:hover .del-btn,.termin-card:hover .del-btn,.kommentar:hover .del-btn,.plan-item:hover .del-btn{opacity:1}
+/* Touch-Geräte (kein Hover): Bearbeiten-/Löschen-Knöpfe dauerhaft sichtbar */
+@media(hover:none){.del-btn{opacity:1}}
 .admin-section{background:#fff8f8;border:1.5px dashed #e74c3c;border-radius:8px;padding:14px;margin-bottom:12px}
 .admin-section .admin-label{font-size:.72rem;font-weight:700;text-transform:uppercase;color:#e74c3c;letter-spacing:.06em;margin-bottom:8px}
 .loading{text-align:center;padding:40px;color:#aaa;font-size:.9rem}
@@ -239,6 +241,8 @@ html.fs-sehrgross{font-size:20.5px}
   /* größere Tap-Ziele */
   .btn{padding:9px 15px}
   .btn-sm{padding:7px 12px;font-size:.8rem}
+  /* Bearbeiten-/Löschen-Knöpfe ohne Hover sichtbar (Handy) */
+  .del-btn{opacity:1}
   /* Modale fast vollflächig */
   .modal{width:94%;max-width:94%;padding:18px}
   /* Karten-Titel etwas größer */
