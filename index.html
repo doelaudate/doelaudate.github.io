@@ -947,6 +947,24 @@ html.fs-sehrgross{font-size:20.5px}
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-probe-edit">
+  <div class="modal">
+    <h3>✏️ Probe bearbeiten</h3>
+    <input type="hidden" id="pe-id">
+    <input type="hidden" id="pe-geplant">
+    <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:4px;color:#444">Datum</label>
+    <input class="fl-input" type="date" id="pe-datum">
+    <label style="display:block;font-size:.8rem;font-weight:600;margin:6px 0 5px;color:#444">Lieder</label>
+    <div id="pe-song-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+    <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:4px;color:#444">Notizen</label>
+    <textarea id="pe-notiz" placeholder="z.B. Sopran bei Takt 12 nochmal üben…" style="min-height:55px"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-success" onclick="saveProbeEdit()">💾 Speichern</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-mitglied">
   <div class="modal">
     <h3>✏️ Mitglied bearbeiten</h3>
@@ -1529,6 +1547,58 @@ async function deleteProbe(id,geplant=false){
   renderProben(); renderLieder();
 }
 
+// Lieder-Auswahl (Chips) in einen beliebigen Container bauen, vorausgewählte Lieder ankreuzen
+function buildSongPickerInto(containerEl, selectedIds){
+  if(!D || !containerEl) return;
+  const sel=new Set(selectedIds||[]);
+  containerEl.innerHTML='';
+  D.seasons.forEach(s=>{
+    if(!(s.songs||[]).length) return;
+    const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'}[s.type]||'🎵';
+    containerEl.innerHTML+=`<div style="width:100%;font-size:.7rem;font-weight:700;text-transform:uppercase;color:#999;margin:5px 0 3px">${ic} ${esc(s.name)}</div>`;
+    s.songs.forEach(song=>{
+      const ck=sel.has(song.id);
+      containerEl.innerHTML+=`<label style="display:inline-flex;align-items:center;gap:5px;background:${ck?'#d6eaf8':'#f0f4f8'};border-radius:20px;padding:4px 11px;cursor:pointer;border:1.5px solid ${ck?'#2563b5':'transparent'};font-size:.82rem;user-select:none;margin-bottom:3px">
+        <input type="checkbox" value="${song.id}" ${ck?'checked':''} onchange="this.parentElement.style.background=this.checked?'#d6eaf8':'#f0f4f8';this.parentElement.style.borderColor=this.checked?'#2563b5':'transparent'">
+        ${esc(song.name)}</label>`;
+    });
+  });
+}
+// Bestehende Probe (geplant oder vergangen) bearbeiten
+function editProbe(id, geplant){
+  if(!hasPermission('proben')) return;
+  const arr = geplant ? probenplan : ((D&&D.proben)||[]);
+  const p = arr.find(x=>x.id===id);
+  if(!p){ alert('Probe nicht gefunden.'); return; }
+  document.getElementById('pe-id').value=id;
+  document.getElementById('pe-geplant').value=geplant?'1':'';
+  document.getElementById('pe-datum').value=p.datum||'';
+  document.getElementById('pe-notiz').value=p.notiz||'';
+  buildSongPickerInto(document.getElementById('pe-song-picker'), p.songIds||[]);
+  document.getElementById('modal-probe-edit').classList.add('open');
+}
+async function saveProbeEdit(){
+  if(!hasPermission('proben')) return;
+  const id=document.getElementById('pe-id').value;
+  const geplant=document.getElementById('pe-geplant').value==='1';
+  const datum=document.getElementById('pe-datum').value;
+  if(!datum){ alert('Bitte Datum eingeben.'); return; }
+  const songIds=[...document.querySelectorAll('#pe-song-picker input:checked')].map(x=>x.value);
+  const notiz=document.getElementById('pe-notiz').value.trim();
+  if(!geplant && !songIds.length){ alert('Bitte mindestens ein Lied auswählen.'); return; }
+  const arr = geplant ? probenplan : (D.proben=D.proben||[]);
+  const p = arr.find(x=>x.id===id);
+  if(!p){ alert('Probe nicht gefunden.'); return; }
+  p.datum=datum; p.songIds=songIds; p.notiz=notiz;
+  if(geplant){
+    await dbFetch(DB+'/probenplan.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(probenplan)}).catch(e=>console.warn(e));
+  } else {
+    await dbFetch(DB+'/chorproben.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seasons:D.seasons,proben:D.proben})}).catch(e=>console.warn(e));
+  }
+  closeModal();
+  renderProben(); renderLieder();
+}
+
 // ===== PROBEN-ANWESENHEIT (Ab-/Zusage für geplante Proben) =====
 async function loadProbenstatus(){
   try{ const r=await dbFetch(DB+'/probenstatus.json'); probenstatus=(r.ok?await r.json():null)||{}; renderProben(); }catch(e){}
@@ -1827,7 +1897,7 @@ function renderProben(){
     else planEl.innerHTML=upcoming.map(p=>{
       const songs=(p.songIds||[]).map(id=>{const s=allS.find(x=>x.id===id);return s?s.name:'?'}).join(', ');
       const isGeplant=p._src==='plan';
-      return`<div class="plan-item"><div style="font-weight:600;color:#1e8449;margin-bottom:2px">🎹 ${fmt(p.datum)}</div>${songs?`<div style="font-size:.8rem;color:#555">🎵 ${esc(songs)}</div>`:''}${p.notiz?`<div style="font-size:.8rem;color:#888;font-style:italic">💬 ${esc(p.notiz)}</div>`:''}${buildProbeAttendance(p)}${uiEdit('proben')?`<button class="btn btn-danger btn-sm del-btn" onclick="deleteProbe('${p.id}',${isGeplant})">✕</button>`:''}</div>`;
+      return`<div class="plan-item"><div style="font-weight:600;color:#1e8449;margin-bottom:2px">🎹 ${fmt(p.datum)}</div>${songs?`<div style="font-size:.8rem;color:#555">🎵 ${esc(songs)}</div>`:''}${p.notiz?`<div style="font-size:.8rem;color:#888;font-style:italic">💬 ${esc(p.notiz)}</div>`:''}${buildProbeAttendance(p)}${uiEdit('proben')?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editProbe('${p.id}',${isGeplant})">✏️ Bearbeiten</button><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',${isGeplant})">🗑️ Löschen</button></div>`:''}</div>`;
     }).join('');
   }
 
@@ -1845,7 +1915,7 @@ function renderProben(){
             <div class="probe-date">📋 ${fmt(p.datum)}</div>
             ${names?`<div class="probe-songs">🎵 ${esc(names)}</div>`:''}
             ${p.notiz?`<div class="probe-notes">💬 ${esc(p.notiz)}</div>`:''}
-            ${uiEdit('proben')?`<button class="btn btn-danger btn-sm del-btn" onclick="deleteProbe('${p.id}',true)">✕</button>`:''}
+            ${uiEdit('proben')?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editProbe('${p.id}',true)">✏️ Bearbeiten</button><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',true)">🗑️ Löschen</button></div>`:''}
           </div>`;
         }
         const hw=p.hausaufgaben||{};
@@ -1856,8 +1926,9 @@ function renderProben(){
           ${p.notiz?`<div class="probe-notes">💬 ${esc(p.notiz)}</div>`:''}
           ${hwHtml?`<div style="background:#fff8e7;border-radius:5px;padding:6px 8px;margin-top:6px;font-size:.78rem;color:#7d6608"><strong>📝 Hausaufgaben:</strong>${hwHtml}</div>`:''}
           ${uiEdit('proben')?`<div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap">
-            <button class="btn btn-sm" style="background:#f39c12;color:white;font-size:.72rem" onclick="editHausaufgaben('${p.id}')">📝 HA</button>
-            <button class="btn btn-danger btn-sm del-btn" onclick="deleteProbe('${p.id}',false)">✕</button>
+            <button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editProbe('${p.id}',false)">✏️ Bearbeiten</button>
+            <button class="btn btn-sm" style="background:#f39c12;color:white" onclick="editHausaufgaben('${p.id}')">📝 HA</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',false)">🗑️ Löschen</button>
           </div>`:''}
         </div>`;
       }).join('');
