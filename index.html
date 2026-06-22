@@ -543,7 +543,7 @@ html.fs-sehrgross{font-size:20.5px}
 <div class="page" id="p-mitglieder">
   <div class="sub-tabs">
     <button id="mtab-mitglieder" class="stab active" onclick="setMitgliederTab('mitglieder')">👥 Mitglieder</button>
-    <button id="mtab-beitraege" class="stab" onclick="setMitgliederTab('beitraege')">💶 Beiträge</button>
+    <button id="mtab-beitraege" class="stab" style="display:none" onclick="setMitgliederTab('beitraege')">💶 Beiträge</button>
     <button id="mtab-kasse" class="stab" onclick="setMitgliederTab('kasse')">💰 Chorkasse</button>
   </div>
   <div id="mv-mitglieder">
@@ -1792,8 +1792,9 @@ const BEITRAG_OWNER_USERNAMES = ['MW290498'];
 const BEITRAG_OWNER_EMAILS = ['doelaudate@martinwolff-tenor.de'];
 function isBeitragOwner(){
   const un = currentUserProfile && currentUserProfile.username;
-  const em = (currentUser && currentUser.email || '').toLowerCase();
-  return BEITRAG_OWNER_USERNAMES.includes(un) || BEITRAG_OWNER_EMAILS.includes(em);
+  const em1 = (currentUser && currentUser.email || '').toLowerCase();
+  const em2 = (currentUserProfile && currentUserProfile.email || '').toLowerCase();
+  return BEITRAG_OWNER_USERNAMES.includes(un) || BEITRAG_OWNER_EMAILS.includes(em1) || BEITRAG_OWNER_EMAILS.includes(em2);
 }
 // Beiträge-Tab nur für den Kassenwart zeigen; andere ggf. von der Ansicht wegleiten
 function applyBeitragAccess(){
@@ -2752,6 +2753,7 @@ async function loadUserProfile(uid, email) {
     document.getElementById('user-chip').style.display = 'flex';
     const _bell2=document.getElementById('bell-btn'); if(_bell2) _bell2.style.display='block';
     const lb=document.getElementById('logout-btn');if(lb)lb.style.display='block';
+    applyBeitragAccess();
     loadAll();
   }
 }
