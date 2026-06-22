@@ -344,7 +344,7 @@ html.fs-sehrgross{font-size:20.5px}
     </div>
     <!-- Register Form -->
     <div id="form-register" style="display:none">
-      <div style="font-size:.8rem;color:#888;margin-bottom:12px;line-height:1.4">Gib deine E-Mail-Adresse und ein eigenes Passwort ein. Dein Benutzername wird automatisch anhand der Mitgliederliste vergeben.</div>
+      <div style="font-size:.8rem;color:#888;margin-bottom:12px;line-height:1.4">Bitte die <strong>in der Mitgliederliste hinterlegte E-Mail-Adresse</strong> verwenden — nur Chormitglieder können ein Konto anlegen. Dein Benutzername wird automatisch vergeben. Stimmt deine E-Mail nicht? Dann bei der Chorleitung melden.</div>
       <input type="email" id="reg-email" class="login-input" placeholder="E-Mail-Adresse" autocomplete="email">
       <input type="password" id="reg-pw" class="login-input" placeholder="Passwort (mind. 6 Zeichen)" autocomplete="new-password">
       <input type="password" id="reg-pw2" class="login-input" placeholder="Passwort wiederholen" autocomplete="new-password">
@@ -2713,6 +2713,8 @@ let currentUser = null;
 let currentUserProfile = null;
 
 function onAuthChange(user) {
+  // Während einer laufenden Registrierung erst nach der Mitglieds-Prüfung übernehmen
+  if(window._registering){ currentUser = user; return; }
   currentUser = user;
   if(user) {
     document.getElementById('login-overlay').style.display = 'none';
@@ -2822,12 +2824,30 @@ async function doRegister() {
   
   const btn = document.getElementById('btn-register-submit');
   if(btn){btn.textContent = '⏳'; btn.disabled = true;}
-  
+
+  window._registering = true;
   try {
     // Create Firebase account
     const cred = await window._fbCreateUser(window._fbAuth, email, pw);
     const uid = cred.user.uid;
-    
+
+    // ---- ZUGANGSSCHUTZ: Nur E-Mails aus der Mitgliederliste dürfen ein Konto behalten ----
+    let istMitglied = INIT_MITGLIEDER.some(m => m.email && m.email.toLowerCase() === email);
+    if(!istMitglied){
+      try{
+        const mr = await dbFetch(DB+'/mitglieder.json');   // jetzt mit Token lesbar
+        if(mr.ok){ const liste = await mr.json(); if(Array.isArray(liste)) istMitglied = liste.some(m => m && m.email && String(m.email).toLowerCase() === email); }
+      }catch(_){}
+    }
+    if(!istMitglied){
+      // Konto sofort wieder entfernen und abweisen
+      try{ await cred.user.delete(); }catch(_){ try{ await window._fbSignOut(window._fbAuth); }catch(__){} }
+      currentUser = null; window._registering = false;
+      errEl.textContent = 'Diese E-Mail ist nicht in der Mitgliederliste. Bitte wende dich an die Chorleitung.';
+      if(btn){btn.textContent = 'Konto erstellen'; btn.disabled = false;}
+      return;
+    }
+
     // Find matching Mitglied by email to assign username
     const mitgl = INIT_MITGLIEDER.find(m => m.email && m.email.toLowerCase() === email);
     
@@ -2866,8 +2886,11 @@ async function doRegister() {
       }
     }catch(e){ console.warn('Mitglied-Anlage', e); }
 
-    // onAuthChange handles the rest
+    // Mitglied bestätigt -> jetzt regulär in die App
+    window._registering = false;
+    onAuthChange(window._fbAuth.currentUser);
   } catch(e) {
+    window._registering = false;
     let msg = 'Fehler bei der Registrierung.';
     if(e.code==='auth/email-already-in-use') msg = 'Diese E-Mail ist bereits registriert. Bitte anmelden.';
     else if(e.code==='auth/invalid-email') msg = 'Ungültige E-Mail-Adresse.';
