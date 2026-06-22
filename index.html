@@ -588,7 +588,15 @@ html.fs-sehrgross{font-size:20.5px}
       </div>
       <div id="beitrag-hint" style="font-size:.82rem;color:#666;margin-bottom:12px">30 € pro Quartal · 120 € pro Jahr. Die Liste folgt automatisch der Mitgliederliste.</div>
       <div class="stats" id="beitrag-stats"></div>
-      <input type="text" class="search-box" id="beitrag-search" placeholder="🔍 Mitglied suchen…" oninput="renderBeitraege()">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+        <input type="text" class="search-box" id="beitrag-search" placeholder="🔍 Mitglied suchen…" oninput="renderBeitraege()" style="flex:1;min-width:160px;margin-bottom:0">
+        <select id="beitrag-sort" class="fl-input" style="width:auto;min-width:170px;margin-bottom:0" onchange="renderBeitraege()">
+          <option value="name">Vorname A–Z</option>
+          <option value="nachname">Nachname A–Z</option>
+          <option value="offen">Offene zuerst</option>
+          <option value="bezahlt">Voll bezahlt zuerst</option>
+        </select>
+      </div>
       <div id="beitrag-list"></div>
     </div>
   </div>
@@ -1299,6 +1307,7 @@ function applyAdminMode(){
   if(adminMode){renderKonsole();}
   renderProben();
   updateEditModeUI();
+  applyBeitragAccess();
 }
 
 // PAGE
@@ -1778,8 +1787,28 @@ let beitragJahr = new Date().getFullYear();
 async function loadBeitraege(){
   try{ const r=await dbFetch(DB+'/beitraege.json'); beitraege=(r.ok?await r.json():null)||{}; }catch(e){ beitraege={}; }
 }
+// ===== ZUGRIFF BEITRÄGE: nur Kassenwart (Martin Wolff) =====
+const BEITRAG_OWNER_USERNAMES = ['MW290498'];
+const BEITRAG_OWNER_EMAILS = ['doelaudate@martinwolff-tenor.de'];
+function isBeitragOwner(){
+  const un = currentUserProfile && currentUserProfile.username;
+  const em = (currentUser && currentUser.email || '').toLowerCase();
+  return BEITRAG_OWNER_USERNAMES.includes(un) || BEITRAG_OWNER_EMAILS.includes(em);
+}
+// Beiträge-Tab nur für den Kassenwart zeigen; andere ggf. von der Ansicht wegleiten
+function applyBeitragAccess(){
+  const owner = isBeitragOwner();
+  const tab = document.getElementById('mtab-beitraege');
+  if(tab) tab.style.display = owner ? '' : 'none';
+  if(!owner){
+    const bv = document.getElementById('mv-beitraege');
+    if(bv && bv.style.display !== 'none') setMitgliederTab('mitglieder');
+  }
+}
+
 // Unter-Tabs auf der Mitglieder-Seite (Mitglieder / Beiträge / Chorkasse)
 function setMitgliederTab(which){
+  if(which==='beitraege' && !isBeitragOwner()) which='mitglieder';   // Zugriffsschutz
   const views={mitglieder:'mv-mitglieder', beitraege:'mv-beitraege', kasse:'mv-kasse'};
   const tabs={mitglieder:'mtab-mitglieder', beitraege:'mtab-beitraege', kasse:'mtab-kasse'};
   Object.keys(views).forEach(k=>{
@@ -1806,7 +1835,15 @@ function renderBeitraege(){
   if(statsEl) statsEl.innerHTML=`<div class="stat"><div class="stat-n" style="color:#22a559">${eingenommen} €</div><div class="stat-l">Eingenommen</div></div><div class="stat"><div class="stat-n" style="color:#e74c3c">${offen} €</div><div class="stat-l">Offen</div></div><div class="stat"><div class="stat-n">${fully}/${mitglieder.length}</div><div class="stat-l">Voll bezahlt</div></div>`;
   // Liste (gefiltert + sortiert)
   const q=(document.getElementById('beitrag-search')?.value||'').trim().toLowerCase();
-  let members=[...mitglieder].sort((a,b)=>memberName(a).localeCompare(memberName(b)));
+  const sort=document.getElementById('beitrag-sort')?.value||'name';
+  const byName=(a,b)=>memberName(a).localeCompare(memberName(b),'de');
+  const byNachname=(a,b)=>(a.nachname||'').localeCompare(b.nachname||'','de')||(a.vorname||'').localeCompare(b.vorname||'','de');
+  const pc=m=>beitragPaidCount(data[memberKey(m)]);
+  let members=[...mitglieder];
+  if(sort==='nachname') members.sort(byNachname);
+  else if(sort==='offen') members.sort((a,b)=>pc(a)-pc(b)||byName(a,b));        // wenig bezahlt zuerst
+  else if(sort==='bezahlt') members.sort((a,b)=>pc(b)-pc(a)||byName(a,b));       // voll bezahlt zuerst
+  else members.sort(byName);
   if(q) members=members.filter(m=>memberName(m).toLowerCase().includes(q));
   const list=document.getElementById('beitrag-list'); if(!list) return;
   if(!members.length){ list.innerHTML='<div class="empty">Keine Mitglieder gefunden.</div>'; return; }
