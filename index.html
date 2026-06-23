@@ -243,6 +243,14 @@ html.fs-sehrgross{font-size:20.5px}
 .kasse-amt{font-weight:800;font-size:.92rem;font-variant-numeric:tabular-nums;white-space:nowrap}
 .kasse-amt.pos{color:#22a559}.kasse-amt.neg{color:#e74c3c}
 
+/* ===== SETLISTE / ABLAUF-EDITOR ===== */
+.sl-row{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:8px 10px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px;background:#fff;font-size:.86rem}
+.sl-row.mod{background:#faf5ff;border-color:#e6d6f2}
+.sl-label{min-width:0;flex:1;word-break:break-word;line-height:1.35}
+.sl-actions{display:flex;gap:4px;flex-shrink:0}
+.sl-actions .btn-sm{padding:6px 9px}
+.sl-actions .btn-sm:disabled{opacity:.35;cursor:default}
+
 /* ===== HANDY-OPTIMIERUNG ===== */
 @media(max-width:640px){
   body{padding-bottom:calc(env(safe-area-inset-bottom) + 60px)}
@@ -1081,14 +1089,23 @@ html.fs-sehrgross{font-size:20.5px}
 
 <!-- SETLISTE MODAL -->
 <div class="modal-overlay" id="modal-setliste">
-  <div class="modal" style="max-width:540px">
-    <h3>🎵 Setliste bearbeiten</h3>
-    <p style="font-size:.82rem;color:#888;margin-bottom:12px">Wähle Lieder aus der Saison oder gib eigene Titel ein:</p>
-    <div id="setliste-song-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;max-height:180px;overflow-y:auto;border:1px solid #eee;border-radius:6px;padding:8px"></div>
-    <div id="setliste-custom-list" style="margin-bottom:10px"></div>
-    <div style="display:flex;gap:6px;margin-bottom:10px">
-      <input type="text" id="setliste-custom-input" class="fl-input" placeholder="Eigenen Titel hinzufügen…" style="flex:1">
-      <button class="btn btn-primary btn-sm" onclick="addCustomSetlisteSong()">＋</button>
+  <div class="modal" style="max-width:560px">
+    <h3>🎵 Ablauf / Setliste – <span id="sl-titel"></span></h3>
+    <p style="font-size:.8rem;color:#888;margin-bottom:10px">Reihenfolge mit ↑/↓ ändern. Lieder, Moderationen und eigene Titel beliebig mischen.</p>
+    <div id="sl-list" style="margin-bottom:12px;max-height:42vh;overflow-y:auto"></div>
+    <div style="border-top:1px solid var(--line);padding-top:12px">
+      <div class="form-row" style="margin-bottom:8px">
+        <select id="sl-song-select" class="fl-input" style="flex:1;min-width:150px;margin-bottom:0"></select>
+        <button class="btn btn-primary btn-sm" type="button" onclick="slAddSong()">🎵 Lied einfügen</button>
+      </div>
+      <div class="form-row" style="margin-bottom:8px">
+        <input type="text" id="sl-mod-input" class="fl-input" placeholder="Moderation / Ansage (z. B. Begrüßung)" style="flex:1;min-width:150px;margin-bottom:0" onkeydown="if(event.key==='Enter'){event.preventDefault();slAddMod();}">
+        <button class="btn btn-sm" type="button" style="background:#8e44ad;color:#fff" onclick="slAddMod()">🎤 Moderation</button>
+      </div>
+      <div class="form-row">
+        <input type="text" id="sl-custom-input" class="fl-input" placeholder="Eigener Titel (nicht aus der Liederliste)" style="flex:1;min-width:150px;margin-bottom:0" onkeydown="if(event.key==='Enter'){event.preventDefault();slAddCustom();}">
+        <button class="btn btn-gray btn-sm" type="button" onclick="slAddCustom()">＋ Titel</button>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-gray" onclick="closeModal()">Abbrechen</button>
@@ -2219,7 +2236,7 @@ function terminHtml(t,past=false){
     <div class="t-meta">📅 ${dateStr}${t.uhrzeit?' &nbsp;🕐 '+esc(t.uhrzeit):''}</div>
     ${t.beschreibung?`<div style="font-size:.78rem;color:#888;margin-bottom:5px">ℹ️ ${esc(t.beschreibung)}</div>`:''}
     ${t.frist&&!past?`<div style="font-size:.78rem;color:${t.frist<localToday()?'#e74c3c':'#7d6608'};margin-bottom:5px">⏳ Bitte bis <strong>${fmt(t.frist)}</strong> zurückmelden${t.frist<localToday()?' (Frist abgelaufen)':''}</div>`:''}
-    ${t.setliste&&t.setliste.length?`<div style="margin-bottom:8px"><div style="font-size:.76rem;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:3px">Setliste</div>${t.setliste.map((s,i)=>`<div style="font-size:.82rem;color:#555">🎵 ${i+1}. ${esc(s)}</div>`).join('')}</div>`:''}
+    ${setlisteHtml(t)}
     ${jaL.length||nL.length||vL.length?`<div class="tally">${jaL.length?`<span style="color:#27ae60">✅ ${jaL.length}: ${esc(prettyNames(jaL).join(', '))}</span><br>`:''}${nL.length?`<span style="color:#e74c3c">❌ ${nL.length}: ${esc(prettyNames(nL).join(', '))}</span><br>`:''}${vL.length?`<span style="color:#f39c12">❓ ${vL.length}: ${esc(prettyNames(vL).join(', '))}</span>`:''}</div>`:''}
     ${!past?`<div class="vote-row" id="vrow-${t.id}">${buildVoteRow(t)}</div>`:''}
     <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">
@@ -3246,7 +3263,8 @@ function terminToVEVENT(t){
   }
   const typLabels = {konzert:'🎵 Konzert',fest:'🎪 Fest',chorlager:'🏕️ Chorlager',gottesdienst:'⛪ Gottesdienst',probe:'🎹 Probe',sonstiges:'📌 Sonstiges'};
   const summary = (typLabels[t.typ]||'') + ' – ' + t.titel + ' (Chor Dölau)';
-  const desc = [t.beschreibung, t.uhrzeit?'Uhrzeit: '+t.uhrzeit:'', t.setliste?.length?'Setliste: '+t.setliste.join(', '):''].filter(Boolean).join('\\n');
+  const _sl = normSetliste(t.setliste).map(it => it.typ==='moderation' ? '['+it.text+']' : it.text);
+  const desc = [t.beschreibung, t.uhrzeit?'Uhrzeit: '+t.uhrzeit:'', _sl.length?'Setliste: '+_sl.join(', '):''].filter(Boolean).join('\\n');
   return [
     'BEGIN:VEVENT',
     'UID:'+uid,
@@ -3626,64 +3644,79 @@ function renderGeburtstage(){
   el.innerHTML = html;
 }
 
-// ===== SETLISTE EDIT =====
-let _editSetlisteId = null;
+// ===== SETLISTE / ABLAUF EDIT =====
+// Item-Modell: {typ:'lied'|'moderation', text}. Alte Setlisten (Strings) werden normalisiert.
+function normSetliste(arr){
+  return (arr||[]).map(it => (typeof it==='string') ? {typ:'lied', text:it} : {typ:(it&&it.typ==='moderation'?'moderation':'lied'), text:(it&&it.text)||''}).filter(it=>it.text);
+}
+// Anzeige des Ablaufs in der Termin-Karte
+function setlisteHtml(t){
+  const items = normSetliste(t&&t.setliste);
+  if(!items.length) return '';
+  let nr=0;
+  const rows = items.map(it => it.typ==='moderation'
+    ? `<div style="font-size:.8rem;color:#8e44ad;font-style:italic">🎤 ${esc(it.text)}</div>`
+    : `<div style="font-size:.82rem;color:#555">🎵 ${++nr}. ${esc(it.text)}</div>`).join('');
+  return `<div style="margin-bottom:8px"><div style="font-size:.76rem;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:3px">Ablauf / Setliste</div>${rows}</div>`;
+}
+let _slId = null;
+let _slItems = [];
 function editSetliste(terminId){
   const t = termine.find(x=>x.id===terminId);
   if(!t) return;
-  _editSetlisteId = terminId;
-  
-  // Populate song picker from all seasons
-  const picker = document.getElementById('setliste-song-picker');
-  const allSongs = D?.seasons?.flatMap(s=>s.songs.map(song=>({...song,seasonName:s.name})))||[];
-  const currentList = t.setliste||[];
-  picker.innerHTML = allSongs.map(s=>{
-    const checked = currentList.includes(s.name);
-    return`<label style="display:inline-flex;align-items:center;gap:5px;background:${checked?'#d6eaf8':'#f0f4f8'};border:1.5px solid ${checked?'#2563b5':'transparent'};border-radius:20px;padding:4px 11px;cursor:pointer;font-size:.82rem;user-select:none">
-      <input type="checkbox" value="${esc(s.name)}" ${checked?'checked':''} style="accent-color:#2563b5">
-      ${esc(s.name)}
-    </label>`;
-  }).join('');
-  
-  // Show custom entries (not in song list)
-  const knownNames = allSongs.map(s=>s.name);
-  const customList = document.getElementById('setliste-custom-list');
-  const customs = currentList.filter(name=>!knownNames.includes(name));
-  customList.innerHTML = customs.map(name=>`
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
-      <span style="flex:1;font-size:.85rem;padding:4px 8px;background:#fef9e7;border-radius:5px">✏️ ${esc(name)}</span>
-      <button class="btn btn-danger btn-sm" onclick="removeCustomSetliste('${esc(name)}')">✕</button>
-    </div>`).join('');
-  
+  _slId = terminId;
+  _slItems = normSetliste(t.setliste);
+  document.getElementById('sl-titel').textContent = t.titel||'';
+  // Lied-Auswahl aus allen Saisons
+  const allSongs = (D&&D.seasons) ? D.seasons.flatMap(s=>(s.songs||[]).map(song=>song.name)) : [];
+  const uniq = [...new Set(allSongs.filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+  const sel = document.getElementById('sl-song-select');
+  if(sel) sel.innerHTML = '<option value="">— Lied wählen —</option>' + uniq.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  ['sl-mod-input','sl-custom-input'].forEach(id=>{const e=document.getElementById(id); if(e) e.value='';});
+  slRender();
   document.getElementById('modal-setliste').classList.add('open');
 }
-
-function addCustomSetlisteSong(){
-  const inp = document.getElementById('setliste-custom-input');
-  const val = inp.value.trim();
-  if(!val) return;
-  const customList = document.getElementById('setliste-custom-list');
-  customList.innerHTML += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
-    <span style="flex:1;font-size:.85rem;padding:4px 8px;background:#fef9e7;border-radius:5px">✏️ ${esc(val)}</span>
-    <button class="btn btn-danger btn-sm" onclick="removeCustomSetliste('${esc(val)}')">✕</button>
-  </div>`;
-  inp.value='';
+function slRender(){
+  const el = document.getElementById('sl-list'); if(!el) return;
+  if(!_slItems.length){ el.innerHTML='<div class="empty" style="padding:14px">Noch leer – unten Lieder und Moderationen hinzufügen.</div>'; return; }
+  let nr=0;
+  el.innerHTML = _slItems.map((it,i)=>{
+    const isMod = it.typ==='moderation';
+    let label;
+    if(isMod){ label = `<span style="color:#8e44ad;font-weight:600">🎤 ${esc(it.text)}</span>`; }
+    else { nr++; label = `<span><strong style="color:var(--primary)">${nr}.</strong> 🎵 ${esc(it.text)}</span>`; }
+    return `<div class="sl-row${isMod?' mod':''}">
+      <div class="sl-label">${label}</div>
+      <div class="sl-actions">
+        <button class="btn btn-gray btn-sm" type="button" ${i===0?'disabled':''} onclick="slMove(${i},-1)" title="nach oben">↑</button>
+        <button class="btn btn-gray btn-sm" type="button" ${i===_slItems.length-1?'disabled':''} onclick="slMove(${i},1)" title="nach unten">↓</button>
+        <button class="btn btn-danger btn-sm" type="button" onclick="slRemove(${i})" title="entfernen">✕</button>
+      </div>
+    </div>`;
+  }).join('');
 }
-
-function removeCustomSetliste(name){
-  const customList = document.getElementById('setliste-custom-list');
-  customList.innerHTML = customList.innerHTML.replace(new RegExp(`<div[^>]*>\s*<span[^>]*>✏️ ${name}<\/span>.*?<\/div>`,'s'),'');
+function slAddSong(){
+  const sel=document.getElementById('sl-song-select'); const v=(sel&&sel.value||'').trim(); if(!v) return;
+  _slItems.push({typ:'lied', text:v}); if(sel) sel.value=''; slRender();
 }
-
+function slAddMod(){
+  const inp=document.getElementById('sl-mod-input'); const v=(inp&&inp.value||'').trim(); if(!v) return;
+  _slItems.push({typ:'moderation', text:v}); if(inp) inp.value=''; slRender();
+}
+function slAddCustom(){
+  const inp=document.getElementById('sl-custom-input'); const v=(inp&&inp.value||'').trim(); if(!v) return;
+  _slItems.push({typ:'lied', text:v}); if(inp) inp.value=''; slRender();
+}
+function slMove(i,dir){
+  const j=i+dir; if(j<0||j>=_slItems.length) return;
+  const tmp=_slItems[i]; _slItems[i]=_slItems[j]; _slItems[j]=tmp; slRender();
+}
+function slRemove(i){ _slItems.splice(i,1); slRender(); }
 async function saveSetliste(){
-  if(!_editSetlisteId) return;
-  const t = termine.find(x=>x.id===_editSetlisteId);
+  if(!_slId) return;
+  const t = termine.find(x=>x.id===_slId);
   if(!t) return;
-  // Get checked songs
-  const checked = [...document.querySelectorAll('#setliste-song-picker input:checked')].map(x=>x.value);
-  // Get custom entries
-  const customs = [...document.querySelectorAll('#setliste-custom-list span')].map(s=>s.textContent.replace('✏️ ','').trim()).filter(Boolean);
-  t.setliste = [...checked, ...customs];
+  t.setliste = _slItems.map(it=>({typ:it.typ, text:it.text}));
   await dbFetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)});
   closeModal();
   renderTermine();
