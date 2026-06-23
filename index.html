@@ -251,6 +251,19 @@ html.fs-sehrgross{font-size:20.5px}
 .sl-actions .btn-sm{padding:6px 9px}
 .sl-actions .btn-sm:disabled{opacity:.35;cursor:default}
 
+/* ===== EINKLAPPBARE TERMIN-SEKTIONEN (Setliste / Rückmeldungen) ===== */
+.t-coll{margin:7px 0;border:1px solid var(--line);border-radius:10px;background:#fafbfc;overflow:hidden}
+.t-coll>summary{cursor:pointer;list-style:none;padding:9px 12px;font-size:.8rem;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:5px;user-select:none}
+.t-coll>summary::-webkit-details-marker{display:none}
+.t-coll>summary::after{content:'▾';margin-left:auto;color:#9aa7b4;transition:transform .15s}
+.t-coll[open]>summary::after{transform:rotate(180deg)}
+.t-coll>summary:hover{color:var(--primary)}
+.t-coll>div{padding:2px 12px 11px}
+.satb-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.satb-cell{flex:1;min-width:82px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+.satb-name{font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.satb-nums{font-size:.84rem;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
+
 /* ===== HANDY-OPTIMIERUNG ===== */
 @media(max-width:640px){
   body{padding-bottom:calc(env(safe-area-inset-bottom) + 60px)}
@@ -2221,6 +2234,43 @@ function renderTermine(){
   if(upEl) upEl.innerHTML=upcoming.length?upcoming.map(t=>terminHtml(t)).join(''):'<div class="empty">Keine bevorstehenden Termine.</div>';
   if(pastEl) pastEl.innerHTML=past.length?[...past].reverse().map(t=>terminHtml(t,true)).join(''):'<div class="empty">Keine vergangenen Termine.</div>';
 }
+// Stimme eines Mitglieds für einen Termin ermitteln (über Benutzername/Name/Anzeigename; Urlaub = nein)
+function voteForMember(m, abs, urlaubNorm){
+  abs = abs||{};
+  const cands=[];
+  if(m.username) cands.push(_norm(m.username));
+  const fn=memberName(m); if(fn) cands.push(_norm(fn));
+  const an=_anzeigeForUsername(m.username); if(an) cands.push(_norm(an));
+  if(urlaubNorm && cands.some(c=>urlaubNorm.has(c))) return 'nein';
+  for(const k of Object.keys(abs)){ if(cands.includes(_norm(k))) return abs[k]; }
+  return null;
+}
+// SATB-Auswertung + offene Rückmeldungen für einen Termin
+const SATB_VOICES=['Sopran','Alt','Tenor','Bass'];
+function terminVoteStats(t){
+  const abs=t.abstimmungen||{};
+  const urlaubNorm=new Set((absentNamesForDate(t.datum)||[]).map(_norm));
+  const stat={}; SATB_VOICES.concat(['—']).forEach(v=>stat[v]={ja:0,nein:0,vl:0,total:0});
+  const notVoted=[];
+  (mitglieder||[]).forEach(m=>{
+    const voice=SATB_VOICES.includes(m.stimme)?m.stimme:'—';
+    const v=voteForMember(m, abs, urlaubNorm);
+    stat[voice].total++;
+    if(v==='ja')stat[voice].ja++; else if(v==='nein')stat[voice].nein++; else if(v==='vielleicht')stat[voice].vl++;
+    else notVoted.push(m);
+  });
+  return {stat, notVoted};
+}
+function rueckmeldungenHtml(t, jaL, nL, vL){
+  const vs=terminVoteStats(t);
+  const cell=(name,s)=>!s.total?'':`<div class="satb-cell"><div class="satb-name">${name}</div><div class="satb-nums"><span style="color:#22a559">✅ ${s.ja}</span>${s.vl?` <span style="color:#f39c12">❓${s.vl}</span>`:''}${s.nein?` <span style="color:#e74c3c">❌${s.nein}</span>`:''} <span style="color:#bbb">/ ${s.total}</span></div></div>`;
+  const cells=SATB_VOICES.map(v=>cell(v,vs.stat[v])).join('')+cell('o. Stimme',vs.stat['—']);
+  const tally=(jaL.length||nL.length||vL.length)?`<div class="tally">${jaL.length?`<span style="color:#27ae60">✅ ${jaL.length}: ${esc(prettyNames(jaL).join(', '))}</span><br>`:''}${nL.length?`<span style="color:#e74c3c">❌ ${nL.length}: ${esc(prettyNames(nL).join(', '))}</span><br>`:''}${vL.length?`<span style="color:#f39c12">❓ ${vL.length}: ${esc(prettyNames(vL).join(', '))}</span>`:''}</div>`:'';
+  const offen=vs.notVoted.length
+    ? `<div style="font-size:.78rem;color:#7d6608;margin-top:8px"><strong>⏳ Noch nicht abgestimmt (${vs.notVoted.length}):</strong> ${esc(vs.notVoted.map(m=>memberName(m)||('Nr. '+(m.nr||'?'))).join(', '))}</div>`
+    : `<div style="font-size:.78rem;color:#22a559;margin-top:8px">✅ Alle haben abgestimmt.</div>`;
+  return `<details class="t-coll"><summary>📊 Rückmeldungen · <span style="color:#22a559">✅${jaL.length}</span> <span style="color:#e74c3c">❌${nL.length}</span> <span style="color:#f39c12">❓${vL.length}</span> · ${vs.notVoted.length} offen</summary><div><div class="satb-grid">${cells}</div>${tally}${offen}</div></details>`;
+}
 function terminHtml(t,past=false){
   const color=TYP_COLOR[t.typ]||'#888';
   const label=TYP_LABEL[t.typ]||t.typ;
@@ -2230,6 +2280,7 @@ function terminHtml(t,past=false){
   const jaL=Object.entries(abs).filter(([,v])=>v==='ja').map(([k])=>k).filter(n=>!urlaubT.includes(n));
   const nL=[...new Set([...Object.entries(abs).filter(([,v])=>v==='nein').map(([k])=>k), ...urlaubT])];
   const vL=Object.entries(abs).filter(([,v])=>v==='vielleicht').map(([k])=>k).filter(n=>!urlaubT.includes(n));
+  const showRueck = !past || jaL.length || nL.length || vL.length;
   return`<div class="termin-card" style="border-left-color:${color};${past?'opacity:.6':''}">
     <span class="t-badge" style="background:${color}">${label}</span>
     <div class="t-title">${esc(t.titel)}</div>
@@ -2237,7 +2288,7 @@ function terminHtml(t,past=false){
     ${t.beschreibung?`<div style="font-size:.78rem;color:#888;margin-bottom:5px">ℹ️ ${esc(t.beschreibung)}</div>`:''}
     ${t.frist&&!past?`<div style="font-size:.78rem;color:${t.frist<localToday()?'#e74c3c':'#7d6608'};margin-bottom:5px">⏳ Bitte bis <strong>${fmt(t.frist)}</strong> zurückmelden${t.frist<localToday()?' (Frist abgelaufen)':''}</div>`:''}
     ${setlisteHtml(t)}
-    ${jaL.length||nL.length||vL.length?`<div class="tally">${jaL.length?`<span style="color:#27ae60">✅ ${jaL.length}: ${esc(prettyNames(jaL).join(', '))}</span><br>`:''}${nL.length?`<span style="color:#e74c3c">❌ ${nL.length}: ${esc(prettyNames(nL).join(', '))}</span><br>`:''}${vL.length?`<span style="color:#f39c12">❓ ${vL.length}: ${esc(prettyNames(vL).join(', '))}</span>`:''}</div>`:''}
+    ${showRueck?rueckmeldungenHtml(t, jaL, nL, vL):''}
     ${!past?`<div class="vote-row" id="vrow-${t.id}">${buildVoteRow(t)}</div>`:''}
     <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-sm" style="background:transparent;border:1px solid #8e44ad;color:#8e44ad;font-size:.72rem" onclick="exportTerminICS('${t.id}')">📥 .ics</button>
@@ -3649,7 +3700,7 @@ function renderGeburtstage(){
 function normSetliste(arr){
   return (arr||[]).map(it => (typeof it==='string') ? {typ:'lied', text:it} : {typ:(it&&it.typ==='moderation'?'moderation':'lied'), text:(it&&it.text)||''}).filter(it=>it.text);
 }
-// Anzeige des Ablaufs in der Termin-Karte
+// Anzeige des Ablaufs in der Termin-Karte (einklappbar, standardmäßig zu)
 function setlisteHtml(t){
   const items = normSetliste(t&&t.setliste);
   if(!items.length) return '';
@@ -3657,7 +3708,10 @@ function setlisteHtml(t){
   const rows = items.map(it => it.typ==='moderation'
     ? `<div style="font-size:.8rem;color:#8e44ad;font-style:italic">🎤 ${esc(it.text)}</div>`
     : `<div style="font-size:.82rem;color:#555">🎵 ${++nr}. ${esc(it.text)}</div>`).join('');
-  return `<div style="margin-bottom:8px"><div style="font-size:.76rem;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:3px">Ablauf / Setliste</div>${rows}</div>`;
+  const songCount = items.filter(it=>it.typ!=='moderation').length;
+  const modCount = items.length - songCount;
+  const sub = `${songCount} Lied${songCount===1?'':'er'}${modCount?` · ${modCount} Mod.`:''}`;
+  return `<details class="t-coll"><summary>🎵 Ablauf / Setliste · ${sub}</summary><div>${rows}</div></details>`;
 }
 let _slId = null;
 let _slItems = [];
