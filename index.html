@@ -808,6 +808,14 @@ html.fs-sehrgross{font-size:20.5px}
         <button class="btn btn-danger btn-sm" onclick="clearAllKommentare()">🗑️ Alle Kommentare löschen</button>
       </div>
     </div>
+    <div class="konsole-section">
+      <div class="konsole-title">🧹 Doppelte Stimmen bereinigen</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:10px">Führt bei allen Terminen mehrfache Stimm-Einträge derselben Person (getippter Name + Benutzername + Anzeigename) zu <strong>einem</strong> Eintrag zusammen. <strong>Tipp:</strong> vorher „Alle Daten exportieren" als Sicherung.</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="bereinigeStimmen()">🧹 Jetzt bereinigen</button>
+        <span id="cleanup-votes-result" style="font-size:.82rem;min-height:16px"></span>
+      </div>
+    </div>
     </div>
     <div class="konsole-pane" id="kp-sicherheit">
     <div class="konsole-section">
@@ -2762,6 +2770,37 @@ async function clearAllKommentare(){
   if(!confirm('ALLE Kommentare löschen? Das kann nicht rückgängig gemacht werden!'))return;
   await dbFetch(DB+'/kommentare.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:'null'}).catch(e=>console.warn(e));
   kommentare=[];renderKommentare();renderKonsole();
+}
+// Einmalige Bereinigung: pro Termin mehrfache Stimm-Einträge derselben Person zu EINEM (unter Benutzername) zusammenführen
+async function bereinigeStimmen(){
+  if(!(adminMode || uiEdit('termine'))) return;
+  const res=document.getElementById('cleanup-votes-result');
+  let affected=0, removed=0; const staged=[];
+  (termine||[]).forEach(t=>{
+    const abs=t.abstimmungen||{}; const keys=Object.keys(abs); if(!keys.length) return;
+    const usedKeys=new Set(); const canon={};
+    (mitglieder||[]).forEach(m=>{
+      const cands=[]; if(m.username)cands.push(_norm(m.username));
+      const fn=memberName(m); if(fn)cands.push(_norm(fn));
+      const an=_anzeigeForUsername(m.username); if(an)cands.push(_norm(an));
+      const matched=keys.filter(k=>cands.includes(_norm(k))); if(!matched.length) return;
+      matched.forEach(k=>usedKeys.add(k));
+      const unKey=matched.find(k=>_norm(k)===_norm(m.username));
+      const vote = unKey ? abs[unKey] : abs[matched[matched.length-1]];
+      canon[m.username||matched[0]] = vote;
+    });
+    const newAbs={}; keys.forEach(k=>{ if(!usedKeys.has(k)) newAbs[k]=abs[k]; });   // Gäste behalten
+    Object.entries(canon).forEach(([k,v])=>{ newAbs[k]=v; });                        // Mitglieder kanonisch
+    if(JSON.stringify(newAbs)!==JSON.stringify(abs)){
+      staged.push([t,newAbs]); affected++; removed += keys.length - Object.keys(newAbs).length;
+    }
+  });
+  if(!affected){ if(res){res.style.color='#22a559'; res.textContent='✅ Keine doppelten Stimmen gefunden.';} return; }
+  if(!confirm(`In ${affected} Termin(en) werden ${removed} doppelte Stimm-Einträge zusammengeführt.\n\nVorher als Sicherung „Alle Daten exportieren"? Dann jetzt abbrechen, exportieren und erneut starten.\n\nJetzt bereinigen?`)) return;
+  staged.forEach(([t,newAbs])=>{ t.abstimmungen=newAbs; });
+  await dbFetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
+  if(res){res.style.color='#22a559'; res.textContent=`✅ ${removed} Doppel-Einträge in ${affected} Termin(en) bereinigt.`;}
+  renderTermine();
 }
 function exportData(){
   const data={chorproben:D,termine,probenplan,mitglieder,kommentare,exportiert:new Date().toISOString()};
