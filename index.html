@@ -2283,7 +2283,24 @@ function rueckmeldungenHtml(t, bd){
   const offen=bd.notVoted.length
     ? `<div style="font-size:.78rem;color:#7d6608;margin-top:8px"><strong>⏳ Noch nicht abgestimmt (${bd.notVoted.length}):</strong> ${esc(bd.notVoted.map(m=>memberName(m)||('Nr. '+(m.nr||'?'))).join(', '))}</div>`
     : `<div style="font-size:.78rem;color:#22a559;margin-top:8px">✅ Alle haben abgestimmt.</div>`;
-  return `<details class="t-coll"><summary>📊 Rückmeldungen · <span style="color:#22a559">✅${bd.ja.length}</span> <span style="color:#e74c3c">❌${bd.nein.length}</span> <span style="color:#f39c12">❓${bd.vl.length}</span> · ${bd.notVoted.length} offen</summary><div><div class="satb-grid">${cells}</div>${tally}${offen}</div></details>`;
+  // Admin: einzelne Stimm-Einträge (roh) verwalten/löschen
+  const abs=t.abstimmungen||{};
+  const absKeys=Object.keys(abs);
+  const ICON={ja:'✅',nein:'❌',vielleicht:'❓'};
+  const manage = (uiEdit('termine') && absKeys.length) ? `<div style="margin-top:11px;border-top:1px dashed #e0c4c0;padding-top:8px">
+      <div style="font-size:.72rem;font-weight:700;color:#c0392b;text-transform:uppercase;letter-spacing:.03em;margin-bottom:5px">🔧 Stimmen verwalten · ${absKeys.length} Eintrag${absKeys.length===1?'':'e'}</div>
+      ${absKeys.map(k=>{const pn=prettyName(k); const raw=(_norm(pn)!==_norm(k))?` <span style="color:#bbb">(${esc(k)})</span>`:''; return `<div style="display:flex;align-items:center;gap:8px;justify-content:space-between;padding:3px 0;font-size:.81rem"><span>${ICON[abs[k]]||'•'} ${esc(pn)}${raw}</span><button class="btn btn-danger btn-sm" title="Diese Stimme löschen" onclick="deleteVote('${esc(t.id)}', decodeURIComponent('${encodeURIComponent(k)}'))">✕</button></div>`;}).join('')}
+    </div>` : '';
+  return `<details class="t-coll"><summary>📊 Rückmeldungen · <span style="color:#22a559">✅${bd.ja.length}</span> <span style="color:#e74c3c">❌${bd.nein.length}</span> <span style="color:#f39c12">❓${bd.vl.length}</span> · ${bd.notVoted.length} offen</summary><div><div class="satb-grid">${cells}</div>${tally}${offen}${manage}</div></details>`;
+}
+async function deleteVote(terminId, key){
+  if(!(adminMode || uiEdit('termine'))) return;
+  const t=(termine||[]).find(x=>x.id===terminId);
+  if(!t || !t.abstimmungen || !(key in t.abstimmungen)) return;
+  if(!confirm('Stimme von „'+(prettyName(key)||key)+'" wirklich löschen?')) return;
+  delete t.abstimmungen[key];
+  await dbFetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
+  renderTermine();
 }
 function terminHtml(t,past=false){
   const color=TYP_COLOR[t.typ]||'#888';
