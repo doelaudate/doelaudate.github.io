@@ -1305,6 +1305,7 @@ function updateEditModeUI(){
   }
 }
 let aktiveSaison='__all__', aktiveTerminTab='anstehend';
+let liederView='aktiv'; // 'aktiv' | 'archiv'
 let kalMonat=new Date().getMonth(), kalJahr=new Date().getFullYear(), kalSel=null;
 let adminPw = localStorage.getItem('chor_admin_pw') || ADMIN_PW;
 
@@ -1404,17 +1405,53 @@ function closeMoreSheet(){ document.getElementById('more-sheet').classList.remov
 // LIEDER
 function renderStats(){
   if(!D)return;
-  const all=D.seasons.flatMap(s=>s.songs||[]);
+  const all=D.seasons.flatMap(s=>(s.songs||[]).filter(x=>!x.archived));
   const never=all.filter(s=>!getStat(s.id).last).length;
   const fresh=all.filter(s=>{const d=dSince(getStat(s.id).last);return d!==null&&d<=14}).length;
   document.getElementById('stats').innerHTML=`<div class="stat"><div class="stat-n">${all.length}</div><div class="stat-l">Lieder</div></div><div class="stat"><div class="stat-n" style="color:#27ae60">${fresh}</div><div class="stat-l">Frisch</div></div><div class="stat"><div class="stat-n" style="color:#e74c3c">${never}</div><div class="stat-l">Nie geprobt</div></div><div class="stat"><div class="stat-n">${(D.proben||[]).length}</div><div class="stat-l">Proben</div></div>`;
 }
 function renderSaisonTabs(){
   if(!D)return;
-  const tabs=[{id:'__all__',label:'Alle',type:'all'},...D.seasons.map(s=>({id:s.id,label:s.name,type:s.type}))];
-  document.getElementById('saison-tabs').innerHTML=tabs.map(t=>{const tc={sommer:'sommer',weihnachten:'weihnachten',repertoire:'repertoire'}[t.type]||'';const ic={sommer:'☀️ ',weihnachten:'🎄 ',repertoire:'📚 ',all:'🎵 '}[t.type]||'🎵 ';return`<button class="stab ${tc} ${aktiveSaison===t.id?'active':''}" onclick="setSaison('${t.id}')">${ic}${esc(t.label)}</button>`;}).join('');
+  const admin=uiEdit('lieder');
+  const archivCount=D.seasons.flatMap(s=>s.songs||[]).filter(x=>x.archived).length;
+  const sw=`<div style="display:flex;gap:6px;width:100%;margin-bottom:9px">
+    <button class="stab ${liederView==='aktiv'?'active':''}" style="flex:1;justify-content:center" onclick="setLiederView('aktiv')">🎵 Aktiv</button>
+    <button class="stab ${liederView==='archiv'?'active':''}" style="flex:1;justify-content:center" onclick="setLiederView('archiv')">🗄️ Archiv${archivCount?` (${archivCount})`:''}</button>
+  </div>`;
+  let seasons=D.seasons.map(s=>s);
+  if(liederView==='aktiv'){ if(!admin) seasons=seasons.filter(s=>!s.hidden); }
+  else { seasons=seasons.filter(s=>(s.songs||[]).some(x=>x.archived)); }
+  const tabs=[{id:'__all__',label:'Alle',type:'all'},...seasons.map(s=>({id:s.id,label:s.name,type:s.type,hidden:!!s.hidden}))];
+  const tabHtml=tabs.map(t=>{
+    const tc={sommer:'sommer',weihnachten:'weihnachten',repertoire:'repertoire'}[t.type]||'';
+    const ic={sommer:'☀️ ',weihnachten:'🎄 ',repertoire:'📚 ',all:'🎵 '}[t.type]||'🎵 ';
+    const dim=(liederView==='aktiv'&&t.hidden)?'opacity:.5;':'';
+    let eye='';
+    if(admin && liederView==='aktiv' && t.id!=='__all__'){
+      eye=`<span onclick="event.stopPropagation();toggleSeasonHidden('${t.id}')" title="${t.hidden?'Vorne einblenden':'Vorne ausblenden'}" style="margin-left:6px;cursor:pointer">${t.hidden?'🙈':'👁️'}</span>`;
+    }
+    return `<button class="stab ${tc} ${aktiveSaison===t.id?'active':''}" style="${dim}" onclick="setSaison('${t.id}')">${ic}${esc(t.label)}${eye}</button>`;
+  }).join('');
+  document.getElementById('saison-tabs').innerHTML=sw+tabHtml;
 }
 function setSaison(id){aktiveSaison=id;renderLieder();}
+function setLiederView(v){ liederView=v; aktiveSaison='__all__'; renderLieder(); }
+async function toggleSeasonHidden(id){
+  if(!hasPermission('lieder')){alert('Keine Berechtigung.');return;}
+  const si=(D.seasons||[]).findIndex(s=>s.id===id); if(si<0)return;
+  const nv=!D.seasons[si].hidden; D.seasons[si].hidden=nv;
+  try{ await dbFetch(DB+'/chorproben/seasons/'+si+'/hidden.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(nv)}); }
+  catch(e){ D.seasons[si].hidden=!nv; alert('Speichern fehlgeschlagen: '+e); return; }
+  renderLieder();
+}
+async function toggleSongArchived(id,val){
+  if(!hasPermission('lieder')){alert('Keine Berechtigung.');return;}
+  const p=songPos(id); if(!p)return;
+  const song=D.seasons[p[0]].songs[p[1]]; const old=!!song.archived; song.archived=!!val;
+  try{ await dbFetch(DB+'/chorproben/seasons/'+p[0]+'/songs/'+p[1]+'/archived.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(!!val)}); }
+  catch(e){ song.archived=old; alert('Speichern fehlgeschlagen: '+e); return; }
+  renderLieder(); if(typeof renderSongPicker==='function')renderSongPicker();
+}
 function renderLiedForm(){
   const sel=document.getElementById('nl-saison'); if(!sel||!D)return;
   const prev=sel.value;
@@ -1442,7 +1479,10 @@ async function addLied(){
 }
 function renderLieder(){
   if(!D)return; renderStats(); renderSaisonTabs(); renderLiedForm();
-  let songs=D.seasons.flatMap(s=>(s.songs||[]).map(song=>Object.assign({},song,{seasonId:s.id,seasonName:s.name,seasonType:s.type})));
+  const admin=uiEdit('lieder');
+  let songs=D.seasons.flatMap(s=>(s.songs||[]).map(song=>Object.assign({},song,{seasonId:s.id,seasonName:s.name,seasonType:s.type,seasonHidden:!!s.hidden})));
+  if(liederView==='archiv') songs=songs.filter(s=>s.archived);
+  else { songs=songs.filter(s=>!s.archived); if(!admin) songs=songs.filter(s=>!s.seasonHidden); }
   if(aktiveSaison!=='__all__') songs=songs.filter(s=>s.seasonId===aktiveSaison);
   const sort=document.getElementById('sort-sel')?.value||'last';
   songs=songs.map(s=>Object.assign({},s,getStat(s.id)));
@@ -1450,7 +1490,7 @@ function renderLieder(){
   else if(sort==='name') songs.sort((a,b)=>a.name.localeCompare(b.name));
   else songs.sort((a,b)=>a.count-b.count);
   const el=document.getElementById('lieder-list');if(!el)return;
-  if(!songs.length){el.innerHTML='<div class="empty">Keine Lieder vorhanden.</div>';return;}
+  if(!songs.length){el.innerHTML='<div class="empty">'+(liederView==='archiv'?'Archiv ist leer.':'Keine Lieder vorhanden.')+'</div>';return;}
   let html='';
   if(aktiveSaison==='__all__'){D.seasons.forEach(s=>{const ss=songs.filter(x=>x.seasonId===s.id);if(!ss.length)return;const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'}[s.type]||'🎵';html+=`<div class="section-label">${ic} ${esc(s.name)}</div>`+buildTbl(ss);});}
   else html=buildTbl(songs);
@@ -1464,7 +1504,10 @@ function buildTbl(songs){
     const hasHoer = s.hoer && (s.hoer.S||s.hoer.A||s.hoer.T||s.hoer.B);
     const hoerBtn = (hasHoer||canEdit)?`<button onclick="openHoer('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:1.05rem;padding:0 1px" title="Hörbeispiele (S/A/T/B)">🎧</button>`:'';
     const editBtn = canEdit?`<button onclick="editSongPdf('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:.85rem;opacity:.45;padding:0 2px" title="Noten/Üben bearbeiten">✏️</button>`:'';
-    const cell = (openLink||uebenLink||hoerBtn||editBtn) ? [openLink,uebenLink,hoerBtn,editBtn].filter(Boolean).join(' ') : '—';
+    const archBtn = canEdit?(liederView==='archiv'
+      ? `<button onclick="toggleSongArchived('${s.id}',false)" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:0 2px" title="Aus Archiv wiederherstellen">↩️</button>`
+      : `<button onclick="toggleSongArchived('${s.id}',true)" style="background:none;border:none;cursor:pointer;font-size:1rem;opacity:.5;padding:0 2px" title="Ins Archiv verschieben">🗄️</button>`):'';
+    const cell = (openLink||uebenLink||hoerBtn||editBtn||archBtn) ? [openLink,uebenLink,hoerBtn,editBtn,archBtn].filter(Boolean).join(' ') : '—';
     return `<tr><td><strong>${esc(s.name)}</strong></td><td>${fmt(s.last)}</td><td style="text-align:center;color:#666">${s.count}×</td><td><span class="dot" style="background:${dotC(s.last)}"></span><span class="badge" style="${bdgS(s.last)}">${bdgT(s.last)}</span></td><td style="text-align:center;white-space:nowrap">${cell}</td></tr>`;
   }).join('')+'</tbody></table>';
 }
@@ -1648,10 +1691,11 @@ function renderSongPicker(){
   const el=document.getElementById('probe-song-picker');if(!el)return;
   el.innerHTML='';
   D.seasons.forEach(s=>{
-    if(!(s.songs||[]).length)return;
+    const aktiv=(s.songs||[]).filter(x=>!x.archived);
+    if(!aktiv.length)return;
     const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'}[s.type]||'🎵';
     el.innerHTML+=`<div style="width:100%;font-size:.7rem;font-weight:700;text-transform:uppercase;color:#999;margin:5px 0 3px">${ic} ${esc(s.name)}</div>`;
-    s.songs.forEach(song=>{
+    aktiv.forEach(song=>{
       const cid='psp-'+song.id;
       el.innerHTML+=`<label id="${cid}" style="display:inline-flex;align-items:center;gap:5px;background:#f0f4f8;border-radius:20px;padding:4px 11px;cursor:pointer;border:1.5px solid transparent;font-size:.82rem;user-select:none;margin-bottom:3px">
         <input type="checkbox" value="${song.id}" onchange="this.parentElement.style.background=this.checked?'#d6eaf8':'#f0f4f8';this.parentElement.style.borderColor=this.checked?'#2563b5':'transparent'">
