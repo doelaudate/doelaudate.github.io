@@ -383,6 +383,7 @@ html.fs-sehrgross{font-size:20.5px}
   <div class="header-right">
     <span id="admin-badge" class="admin-badge" style="display:none">🔑 Admin</span>
     <button id="search-btn" onclick="openSearch()" title="Suche" style="display:none;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:8px;padding:3px 9px;cursor:pointer;font-size:1.05rem;line-height:1.4">🔍</button>
+    <button id="editmode-icon-btn" onclick="setEditMode(!editMode)" title="Bearbeiten-Modus" style="display:none;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:8px;padding:3px 9px;cursor:pointer;font-size:1.05rem;line-height:1.4">✏️</button>
     <button id="abw-btn" onclick="openAbwesenheit()" title="Meine Abwesenheit" style="display:none;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:8px;padding:3px 9px;cursor:pointer;font-size:1.05rem;line-height:1.4">🏖️</button>
     <button id="bell-btn" onclick="openNotifications()" title="Benachrichtigungen" style="display:none;position:relative;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:8px;padding:3px 9px;cursor:pointer;font-size:1.05rem;line-height:1.4">
       🔔<span id="bell-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:#e74c3c;color:white;font-size:.6rem;font-weight:700;min-width:16px;height:16px;border-radius:8px;padding:0 4px;line-height:16px;text-align:center">0</span>
@@ -413,6 +414,14 @@ html.fs-sehrgross{font-size:20.5px}
 
 <div class="page active" id="p-lieder">
   <div class="stats" id="stats"></div>
+  <div class="admin-section admin-only" data-perm="lieder">
+    <div class="admin-label">🔑 Admin: Lied hinzufügen</div>
+    <div class="form-row">
+      <input class="fl-input" type="text" id="nl-name" placeholder="Liedtitel *" maxlength="120" style="flex:2;min-width:170px">
+      <select id="nl-saison" class="fl-input" style="flex:1;min-width:150px"></select>
+    </div>
+    <button class="btn btn-primary" onclick="addLied()">＋ Lied hinzufügen</button>
+  </div>
   <div class="card">
     <div class="sub-tabs" id="saison-tabs"></div>
     <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
@@ -1287,6 +1296,13 @@ function updateEditModeUI(){
     b.style.background = editMode ? '#27ae60' : '#ecf0f1';
     b.style.color = editMode ? 'white' : '#555';
   });
+  const ib=document.getElementById('editmode-icon-btn');
+  if(ib){
+    ib.style.display = adminMode ? '' : 'none';
+    ib.textContent = editMode ? '🔓' : '✏️';
+    ib.style.background = editMode ? '#27ae60' : 'rgba(255,255,255,.15)';
+    ib.title = editMode ? 'Bearbeiten-Modus ist AN – ausschalten' : 'Bearbeiten-Modus einschalten';
+  }
 }
 let aktiveSaison='__all__', aktiveTerminTab='anstehend';
 let kalMonat=new Date().getMonth(), kalJahr=new Date().getFullYear(), kalSel=null;
@@ -1399,8 +1415,33 @@ function renderSaisonTabs(){
   document.getElementById('saison-tabs').innerHTML=tabs.map(t=>{const tc={sommer:'sommer',weihnachten:'weihnachten',repertoire:'repertoire'}[t.type]||'';const ic={sommer:'☀️ ',weihnachten:'🎄 ',repertoire:'📚 ',all:'🎵 '}[t.type]||'🎵 ';return`<button class="stab ${tc} ${aktiveSaison===t.id?'active':''}" onclick="setSaison('${t.id}')">${ic}${esc(t.label)}</button>`;}).join('');
 }
 function setSaison(id){aktiveSaison=id;renderLieder();}
+function renderLiedForm(){
+  const sel=document.getElementById('nl-saison'); if(!sel||!D)return;
+  const prev=sel.value;
+  sel.innerHTML=(D.seasons||[]).map(s=>{const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'}[s.type]||'🎵';return`<option value="${s.id}">${ic} ${esc(s.name)}</option>`;}).join('');
+  if(prev && [...sel.options].some(o=>o.value===prev)) sel.value=prev;
+  else if(aktiveSaison && aktiveSaison!=='__all__') sel.value=aktiveSaison;
+}
+async function addLied(){
+  if(!hasPermission('lieder')){alert('Keine Berechtigung.');return;}
+  if(!D){alert('Daten noch nicht geladen.');return;}
+  const name=document.getElementById('nl-name').value.trim();
+  const sid=document.getElementById('nl-saison').value;
+  if(!name){alert('Bitte einen Liedtitel eingeben.');return;}
+  const si=(D.seasons||[]).findIndex(s=>s.id===sid);
+  if(si<0){alert('Bitte eine Saison wählen.');return;}
+  if(!Array.isArray(D.seasons[si].songs)) D.seasons[si].songs=[];
+  if(D.seasons[si].songs.some(x=>(x.name||'').toLowerCase()===name.toLowerCase())){alert('Dieses Lied gibt es in der Saison schon.');return;}
+  D.seasons[si].songs.push({id:uid(),name});
+  try{
+    await dbFetch(DB+'/chorproben/seasons/'+si+'/songs.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(D.seasons[si].songs)});
+  }catch(e){ D.seasons[si].songs.pop(); alert('Speichern fehlgeschlagen: '+e); return; }
+  document.getElementById('nl-name').value='';
+  renderLieder(); populateLiedSelect(); if(typeof renderSongPicker==='function')renderSongPicker();
+  alert('✅ Lied hinzugefügt!');
+}
 function renderLieder(){
-  if(!D)return; renderStats(); renderSaisonTabs();
+  if(!D)return; renderStats(); renderSaisonTabs(); renderLiedForm();
   let songs=D.seasons.flatMap(s=>(s.songs||[]).map(song=>Object.assign({},song,{seasonId:s.id,seasonName:s.name,seasonType:s.type})));
   if(aktiveSaison!=='__all__') songs=songs.filter(s=>s.seasonId===aktiveSaison);
   const sort=document.getElementById('sort-sel')?.value||'last';
