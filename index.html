@@ -1053,15 +1053,23 @@ html.fs-sehrgross{font-size:20.5px}
 
 <div class="modal-overlay" id="modal-movesong">
   <div class="modal">
-    <h3>↔️ Lied verschieben – <span id="ms-songname"></span></h3>
+    <h3>🎵 Lied verwalten – <span id="ms-songname"></span></h3>
     <input type="hidden" id="ms-songid">
     <div style="margin-bottom:6px">
-      <div style="font-size:.82rem;font-weight:600;color:#1b3a6b;margin-bottom:6px">In welche Saison?</div>
+      <div style="font-size:.82rem;font-weight:600;color:#1b3a6b;margin-bottom:6px">Ziel-Saison</div>
       <select id="ms-saison" class="fl-input"></select>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-primary btn-sm" style="flex:1" onclick="confirmMoveSong()">↔️ Verschieben</button>
+        <button class="btn btn-success btn-sm" style="flex:1" onclick="confirmCopySong()">📋 Kopieren</button>
+      </div>
+      <div style="font-size:.72rem;color:#888;margin-top:6px">Kopieren: das Lied ist dann in beiden Saisons, taucht in der „Alle"-Übersicht aber nur einmal auf.</div>
     </div>
-    <div class="modal-actions" style="justify-content:space-between">
-      <button class="btn btn-gray" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="confirmMoveSong()">↔️ Verschieben</button>
+    <div style="border-top:1px solid #eee;margin-top:14px;padding-top:12px">
+      <button class="btn btn-danger btn-sm" onclick="deleteSong()">🗑️ Lied ganz löschen</button>
+      <div style="font-size:.72rem;color:#888;margin-top:6px">Entfernt das Lied aus dieser Saison. Zum bloßen Ausblenden lieber 🗄️ Archivieren nutzen.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeModal()">Schließen</button>
     </div>
   </div>
 </div>
@@ -1511,6 +1519,41 @@ async function doMoveSong(id, targetSi){
   catch(e){ D.seasons[targetSi].songs.pop(); D.seasons[si].songs.splice(sj,0,song); alert('Verschieben fehlgeschlagen: '+e); return; }
   renderLieder(); if(typeof renderSongPicker==='function')renderSongPicker(); populateLiedSelect();
 }
+// Lied in eine weitere Saison KOPIEREN (bleibt auch in der Ursprungs-Saison; in „Alle" nur einmal sichtbar)
+async function confirmCopySong(){
+  const id=document.getElementById('ms-songid').value;
+  const ti=parseInt(document.getElementById('ms-saison').value,10);
+  if(isNaN(ti)){alert('Bitte eine Ziel-Saison wählen.');return;}
+  await doCopySong(id, ti); closeModal();
+}
+async function doCopySong(id, targetSi){
+  if(!hasPermission('lieder')){alert('Keine Berechtigung.');return;}
+  const p=songPos(id); if(!p)return; const si=p[0];
+  if(targetSi<0||targetSi>=D.seasons.length) return;
+  if(targetSi===si){alert('Das Lied ist schon in dieser Saison.');return;}
+  const src=D.seasons[si].songs[p[1]];
+  if(!Array.isArray(D.seasons[targetSi].songs)) D.seasons[targetSi].songs=[];
+  if(D.seasons[targetSi].songs.some(x=>songKey(x)===songKey(src))){alert('Dieses Lied gibt es in der Ziel-Saison schon.');return;}
+  const copy=Object.assign({},src,{id:uid()});
+  D.seasons[targetSi].songs.push(copy);
+  try{ await dbFetch(DB+'/chorproben.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seasons:D.seasons,proben:D.proben})}); }
+  catch(e){ D.seasons[targetSi].songs.pop(); alert('Kopieren fehlgeschlagen: '+e); return; }
+  renderLieder(); if(typeof renderSongPicker==='function')renderSongPicker(); populateLiedSelect();
+}
+// Lied ganz aus seiner Saison löschen (Noten-Datei im Storage bleibt bestehen)
+async function deleteSong(){
+  if(!hasPermission('lieder')){alert('Keine Berechtigung.');return;}
+  const id=document.getElementById('ms-songid').value;
+  const p=songPos(id); if(!p)return;
+  const song=D.seasons[p[0]].songs[p[1]];
+  if(!confirm('Lied „'+song.name+'" wirklich ganz löschen?')) return;
+  const [removed]=D.seasons[p[0]].songs.splice(p[1],1);
+  try{ await dbFetch(DB+'/chorproben.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seasons:D.seasons,proben:D.proben})}); }
+  catch(e){ D.seasons[p[0]].songs.splice(p[1],0,removed); alert('Löschen fehlgeschlagen: '+e); return; }
+  closeModal(); renderLieder(); if(typeof renderSongPicker==='function')renderSongPicker(); populateLiedSelect();
+}
+// Identität eines Lieds für die Entdopplung in der „Alle"-Übersicht (gleicher Name = ein Lied)
+function songKey(s){ return (s&&s.name||'').toLowerCase().replace(/\s+/g,' ').trim(); }
 // Drag & Drop (Desktop): Lied auf Saison-Tab ziehen = dorthin verschieben; auf Archiv-Umschalter = archivieren
 let _dragSongId=null;
 function dragSong(e,id){ _dragSongId=id; try{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',id);}catch(_){} }
@@ -1564,7 +1607,7 @@ function renderLieder(){
       ? `<div style="margin-bottom:10px"><button class="btn btn-sm btn-gray" onclick="archiveWholeSeason('${aktiveSaison}',false)">↩️ Ganze Saison „${nm}" zurückholen</button></div>`
       : `<div style="margin-bottom:10px"><button class="btn btn-sm btn-gray" onclick="archiveWholeSeason('${aktiveSaison}',true)">📦 Ganze Saison „${nm}" ins Archiv</button></div>`;
   }
-  if(aktiveSaison==='__all__'){D.seasons.forEach(s=>{const ss=songs.filter(x=>x.seasonId===s.id);if(!ss.length)return;const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'}[s.type]||'🎵';html+=`<div class="section-label">${ic} ${esc(s.name)}</div>`+buildTbl(ss);});}
+  if(aktiveSaison==='__all__'){const seen=new Set();D.seasons.forEach(s=>{let ss=songs.filter(x=>x.seasonId===s.id);ss=ss.filter(x=>{const k=songKey(x);if(seen.has(k))return false;seen.add(k);return true;});if(!ss.length)return;const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'}[s.type]||'🎵';html+=`<div class="section-label">${ic} ${esc(s.name)}</div>`+buildTbl(ss);});}
   else html+=buildTbl(songs);
   el.innerHTML=html;
 }
