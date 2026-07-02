@@ -1030,7 +1030,10 @@ html.fs-sehrgross{font-size:20.5px}
   <div class="modal">
     <h3>🔔 Benachrichtigungen</h3>
     <div id="notif-list" style="max-height:62vh;overflow-y:auto;margin:-4px -4px 0"></div>
-    <div class="modal-actions"><button class="btn btn-gray" onclick="closeModal()">Schließen</button></div>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button id="notif-clear-all" class="btn btn-danger btn-sm" style="display:none" onclick="clearAllNotifications()">🗑️ Alle löschen</button>
+      <button class="btn btn-gray" onclick="closeModal()">Schließen</button>
+    </div>
   </div>
 </div>
 
@@ -3908,10 +3911,14 @@ function timeAgo(ts){
 }
 function renderNotifList(){
   const el=document.getElementById('notif-list'); if(!el) return;
+  const canDel=!!adminMode;
+  const clearBtn=document.getElementById('notif-clear-all');
+  if(clearBtn) clearBtn.style.display=(canDel && benachrichtigungen.length)?'':'none';
   if(!benachrichtigungen.length){ el.innerHTML='<div class="empty" style="padding:24px">Noch keine Benachrichtigungen.</div>'; return; }
   const lastSeen=parseInt(localStorage.getItem('notif_last_seen')||'0');
   el.innerHTML=benachrichtigungen.slice(0,50).map(n=>{
     const neu=(n.ts||0)>lastSeen;
+    const del=canDel?`<button onclick="deleteNotification('${esc(n._key)}')" title="Löschen" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:1rem;flex-shrink:0;padding:0 2px;align-self:flex-start">✕</button>`:'';
     return `<div style="display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid #f0f0f0;background:${neu?'#eaf3fb':'transparent'}">
       <div style="font-size:1.2rem;flex-shrink:0">🔔</div>
       <div style="flex:1;min-width:0">
@@ -3919,8 +3926,25 @@ function renderNotifList(){
         ${n.body?`<div style="font-size:.83rem;color:#555;margin-top:1px;word-break:break-word">${esc(n.body)}</div>`:''}
         <div style="font-size:.72rem;color:#aaa;margin-top:2px">${n.ts?timeAgo(n.ts):''}</div>
       </div>
+      ${del}
     </div>`;
   }).join('');
+}
+async function deleteNotification(key){
+  if(!adminMode){ alert('Nur Admins können Nachrichten löschen.'); return; }
+  if(!key) return;
+  benachrichtigungen=benachrichtigungen.filter(n=>n._key!==key);
+  renderNotifList(); updateBellBadge();
+  try{ await dbFetch(DB+'/benachrichtigungen/'+key+'.json',{method:'DELETE'}); }
+  catch(e){ console.warn('Nachricht löschen',e); }
+}
+async function clearAllNotifications(){
+  if(!adminMode){ alert('Nur Admins können Nachrichten löschen.'); return; }
+  if(!confirm('Wirklich ALLE Benachrichtigungen löschen?')) return;
+  benachrichtigungen=[];
+  renderNotifList(); updateBellBadge();
+  try{ await dbFetch(DB+'/benachrichtigungen.json',{method:'DELETE'}); }
+  catch(e){ console.warn('Alle Nachrichten löschen',e); }
 }
 async function openNotifications(){
   await loadBenachrichtigungen();
