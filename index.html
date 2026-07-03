@@ -683,24 +683,27 @@ html.fs-sehrgross{font-size:20.5px}
 </div>
 
 <div class="page" id="p-plakate">
-  <div class="card k-form-wrap">
-    <div class="card-title" style="margin-bottom:10px">＋ Neuen Standort hinzufügen</div>
-    <div class="form-row">
-      <input class="fl-input" type="text" id="pl-ort" placeholder="Standort / Geschäft *" style="flex:2;min-width:160px">
-      <input class="fl-input" type="text" id="pl-anzahl" placeholder="Anzahl Plakate" style="flex:1;min-width:90px">
-    </div>
-    <input class="fl-input" type="text" id="pl-adresse" placeholder="Adresse (optional, für Karten-Link)" style="margin-bottom:8px">
-    <input class="fl-input" type="text" id="pl-notiz" placeholder="Notiz (optional, z. B. Ansprechpartner)" style="margin-bottom:8px">
-    <button class="btn btn-primary" onclick="addPlakat()">＋ Standort hinzufügen</button>
-  </div>
   <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
       <span class="card-title" style="margin-bottom:0">📋 Plakat-Standorte</span>
       <span id="plakate-stats" style="font-size:.8rem;color:#888"></span>
     </div>
+    <div id="plakate-progress" style="display:none;background:#eef1f5;border-radius:6px;height:8px;overflow:hidden;margin:8px 0 4px"><div id="plakate-progress-fill" style="height:100%;width:0%;background:#27ae60;border-radius:6px;transition:width .3s"></div></div>
     <div style="font-size:.82rem;color:#666;margin-bottom:12px">Trage dich auf einen Standort ein, wenn du das Plakat dorthin bringst.</div>
     <div id="plakate-list"></div>
   </div>
+  <details class="card k-form-wrap" style="margin-top:12px">
+    <summary style="cursor:pointer;font-weight:700;color:#1b3a6b;font-size:.92rem;user-select:none">＋ Neuen Standort hinzufügen</summary>
+    <div style="margin-top:12px">
+      <div class="form-row">
+        <input class="fl-input" type="text" id="pl-ort" placeholder="Standort / Geschäft *" style="flex:2;min-width:160px">
+        <input class="fl-input" type="text" id="pl-anzahl" placeholder="Anzahl Plakate" style="flex:1;min-width:90px">
+      </div>
+      <input class="fl-input" type="text" id="pl-adresse" placeholder="Adresse (optional, für Karten-Link)" style="margin-bottom:8px">
+      <input class="fl-input" type="text" id="pl-notiz" placeholder="Notiz (optional, z. B. Ansprechpartner)" style="margin-bottom:8px">
+      <button class="btn btn-primary" onclick="addPlakat()">＋ Standort hinzufügen</button>
+    </div>
+  </details>
 </div>
 
 <div class="page" id="p-kommentare">
@@ -4057,32 +4060,45 @@ function renderPlakate(){
   const stats=document.getElementById('plakate-stats');
   const total=plakate.length, taken=plakate.filter(p=>p.von).length;
   if(stats) stats.textContent = total ? (taken+' von '+total+' übernommen') : '';
+  // Fortschrittsbalken
+  const prog=document.getElementById('plakate-progress'), fill=document.getElementById('plakate-progress-fill');
+  if(prog&&fill){ prog.style.display=total?'':'none'; fill.style.width=total?Math.round(taken/total*100)+'%':'0%'; }
   if(!plakate.length){ el.innerHTML='<div class="empty" style="padding:24px">Noch keine Plakat-Standorte angelegt.</div>'; return; }
   const myName=getUserVoteName();
-  el.innerHTML=plakate.map(p=>{
+  const karte=p=>{
     const done=!!p.von;
-    const maps=p.adresse?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.adresse)}" target="_blank" rel="noopener" style="font-size:.78rem;color:#2563b5;text-decoration:none">🗺️ Karte</a>`:'';
-    return `<div style="border-left:4px solid ${done?'#27ae60':'#f39c12'};padding:11px 14px;margin-bottom:8px;background:${done?'#f0fff4':'#fffdf5'};border-radius:0 8px 8px 0">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:.92rem;color:#1b3a6b">📋 ${esc(p.ort)}${p.anzahl?` <span style="font-size:.78rem;color:#888;font-weight:400">· ${esc(p.anzahl)} Plakat(e)</span>`:''}</div>
-          ${p.adresse?`<div style="font-size:.8rem;color:#666;margin-top:1px">📍 ${esc(p.adresse)} &nbsp; ${maps}</div>`:''}
-          ${p.notiz?`<div style="font-size:.8rem;color:#888;font-style:italic;margin-top:1px">💬 ${esc(p.notiz)}</div>`:''}
-          <div style="margin-top:6px">
-            ${done
-              ? `<span style="font-size:.84rem;color:#1a7a40;font-weight:600">✅ Übernommen von ${esc(p.von)}</span>
-                 <button class="btn btn-sm btn-gray" style="font-size:.72rem;margin-left:8px" onclick="releasePlakat('${p._key}')">↩ freigeben</button>`
-              : `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                   <input class="fl-input" id="pl-name-${p._key}" placeholder="Dein Name" value="${esc(myName||'')}" style="flex:1;min-width:120px;padding:6px 9px;font-size:.82rem">
-                   <button class="btn btn-sm btn-success" style="font-size:.78rem" onclick="claimPlakat('${p._key}')">✋ Ich übernehme</button>
-                 </div>`
-            }
-          </div>
+    const maps=p.adresse?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.adresse)}" target="_blank" rel="noopener" style="font-size:.78rem;color:#2563b5;text-decoration:none;white-space:nowrap">🗺️ Karte</a>`:'';
+    const del=canManage?`<button class="btn btn-danger btn-sm" style="flex-shrink:0;padding:2px 8px" onclick="deletePlakat('${p._key}')">✕</button>`:'';
+    // Aktion rechts: eingeloggt = nur Button; Gast = Namensfeld + Button
+    const action=done
+      ? `<button class="btn btn-sm btn-gray" style="font-size:.72rem;flex-shrink:0" onclick="releasePlakat('${p._key}')">↩ freigeben</button>`
+      : (myName
+        ? `<button class="btn btn-sm btn-success" style="font-size:.78rem;flex-shrink:0" onclick="claimPlakat('${p._key}')">✋ Übernehmen</button>`
+        : `<span style="display:flex;gap:5px;align-items:center;flex-shrink:0"><input class="fl-input" id="pl-name-${p._key}" placeholder="Dein Name" style="width:110px;padding:5px 8px;font-size:.8rem;margin:0"><button class="btn btn-sm btn-success" style="font-size:.78rem" onclick="claimPlakat('${p._key}')">✋</button></span>`);
+    return `<div style="border-left:4px solid ${done?'#27ae60':'#f39c12'};padding:9px 12px;margin-bottom:7px;background:${done?'#f4faf5':'#fffdf5'};border-radius:0 8px 8px 0">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+        <div style="flex:1;min-width:150px">
+          <span style="font-weight:600;font-size:.9rem;color:#1b3a6b">${esc(p.ort)}</span>
+          ${p.anzahl?`<span style="font-size:.76rem;color:#888"> · ${esc(p.anzahl)}×</span>`:''}
+          ${done?`<div style="font-size:.78rem;color:#1a7a40;margin-top:1px">✅ ${esc(p.von)}</div>`:''}
+          ${p.adresse?`<div style="font-size:.76rem;color:#777;margin-top:1px">📍 ${esc(p.adresse)} ${maps}</div>`:''}
+          ${p.notiz?`<div style="font-size:.76rem;color:#999;font-style:italic;margin-top:1px">💬 ${esc(p.notiz)}</div>`:''}
         </div>
-        ${canManage?`<button class="btn btn-danger btn-sm" style="flex-shrink:0" onclick="deletePlakat('${p._key}')">✕</button>`:''}
+        <div style="display:flex;gap:6px;align-items:center">${action}${del}</div>
       </div>
     </div>`;
-  }).join('');
+  };
+  const offen=plakate.filter(p=>!p.von), fertig=plakate.filter(p=>p.von);
+  let html='';
+  if(offen.length){
+    html+=`<div class="section-label" style="color:#b9770e">🟠 Noch zu verteilen (${offen.length})</div>`+offen.map(karte).join('');
+  } else if(total){
+    html+=`<div style="background:#d5f5e3;color:#1a7a40;border-radius:8px;padding:10px 14px;font-size:.88rem;font-weight:600;margin-bottom:10px">🎉 Alle Standorte sind übernommen!</div>`;
+  }
+  if(fertig.length){
+    html+=`<details class="t-coll" style="margin-top:10px"><summary>✅ Übernommen (${fertig.length})</summary><div style="padding-top:8px">${fertig.map(karte).join('')}</div></details>`;
+  }
+  el.innerHTML=html;
 }
 
 // ===== GEBURTSTAGE IN TERMINE =====
