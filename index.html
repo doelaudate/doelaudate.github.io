@@ -414,6 +414,7 @@ html.fs-sehrgross{font-size:20.5px}
   <div class="mtab" onclick="showPage('plakate',this)">📋 Plakate</div>
   <div class="mtab" onclick="showPage('kommentare',this)">💬 Kommentare <span id="k-count" style="background:rgba(41,128,185,.15);color:#2563b5;padding:1px 6px;border-radius:10px;font-size:.72rem;margin-left:3px"></span></div>
   <div class="mtab admin-tab admin-only" onclick="showPage('anwesenheit',this)">📊 Anwesenheit</div>
+  <div class="mtab admin-tab admin-only" onclick="showPage('statistik',this)">📈 Statistik</div>
   <div class="mtab user-only" id="tab-einstellungen" style="display:none" onclick="showPage('einstellungen',this)">⚙️ Einstellungen</div>
   <div class="mtab admin-tab admin-only" onclick="showPage('konsole',this)">⚙️ Konsole</div>
 </div>
@@ -743,6 +744,10 @@ html.fs-sehrgross{font-size:20.5px}
   </div>
 </div>
 
+<div class="page admin-only" id="p-statistik">
+  <div id="statistik-content"></div>
+</div>
+
 <div class="page admin-only" id="p-konsole">
   <div class="card">
     <div class="card-title">⚙️ Admin-Konsole</div>
@@ -997,6 +1002,7 @@ html.fs-sehrgross{font-size:20.5px}
       <button class="sheet-link" onclick="bnavMore('kommentare')"><span class="si">💬</span>Kommentare</button>
       <button class="sheet-link sheet-user" id="more-einst" style="display:none" onclick="bnavMore('einstellungen')"><span class="si">⚙️</span>Einstellungen</button>
       <button class="sheet-link adm sheet-adm" style="display:none" onclick="bnavMore('anwesenheit')"><span class="si">📊</span>Anwesenheit</button>
+      <button class="sheet-link adm sheet-adm" style="display:none" onclick="bnavMore('statistik')"><span class="si">📈</span>Statistik</button>
       <button class="sheet-link adm sheet-adm" style="display:none" onclick="bnavMore('konsole')"><span class="si">🔑</span>Konsole</button>
     </div>
   </div>
@@ -1319,7 +1325,8 @@ const ADMIN_PW='Asf06217';
 const TYP_LABEL={"konzert": "🎵 Konzert", "fest": "🎪 Fest", "chorlager": "🏕️ Chorlager", "gottesdienst": "⛪ Gottesdienst", "probe": "🎹 Probe", "sonstiges": "📌 Sonstiges"};
 const TYP_COLOR={"konzert": "#2563b5", "fest": "#e67e22", "chorlager": "#27ae60", "gottesdienst": "#8e44ad", "probe": "#c0392b", "sonstiges": "#7f8c8d"};
 const INIT_MITGLIEDER=[]; // Mitgliederdaten liegen in der Datenbank (login-geschuetzt), nicht im oeffentlichen Code
-const INIT_TERMINE=[{"id": "23r7du2kk", "titel": "4 Chöre Konzert", "datum": "2026-06-07", "datum_ende": "", "uhrzeit": "15:00", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "8vfz808c1", "titel": "Lieskauer Sommerfest", "datum": "2026-06-21", "datum_ende": "", "uhrzeit": "11:00", "typ": "fest", "beschreibung": "", "abstimmungen": {}}, {"id": "79976fwpi", "titel": "Sommerkonzert", "datum": "2026-06-28", "datum_ende": "", "uhrzeit": "15:00", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "fympt3vrg", "titel": "Gemeindefest", "datum": "2026-09-20", "datum_ende": "", "uhrzeit": "14:00 / 15:00 / 16:00", "typ": "fest", "beschreibung": "Uhrzeit noch nicht festgelegt", "abstimmungen": {}}, {"id": "ru26ly3p6", "titel": "Chorlager Schierke", "datum": "2026-11-06", "datum_ende": "2026-11-08", "uhrzeit": "", "typ": "chorlager", "beschreibung": "", "abstimmungen": {}}, {"id": "c81poy77r", "titel": "Lichtergottesdienst", "datum": "2026-11-29", "datum_ende": "", "uhrzeit": "", "typ": "gottesdienst", "beschreibung": "", "abstimmungen": {}}, {"id": "fwktqtez8", "titel": "Weihnachtskonzert", "datum": "2026-12-05", "datum_ende": "", "uhrzeit": "", "typ": "konzert", "beschreibung": "", "abstimmungen": {}}, {"id": "h5k00tkj8", "titel": "Chorlager", "datum": "2027-10-14", "datum_ende": "2027-10-16", "uhrzeit": "", "typ": "chorlager", "beschreibung": "", "abstimmungen": {}}];
+// Kein hartkodierter Termin-Fallback mehr: bei leerer/fehlgeschlagener DB zeigen wir lieber „keine Termine" als veraltete Daten.
+const INIT_TERMINE=[];
 
 let D=null, termine=[], kommentare=[], probenplan=[], mitglieder=[], liedwuensche=[], plakate=[], probenstatus={}, benachrichtigungen=[], anwesenheit={}, anwWork=null, userprofilesCache={}, abwesenheiten={};
 let adminMode = sessionStorage.getItem('chor_admin')==='1';
@@ -1432,6 +1439,7 @@ function showPage(id,tab){
   document.getElementById('p-'+id).classList.add('active');
   if(tab) tab.classList.add('active');
   if(id==='start') renderStart();
+  if(id==='statistik') renderStatistik();
   if(id==='proben'){renderProben();renderSongPicker();}
   if(id==='termine') renderTermine();
   if(id==='umfragen') renderUmfragen();
@@ -1516,7 +1524,7 @@ function renderStart(){
     html+='<div class="card" style="margin-top:12px;cursor:pointer" onclick="showPageByName(\'umfragen\')">';
     html+='<div style="display:flex;justify-content:space-between;align-items:center"><span class="card-title" style="margin-bottom:0">📊 Offene Umfragen</span><span style="font-size:.76rem;color:#2563b5">Abstimmen ›</span></div>';
     offene.slice(0,3).forEach(([id,u])=>{
-      const voted=myName&&u.stimmen&&u.stimmen[ufSafeKey(myName)];
+      const voted=myName&&u.votes&&u.votes[ufSafeKey(myName)];
       html+=`<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;gap:8px;align-items:center">
         <span style="font-size:.9rem;font-weight:600">${esc(u.frage)}</span>
         ${voted?'<span style="font-size:.72rem;color:#1a7a40;white-space:nowrap">✓ abgestimmt</span>':'<span style="font-size:.72rem;color:#9a6b00;white-space:nowrap">noch offen</span>'}
@@ -2504,6 +2512,72 @@ function renderAnwStats(){
     <table class="overview-table" style="width:100%"><thead><tr><th>Mitglied</th><th style="text-align:center">Da</th><th style="text-align:center">Fehlt</th><th style="text-align:center">Quote</th></tr></thead><tbody>`+
     rows.map(r=>{ const c=r.quote>=80?'#27ae60':r.quote>=50?'#f39c12':'#e74c3c'; return `<tr><td>${esc(r.name)}</td><td style="text-align:center">${r.da}</td><td style="text-align:center;color:#922b21">${r.fehlt}</td><td style="text-align:center"><strong style="color:${c}">${r.quote}%</strong></td></tr>`; }).join('')+
     `</tbody></table>`;
+}
+
+// ===== STATISTIK (Chorleitung) =====
+function _statBars(items, color){
+  // items: [{label, value, sub?}] -> horizontale Balken
+  const max=Math.max(1,...items.map(i=>i.value));
+  return items.map(i=>`<div style="margin-bottom:9px">
+    <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:3px"><span style="font-weight:600;color:#333">${esc(i.label)}</span><span style="color:#888">${i.sub||i.value}</span></div>
+    <div style="background:#eef1f5;border-radius:6px;height:14px;overflow:hidden"><div style="height:100%;width:${Math.round(i.value/max*100)}%;background:${color};border-radius:6px;min-width:2px"></div></div>
+  </div>`).join('');
+}
+function renderStatistik(){
+  const el=document.getElementById('statistik-content'); if(!el) return;
+  if(!D){ el.innerHTML='<div class="empty" style="padding:20px">Daten werden geladen…</div>'; return; }
+  const proben=(D.proben||[]);
+  const allS=D.seasons.flatMap(s=>(s.songs||[]));
+  const captured=Object.entries(anwesenheit||{}).filter(([,v])=>v&&v.erfasst);
+  // Ø Anwesenheitsquote
+  let quote='–';
+  if(captured.length && mitglieder.length){
+    let sum=0; captured.forEach(([,v])=>{ const fehlt=v.fehlt?Object.keys(v.fehlt).filter(k=>v.fehlt[k]).length:0; sum+=(mitglieder.length-fehlt)/mitglieder.length; });
+    quote=Math.round(sum/captured.length*100)+'%';
+  }
+  // Kacheln
+  let html=`<div class="stats" style="margin-bottom:14px">
+    <div class="stat"><div class="stat-n">${proben.length}</div><div class="stat-l">Proben erfasst</div></div>
+    <div class="stat"><div class="stat-n" style="color:#2563b5">${quote}</div><div class="stat-l">Ø Anwesenheit</div></div>
+    <div class="stat"><div class="stat-n" style="color:#27ae60">${allS.filter(s=>!s.archived).length}</div><div class="stat-l">Aktive Lieder</div></div>
+    <div class="stat"><div class="stat-n" style="color:#8e44ad">${(termine||[]).length}</div><div class="stat-l">Termine</div></div>
+  </div>`;
+
+  // Proben pro Monat (letzte 12)
+  const byMonth={};
+  proben.forEach(p=>{ if(p.datum){ const m=p.datum.slice(0,7); byMonth[m]=(byMonth[m]||0)+1; } });
+  const monthsSorted=Object.keys(byMonth).sort().slice(-12);
+  const MN=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  const monthItems=monthsSorted.map(m=>{ const [y,mo]=m.split('-'); return {label:MN[parseInt(mo)-1]+' '+y.slice(2), value:byMonth[m]}; });
+  html+=`<div class="card"><div class="card-title">📅 Proben pro Monat</div>${monthItems.length?_statBars(monthItems,'#2563b5'):'<div class="empty">Noch keine Proben erfasst.</div>'}</div>`;
+
+  // Top geprobte Lieder (nach Häufigkeit)
+  const songStats=allS.map(s=>({name:s.name, count:getStat(s.id).count})).filter(s=>s.count>0).sort((a,b)=>b.count-a.count).slice(0,12);
+  const songItems=songStats.map(s=>({label:s.name, value:s.count, sub:s.count+'×'}));
+  html+=`<div class="card" style="margin-top:12px"><div class="card-title">🎵 Am häufigsten geprobt</div>${songItems.length?_statBars(songItems,'#27ae60'):'<div class="empty">Noch keine Probendaten.</div>'}</div>`;
+
+  // Lange nicht geprobt (aktive Lieder mit ältester/keiner letzter Probe)
+  const stale=allS.filter(s=>!s.archived).map(s=>{const st=getStat(s.id);return {name:s.name, last:st.last, count:st.count};})
+    .sort((a,b)=>{ if(!a.last&&!b.last)return 0; if(!a.last)return -1; if(!b.last)return 1; return a.last.localeCompare(b.last); }).slice(0,8);
+  html+=`<div class="card" style="margin-top:12px"><div class="card-title">🕰️ Lange nicht geprobt</div>`;
+  html+= stale.length?('<table class="overview-table" style="width:100%"><thead><tr><th>Lied</th><th style="text-align:right">Zuletzt</th></tr></thead><tbody>'+
+    stale.map(s=>`<tr><td>${esc(s.name)}</td><td style="text-align:right;color:${!s.last?'#e74c3c':'#888'}">${s.last?fmt(s.last):'nie'}</td></tr>`).join('')+'</tbody></table>')
+    :'<div class="empty">Keine aktiven Lieder.</div>';
+  html+='</div>';
+
+  // Anwesenheit pro Stimmgruppe (SATB)
+  if(captured.length && mitglieder.length){
+    const voices=['Sopran','Alt','Tenor','Bass'];
+    const vItems=voices.map(v=>{
+      const ms=mitglieder.filter(m=>m.stimme===v); if(!ms.length) return null;
+      let sum=0,n=0;
+      captured.forEach(([,rec])=>{ ms.forEach(m=>{ const k=memberKey(m); const fehlt=rec.fehlt&&rec.fehlt[k]; sum+=fehlt?0:1; n++; }); });
+      return {label:v, value:n?Math.round(sum/n*100):0, sub:(n?Math.round(sum/n*100):0)+'%'};
+    }).filter(Boolean);
+    if(vItems.length) html+=`<div class="card" style="margin-top:12px"><div class="card-title">🎤 Anwesenheit pro Stimmgruppe</div>${_statBars(vItems,'#e67e22')}</div>`;
+  }
+
+  el.innerHTML=html;
 }
 
 function localToday(){
