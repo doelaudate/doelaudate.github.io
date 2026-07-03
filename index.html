@@ -683,6 +683,22 @@ html.fs-sehrgross{font-size:20.5px}
 </div>
 
 <div class="page" id="p-plakate">
+  <details class="card k-form-wrap" style="margin-bottom:12px">
+    <summary style="cursor:pointer;font-weight:700;color:#1b3a6b;font-size:.92rem;user-select:none">＋ Neuen Standort hinzufügen</summary>
+    <div style="margin-top:12px">
+      <div class="form-row">
+        <input class="fl-input" type="text" id="pl-ort" placeholder="Standort / Geschäft *" style="flex:2;min-width:160px">
+        <input class="fl-input" type="text" id="pl-anzahl" placeholder="Anzahl Plakate" style="flex:1;min-width:90px">
+      </div>
+      <div class="form-row">
+        <select class="fl-input" id="pl-ortschaft" style="flex:1;min-width:150px" onchange="document.getElementById('pl-ortschaft-frei').style.display=this.value==='__frei__'?'':'none'"></select>
+        <input class="fl-input" type="text" id="pl-ortschaft-frei" placeholder="Ortschaft eingeben…" style="flex:1;min-width:140px;display:none">
+      </div>
+      <input class="fl-input" type="text" id="pl-adresse" placeholder="Adresse (optional, für Karten-Link)" style="margin-bottom:8px">
+      <input class="fl-input" type="text" id="pl-notiz" placeholder="Notiz (optional, z. B. Ansprechpartner)" style="margin-bottom:8px">
+      <button class="btn btn-primary" onclick="addPlakat()">＋ Standort hinzufügen</button>
+    </div>
+  </details>
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
       <span class="card-title" style="margin-bottom:0">📋 Plakat-Standorte</span>
@@ -692,18 +708,6 @@ html.fs-sehrgross{font-size:20.5px}
     <div style="font-size:.82rem;color:#666;margin-bottom:12px">Trage dich auf einen Standort ein, wenn du das Plakat dorthin bringst.</div>
     <div id="plakate-list"></div>
   </div>
-  <details class="card k-form-wrap" style="margin-top:12px">
-    <summary style="cursor:pointer;font-weight:700;color:#1b3a6b;font-size:.92rem;user-select:none">＋ Neuen Standort hinzufügen</summary>
-    <div style="margin-top:12px">
-      <div class="form-row">
-        <input class="fl-input" type="text" id="pl-ort" placeholder="Standort / Geschäft *" style="flex:2;min-width:160px">
-        <input class="fl-input" type="text" id="pl-anzahl" placeholder="Anzahl Plakate" style="flex:1;min-width:90px">
-      </div>
-      <input class="fl-input" type="text" id="pl-adresse" placeholder="Adresse (optional, für Karten-Link)" style="margin-bottom:8px">
-      <input class="fl-input" type="text" id="pl-notiz" placeholder="Notiz (optional, z. B. Ansprechpartner)" style="margin-bottom:8px">
-      <button class="btn btn-primary" onclick="addPlakat()">＋ Standort hinzufügen</button>
-    </div>
-  </details>
 </div>
 
 <div class="page" id="p-kommentare">
@@ -1042,6 +1046,27 @@ html.fs-sehrgross{font-size:20.5px}
     <div class="modal-actions" style="justify-content:space-between">
       <button id="notif-clear-all" class="btn btn-danger btn-sm" style="display:none" onclick="clearAllNotifications()">🗑️ Alle löschen</button>
       <button class="btn btn-gray" onclick="closeModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-plakat-edit">
+  <div class="modal">
+    <h3>✏️ Standort bearbeiten</h3>
+    <input type="hidden" id="ple-key">
+    <div class="form-row">
+      <input class="fl-input" type="text" id="ple-ort" placeholder="Standort / Geschäft *" style="flex:2;min-width:160px">
+      <input class="fl-input" type="text" id="ple-anzahl" placeholder="Anzahl" style="flex:1;min-width:80px">
+    </div>
+    <div class="form-row">
+      <select class="fl-input" id="ple-ortschaft" style="flex:1;min-width:150px" onchange="document.getElementById('ple-ortschaft-frei').style.display=this.value==='__frei__'?'':'none'"></select>
+      <input class="fl-input" type="text" id="ple-ortschaft-frei" placeholder="Ortschaft eingeben…" style="flex:1;min-width:140px;display:none">
+    </div>
+    <input class="fl-input" type="text" id="ple-adresse" placeholder="Adresse (optional)" style="margin-bottom:8px">
+    <input class="fl-input" type="text" id="ple-notiz" placeholder="Notiz (optional)" style="margin-bottom:8px">
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn btn-gray" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-success" onclick="savePlakatEdit()">💾 Speichern</button>
     </div>
   </div>
 </div>
@@ -3614,7 +3639,7 @@ async function renderUserVerwaltung() {
   </div>`;
   const memberOptions = mitglieder.map((m,i)=>({m,i})).sort((a,b)=>memberName(a.m).localeCompare(memberName(b.m)))
     .map(({m,i})=>`<option value="${i}">${esc(memberName(m)||('Nr. '+m.nr))}</option>`).join('');
-  const permLabels = {proben:'📅 Proben',termine:'📆 Termine',mitglieder:'👥 Mitglieder',kommentare:'💬 Kommentare',lieder:'🎵 Lieder'};
+  const permLabels = {proben:'📅 Proben',termine:'📆 Termine',mitglieder:'👥 Mitglieder',kommentare:'💬 Kommentare',lieder:'🎵 Lieder',plakate:'📋 Plakate'};
   el.innerHTML = banner + users.map(u => {
     const perms = u.permissions||[];
     const uid = u.uid;
@@ -3666,7 +3691,7 @@ async function renderUserVerwaltung() {
 
 async function saveUserPerms(uid) {
   const isAdmin = document.getElementById('perm-'+uid+'-admin')?.checked||false;
-  const perms = ['proben','termine','mitglieder','kommentare','lieder'].filter(p=>document.getElementById('perm-'+uid+'-'+p)?.checked);
+  const perms = ['proben','termine','mitglieder','kommentare','lieder','plakate'].filter(p=>document.getElementById('perm-'+uid+'-'+p)?.checked);
   await dbFetch(DB+'/userprofiles/'+uid+'/isAdmin.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(isAdmin)});
   await dbFetch(DB+'/userprofiles/'+uid+'/permissions.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(perms)});
   const res = document.getElementById('perm-result-'+uid);
@@ -4031,12 +4056,52 @@ async function addPlakat(){
   const anzahl=document.getElementById('pl-anzahl').value.trim();
   const adresse=document.getElementById('pl-adresse').value.trim();
   const notiz=document.getElementById('pl-notiz').value.trim();
-  await dbFetch(DB+'/plakate.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ort,anzahl,adresse,notiz,von:'',erstellt:new Date().toISOString()})});
+  const ortschaft=_plOrtschaftValue('pl-ortschaft');
+  await dbFetch(DB+'/plakate.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ort,ortschaft,anzahl,adresse,notiz,von:'',erstellt:new Date().toISOString()})});
   ['pl-ort','pl-anzahl','pl-adresse','pl-notiz'].forEach(id=>document.getElementById(id).value='');
   await loadPlakate();
 }
+// Ortschaften rund um Dölau für die Auswahl (freie Eingabe über „Andere…" möglich)
+const PLAKAT_ORTSCHAFTEN=['Dölau','Heide-Nord','Kröllwitz','Nietleben','Halle-Neustadt','Halle (Zentrum)','Lieskau','Salzmünde','Zappendorf','Bennstedt','Sonstiges'];
+function _plFillOrtschaftSelect(selId, current){
+  const sel=document.getElementById(selId); if(!sel) return;
+  const opts=[...PLAKAT_ORTSCHAFTEN];
+  if(current && !opts.includes(current)) opts.unshift(current);
+  sel.innerHTML=opts.map(o=>`<option value="${esc(o)}"${o===current?' selected':''}>${esc(o)}</option>`).join('')+'<option value="__frei__">➕ Andere…</option>';
+  const frei=document.getElementById(selId+'-frei'); if(frei){ frei.style.display='none'; frei.value=''; }
+}
+function _plOrtschaftValue(selId){
+  const sel=document.getElementById(selId); if(!sel) return 'Sonstiges';
+  if(sel.value==='__frei__'){ const frei=document.getElementById(selId+'-frei'); const v=(frei&&frei.value.trim())||''; return v||'Sonstiges'; }
+  return sel.value||'Sonstiges';
+}
+function editPlakat(key){
+  if(!uiEdit('plakate')) return;
+  const p=plakate.find(x=>x._key===key); if(!p) return;
+  document.getElementById('ple-key').value=key;
+  document.getElementById('ple-ort').value=p.ort||'';
+  document.getElementById('ple-anzahl').value=p.anzahl||'';
+  document.getElementById('ple-adresse').value=p.adresse||'';
+  document.getElementById('ple-notiz').value=p.notiz||'';
+  _plFillOrtschaftSelect('ple-ortschaft', p.ortschaft||'Sonstiges');
+  document.getElementById('modal-plakat-edit').classList.add('open');
+}
+async function savePlakatEdit(){
+  if(!uiEdit('plakate')){alert('Keine Berechtigung.');return;}
+  const key=document.getElementById('ple-key').value;
+  const ort=document.getElementById('ple-ort').value.trim();
+  if(!ort){alert('Bitte Standort eingeben.');return;}
+  const upd={ort,
+    ortschaft:_plOrtschaftValue('ple-ortschaft'),
+    anzahl:document.getElementById('ple-anzahl').value.trim(),
+    adresse:document.getElementById('ple-adresse').value.trim(),
+    notiz:document.getElementById('ple-notiz').value.trim()};
+  await dbFetch(DB+'/plakate/'+key+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(upd)});
+  closeModal();
+  await loadPlakate();
+}
 async function deletePlakat(key){
-  if(!uiEdit('termine')) return;
+  if(!uiEdit('plakate')) return;
   if(!confirm('Standort löschen?'))return;
   await dbFetch(DB+'/plakate/'+key+'.json',{method:'DELETE'});
   await loadPlakate();
@@ -4056,7 +4121,10 @@ async function releasePlakat(key){
 function renderPlakate(){
   const el=document.getElementById('plakate-list');
   if(!el)return;
-  const canManage=uiEdit('termine');
+  const canManage=uiEdit('plakate');
+  // Formular-Select einmalig befüllen (Nutzerwahl nicht überschreiben)
+  const formSel=document.getElementById('pl-ortschaft');
+  if(formSel && !formSel.options.length) _plFillOrtschaftSelect('pl-ortschaft','Dölau');
   const stats=document.getElementById('plakate-stats');
   const total=plakate.length, taken=plakate.filter(p=>p.von).length;
   if(stats) stats.textContent = total ? (taken+' von '+total+' übernommen') : '';
@@ -4068,7 +4136,7 @@ function renderPlakate(){
   const karte=p=>{
     const done=!!p.von;
     const maps=p.adresse?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.adresse)}" target="_blank" rel="noopener" style="font-size:.78rem;color:#2563b5;text-decoration:none;white-space:nowrap">🗺️ Karte</a>`:'';
-    const del=canManage?`<button class="btn btn-danger btn-sm" style="flex-shrink:0;padding:2px 8px" onclick="deletePlakat('${p._key}')">✕</button>`:'';
+    const del=canManage?`<button class="btn btn-sm" style="flex-shrink:0;padding:2px 8px;background:#eef1f5;color:#1d4e96" title="Bearbeiten" onclick="editPlakat('${p._key}')">✏️</button><button class="btn btn-danger btn-sm" style="flex-shrink:0;padding:2px 8px" onclick="deletePlakat('${p._key}')">✕</button>`:'';
     // Aktion rechts: eingeloggt = nur Button; Gast = Namensfeld + Button
     const action=done
       ? `<button class="btn btn-sm btn-gray" style="font-size:.72rem;flex-shrink:0" onclick="releasePlakat('${p._key}')">↩ freigeben</button>`
@@ -4088,16 +4156,20 @@ function renderPlakate(){
       </div>
     </div>`;
   };
-  const offen=plakate.filter(p=>!p.von), fertig=plakate.filter(p=>p.von);
+  // Nach Ortschaft gruppieren (offene zuerst innerhalb jeder Gruppe)
+  const groups={};
+  plakate.forEach(p=>{ const g=p.ortschaft||'Sonstiges'; (groups[g]=groups[g]||[]).push(p); });
+  const order=[...PLAKAT_ORTSCHAFTEN.filter(o=>groups[o]), ...Object.keys(groups).filter(g=>!PLAKAT_ORTSCHAFTEN.includes(g)).sort()];
   let html='';
-  if(offen.length){
-    html+=`<div class="section-label" style="color:#b9770e">🟠 Noch zu verteilen (${offen.length})</div>`+offen.map(karte).join('');
-  } else if(total){
+  if(!plakate.some(p=>!p.von)){
     html+=`<div style="background:#d5f5e3;color:#1a7a40;border-radius:8px;padding:10px 14px;font-size:.88rem;font-weight:600;margin-bottom:10px">🎉 Alle Standorte sind übernommen!</div>`;
   }
-  if(fertig.length){
-    html+=`<details class="t-coll" style="margin-top:10px"><summary>✅ Übernommen (${fertig.length})</summary><div style="padding-top:8px">${fertig.map(karte).join('')}</div></details>`;
-  }
+  order.forEach(g=>{
+    const list=groups[g];
+    const o=list.filter(p=>!p.von), f=list.filter(p=>p.von);
+    html+=`<div class="section-label">📍 ${esc(g)} <span style="color:#bbb;font-weight:400">· ${f.length}/${list.length} übernommen</span></div>`;
+    html+=o.map(karte).join('')+f.map(karte).join('');
+  });
   el.innerHTML=html;
 }
 
@@ -4403,7 +4475,7 @@ function renderEinstellungen(){
   if(el_an) el_an.value = p?.anzeigename || '';
   if(el_p){
     const perms = p?.permissions||[];
-    const labels = {proben:'Proben',termine:'Termine',mitglieder:'Mitglieder',kommentare:'Kommentare löschen',lieder:'Lieder'};
+    const labels = {proben:'Proben',termine:'Termine',mitglieder:'Mitglieder',kommentare:'Kommentare löschen',lieder:'Lieder',plakate:'Plakate'};
     if(p?.isAdmin) el_p.textContent = '🔑 Admin';
     else if(perms.length) el_p.textContent = '🛡️ Berechtigungen: '+perms.map(x=>labels[x]||x).join(', ');
     else el_p.textContent = '';
