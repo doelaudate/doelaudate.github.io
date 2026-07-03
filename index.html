@@ -686,6 +686,8 @@ html.fs-sehrgross{font-size:20.5px}
   <details class="card k-form-wrap" style="margin-bottom:12px">
     <summary style="cursor:pointer;font-weight:700;color:#1b3a6b;font-size:.92rem;user-select:none">＋ Neuen Standort hinzufügen</summary>
     <div style="margin-top:12px">
+      <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#999;margin-bottom:5px">💡 Vorschläge antippen</div>
+      <div id="pl-vorschlaege" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px"></div>
       <div class="form-row">
         <input class="fl-input" type="text" id="pl-ort" placeholder="Standort / Geschäft *" style="flex:2;min-width:160px">
         <input class="fl-input" type="text" id="pl-anzahl" placeholder="Anzahl Plakate" style="flex:1;min-width:90px">
@@ -4063,6 +4065,12 @@ async function addPlakat(){
 }
 // Ortschaften rund um Dölau für die Auswahl (freie Eingabe über „Andere…" möglich)
 const PLAKAT_ORTSCHAFTEN=['Dölau','Heide-Nord','Kröllwitz','Nietleben','Halle-Neustadt','Halle (Zentrum)','Lieskau','Salzmünde','Zappendorf','Bennstedt','Sonstiges'];
+// Typische Orte, an denen Chor-Plakate gut aufgehoben sind (Antippen füllt das Formular)
+const PLAKAT_VORSCHLAEGE=['Bäckerei','Apotheke','Supermarkt (Schwarzes Brett)','Kirche / Gemeindehaus','Kita','Grundschule','Arztpraxis','Physiotherapie','Friseur','Bibliothek','Sparkasse / Bank','Schaukasten / Bushaltestelle','Sportverein / Vereinsheim','Café','Blumenladen','Getränkemarkt','Seniorenheim'];
+function plVorschlag(name){
+  const det=document.querySelector('#p-plakate details'); if(det) det.open=true;
+  const inp=document.getElementById('pl-ort'); if(inp){ inp.value=name; inp.focus(); }
+}
 function _plFillOrtschaftSelect(selId, current){
   const sel=document.getElementById(selId); if(!sel) return;
   const opts=[...PLAKAT_ORTSCHAFTEN];
@@ -4122,9 +4130,11 @@ function renderPlakate(){
   const el=document.getElementById('plakate-list');
   if(!el)return;
   const canManage=uiEdit('plakate');
-  // Formular-Select einmalig befüllen (Nutzerwahl nicht überschreiben)
+  // Formular-Select + Vorschlags-Chips einmalig befüllen (Nutzerwahl nicht überschreiben)
   const formSel=document.getElementById('pl-ortschaft');
   if(formSel && !formSel.options.length) _plFillOrtschaftSelect('pl-ortschaft','Dölau');
+  const vs=document.getElementById('pl-vorschlaege');
+  if(vs && !vs.childElementCount) vs.innerHTML=PLAKAT_VORSCHLAEGE.map(v=>`<button type="button" onclick="plVorschlag('${esc(v)}')" style="background:#eef3fa;color:#1b3a6b;border:1.5px solid transparent;border-radius:16px;padding:4px 11px;font-size:.78rem;cursor:pointer;font-family:inherit">${esc(v)}</button>`).join('');
   const stats=document.getElementById('plakate-stats');
   const total=plakate.length, taken=plakate.filter(p=>p.von).length;
   if(stats) stats.textContent = total ? (taken+' von '+total+' übernommen') : '';
@@ -4156,20 +4166,22 @@ function renderPlakate(){
       </div>
     </div>`;
   };
-  // Nach Ortschaft gruppieren (offene zuerst innerhalb jeder Gruppe)
-  const groups={};
-  plakate.forEach(p=>{ const g=p.ortschaft||'Sonstiges'; (groups[g]=groups[g]||[]).push(p); });
-  const order=[...PLAKAT_ORTSCHAFTEN.filter(o=>groups[o]), ...Object.keys(groups).filter(g=>!PLAKAT_ORTSCHAFTEN.includes(g)).sort()];
+  // Oben: Offen / Übernommen — darunter jeweils nach Ortschaft unterteilt
+  const nachOrtschaft=list=>{
+    const g={}; list.forEach(p=>{ const k=p.ortschaft||'Sonstiges'; (g[k]=g[k]||[]).push(p); });
+    const order=[...PLAKAT_ORTSCHAFTEN.filter(o=>g[o]), ...Object.keys(g).filter(x=>!PLAKAT_ORTSCHAFTEN.includes(x)).sort()];
+    return order.map(o=>`<div style="font-size:.74rem;font-weight:700;color:#8a97a8;margin:9px 0 4px">📍 ${esc(o)} (${g[o].length})</div>`+g[o].map(karte).join('')).join('');
+  };
+  const offen=plakate.filter(p=>!p.von), fertig=plakate.filter(p=>p.von);
   let html='';
-  if(!plakate.some(p=>!p.von)){
+  if(offen.length){
+    html+=`<div class="section-label" style="color:#b9770e">🟠 Noch zu verteilen (${offen.length})</div>`+nachOrtschaft(offen);
+  } else if(total){
     html+=`<div style="background:#d5f5e3;color:#1a7a40;border-radius:8px;padding:10px 14px;font-size:.88rem;font-weight:600;margin-bottom:10px">🎉 Alle Standorte sind übernommen!</div>`;
   }
-  order.forEach(g=>{
-    const list=groups[g];
-    const o=list.filter(p=>!p.von), f=list.filter(p=>p.von);
-    html+=`<div class="section-label">📍 ${esc(g)} <span style="color:#bbb;font-weight:400">· ${f.length}/${list.length} übernommen</span></div>`;
-    html+=o.map(karte).join('')+f.map(karte).join('');
-  });
+  if(fertig.length){
+    html+=`<details class="t-coll" style="margin-top:10px"><summary>✅ Übernommen (${fertig.length})</summary><div style="padding-top:4px">${nachOrtschaft(fertig)}</div></details>`;
+  }
   el.innerHTML=html;
 }
 
