@@ -403,6 +403,7 @@ html.fs-sehrgross{font-size:20.5px}
   </div>
 </div>
 <div class="notice" id="notice-bar">ℹ️ Diese Seite wird von der Chorleitung gepflegt und lädt Änderungen automatisch.</div>
+<div id="offline-bar" style="display:none;background:#5d4037;color:#fff;text-align:center;padding:7px 12px;font-size:.82rem;font-weight:600">📴 Keine Internetverbindung — Anzeige ist evtl. nicht aktuell, Änderungen sind gerade nicht möglich.</div>
 
 <div class="main-tabs">
   <div class="mtab active" onclick="showPage('start',this)">🏠 Start</div>
@@ -1564,6 +1565,24 @@ function renderStart(){
         ${voted?'<span style="font-size:.72rem;color:#1a7a40;white-space:nowrap">✓ abgestimmt</span>':'<span style="font-size:.72rem;color:#9a6b00;white-space:nowrap">noch offen</span>'}
       </div>`;
     });
+    html+='</div>';
+  }
+
+  // 🎂 Geburtstage der nächsten 7 Tage
+  const gToday=new Date(); gToday.setHours(0,0,0,0);
+  const gebs=(mitglieder||[]).filter(m=>m.geburtstag).map(m=>{
+    const parts=String(m.geburtstag).split('.'); if(parts.length<2) return null;
+    const d=parseInt(parts[0]), mo=parseInt(parts[1])-1;
+    if(isNaN(d)||isNaN(mo)) return null;
+    let bd=new Date(gToday.getFullYear(),mo,d);
+    if(bd<gToday) bd=new Date(gToday.getFullYear()+1,mo,d);
+    const days=Math.round((bd-gToday)/86400000);
+    return days<=7?{name:memberName(m),days,bd}:null;
+  }).filter(Boolean).sort((a,b)=>a.days-b.days);
+  if(gebs.length){
+    const WD=['So','Mo','Di','Mi','Do','Fr','Sa'];
+    html+='<div class="card" style="margin-top:12px"><div class="card-title" style="margin-bottom:6px">🎂 Geburtstage diese Woche</div>';
+    html+=gebs.map(g=>`<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:.9rem"><span>${g.days===0?'🎉 ':''}<strong>${esc(g.name)}</strong></span><span style="color:${g.days===0?'#e67e22':'#888'};font-size:.82rem;font-weight:${g.days===0?'700':'400'}">${g.days===0?'HEUTE!':(g.days===1?'morgen':WD[g.bd.getDay()]+', '+g.bd.getDate()+'.'+(g.bd.getMonth()+1)+'.')}</span></div>`).join('');
     html+='</div>';
   }
 
@@ -2739,8 +2758,10 @@ async function deleteVote(terminId, key){
   const t=(termine||[]).find(x=>x.id===terminId);
   if(!t || !t.abstimmungen || !(key in t.abstimmungen)) return;
   if(!confirm('Stimme von „'+(prettyName(key)||key)+'" wirklich löschen?')) return;
+  const idx=termine.indexOf(t);
   delete t.abstimmungen[key];
-  await dbFetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
+  // Gezielt nur diese Stimme löschen (kein Ganz-Array-PUT)
+  await dbFetch(DB+'/termine/'+idx+'/abstimmungen/'+encodeURIComponent(key)+'.json',{method:'DELETE'}).catch(e=>console.warn(e));
   renderTermine();
 }
 function terminHtml(t,past=false){
@@ -2807,21 +2828,27 @@ function buildVoteRow(t){
 
 async function abstimmen(id,antwort){
   const t=termine.find(x=>x.id===id);if(!t)return;
+  const idx=termine.indexOf(t);
   if(!t.abstimmungen) t.abstimmungen={};
-  
+
   let name = getUserVoteName();
+  const ops=[];
+  const base=DB+'/termine/'+idx+'/abstimmungen/';
   if(!name){
     const nameEl=document.getElementById('vn-'+id);
     name=nameEl?nameEl.value.trim():'';
     if(!name){alert('Bitte deinen Namen eingeben.');nameEl&&nameEl.focus();return;}
+    name=name.replace(/[.#$\[\]\/]/g,'_'); // Firebase-sicherer Schlüssel für frei getippte Gast-Namen
   } else {
     // Alte Stimmen unter früheren Namens-Varianten (z. B. altem Anzeigenamen) entfernen -> keine Doppel-Stimmen
     const aliases=getUserAliases();
-    Object.keys(t.abstimmungen).forEach(k=>{ if(_norm(k)!==_norm(name) && aliases.has(_norm(k))) delete t.abstimmungen[k]; });
+    Object.keys(t.abstimmungen).forEach(k=>{ if(_norm(k)!==_norm(name) && aliases.has(_norm(k))){ delete t.abstimmungen[k]; ops.push(dbFetch(base+encodeURIComponent(k)+'.json',{method:'DELETE'})); } });
   }
 
   t.abstimmungen[name]=antwort;
-  await dbFetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
+  // Nur die EIGENE Stimme schreiben — kein Ganz-Array-PUT mehr, sonst löschen sich gleichzeitige Stimmen gegenseitig
+  ops.push(dbFetch(base+encodeURIComponent(name)+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(antwort)}));
+  await Promise.all(ops).catch(e=>console.warn(e));
   if(antwort==='nein'){ notifyAdminAbsage('❌ Absage Termin', name+' kommt nicht zu „'+(t.titel||'Termin')+'" am '+fmt(t.datum)+'.'); }
   // Update just this vote row for instant feedback
   const vrow=document.getElementById('vrow-'+id);
@@ -2899,10 +2926,11 @@ async function voteUmfrage(id, optIdx){
   // Alte Stimmen unter früheren Namens-Varianten entfernen -> keine Doppel-Stimmen
   const aliases=getUserAliases();
   let cur=u.votes[key]?(u.votes[key].o||[]).slice():[];
+  const _removedAliasKeys=[];
   Object.keys(u.votes).forEach(k=>{
     if(k===key) return;
     const vn=u.votes[k]&&u.votes[k].n;
-    if(aliases.has(_norm(k)) || (vn&&aliases.has(_norm(vn)))){ if(!cur.length) cur=(u.votes[k].o||[]).slice(); delete u.votes[k]; }
+    if(aliases.has(_norm(k)) || (vn&&aliases.has(_norm(vn)))){ if(!cur.length) cur=(u.votes[k].o||[]).slice(); delete u.votes[k]; _removedAliasKeys.push(k); }
   });
   if(u.mehrfach){
     const pos=cur.indexOf(optIdx);
@@ -2911,7 +2939,12 @@ async function voteUmfrage(id, optIdx){
     cur=[optIdx];
   }
   if(cur.length) u.votes[key]={n:name,o:cur}; else delete u.votes[key];
-  await dbFetch(DB+'/umfragen/'+id+'/votes.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(u.votes||{})}).catch(e=>console.warn(e));
+  // Nur die EIGENE Stimme (+ entfernte Alias-Stimmen) schreiben — kein Ganz-Objekt-PUT
+  const vbase=DB+'/umfragen/'+id+'/votes/';
+  const vops=_removedAliasKeys.map(k=>dbFetch(vbase+encodeURIComponent(k)+'.json',{method:'DELETE'}));
+  if(cur.length) vops.push(dbFetch(vbase+encodeURIComponent(key)+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({n:name,o:cur})}));
+  else vops.push(dbFetch(vbase+encodeURIComponent(key)+'.json',{method:'DELETE'}));
+  await Promise.all(vops).catch(e=>console.warn(e));
   renderUmfragen();
 }
 async function closeUmfrage(id, off){
@@ -3125,13 +3158,41 @@ async function deleteKommentar(key){
   await dbFetch(DB+'/kommentare/'+key+'.json',{method:'DELETE'}).catch(e=>console.warn(e));
   await loadKommentare();
 }
+// Reaktionen (👍/❤️) auf Kommentare — pro Person einmal, toggelbar
+const K_REAKTIONEN=[['daumen','👍'],['herz','❤️']];
+function reaktionHtml(k){
+  if(!k._key) return '';
+  const my=getUserVoteName(); const myKey=my?ufSafeKey(my):null;
+  return '<div style="display:flex;gap:6px;margin-top:7px">'+K_REAKTIONEN.map(([emo,icon])=>{
+    const r=(k.reaktionen&&k.reaktionen[emo])||{};
+    const n=Object.keys(r).length;
+    const mine=!!(myKey&&r[myKey]);
+    const names=Object.values(r).map(v=>prettyName(v)).join(', ');
+    return `<button title="${esc(names)}" onclick="toggleReaktion('${k._key}','${emo}')" style="background:${mine?'#d6eaf8':'#f0f2f5'};border:1.5px solid ${mine?'#2563b5':'transparent'};border-radius:14px;padding:3px 10px;font-size:.8rem;cursor:pointer;font-family:inherit">${icon}${n?' '+n:''}</button>`;
+  }).join('')+'</div>';
+}
+async function toggleReaktion(key,emo){
+  const my=getUserVoteName(); if(!my){alert('Bitte zuerst anmelden.');return;}
+  const myKey=ufSafeKey(my);
+  const k=kommentare.find(x=>x._key===key); if(!k) return;
+  if(!k.reaktionen) k.reaktionen={}; if(!k.reaktionen[emo]) k.reaktionen[emo]={};
+  const path=DB+'/kommentare/'+key+'/reaktionen/'+emo+'/'+encodeURIComponent(myKey)+'.json';
+  if(k.reaktionen[emo][myKey]){
+    delete k.reaktionen[emo][myKey];
+    await dbFetch(path,{method:'DELETE'}).catch(e=>console.warn(e));
+  } else {
+    k.reaktionen[emo][myKey]=my;
+    await dbFetch(path,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(my)}).catch(e=>console.warn(e));
+  }
+  renderKommentare();
+}
 function renderKommentare(){
   const el=document.getElementById('kommentare-list');if(!el)return;
   if(!kommentare.length){el.innerHTML='<div class="empty">Noch keine Kommentare.</div>';return;}
   el.innerHTML=kommentare.map(k=>{
     const d=new Date(k.datum);
     const ds=d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-    return`<div class="kommentar"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span class="k-name">👤 ${esc(prettyName(k.name))}</span><span class="k-meta">${ds}</span></div>${k.lied?`<div class="k-lied">🎵 ${esc(k.lied)}</div>`:''}<div class="k-text">${esc(k.text)}</div>${uiEdit('kommentare')&&k._key?`<button class="btn btn-danger btn-sm del-btn" onclick="deleteKommentar('${k._key}')">✕</button>`:''}</div>`;
+    return`<div class="kommentar"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span class="k-name">👤 ${esc(prettyName(k.name))}</span><span class="k-meta">${ds}</span></div>${k.lied?`<div class="k-lied">🎵 ${esc(k.lied)}</div>`:''}<div class="k-text">${esc(k.text)}</div>${reaktionHtml(k)}${uiEdit('kommentare')&&k._key?`<button class="btn btn-danger btn-sm del-btn" onclick="deleteKommentar('${k._key}')">✕</button>`:''}</div>`;
   }).join('');
 }
 async function submitKommentar(){
@@ -4783,6 +4844,11 @@ async function loadAll(){
 // loadAll is called by onAuthChange when user logs in
 setInterval(()=>{if(currentUser){loadAll();if(aktiveTerminTab==='kalender')renderKalender();}},120000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser)loadAll();});
+// Offline-Hinweis: Banner ein-/ausblenden; beim Wieder-online-Gehen frisch laden
+function updateOfflineBar(){ const b=document.getElementById('offline-bar'); if(b) b.style.display=navigator.onLine?'none':'block'; }
+window.addEventListener('online',()=>{ updateOfflineBar(); if(currentUser)loadAll(); });
+window.addEventListener('offline',updateOfflineBar);
+updateOfflineBar();
 </script>
 <script>
 if('serviceWorker' in navigator){
