@@ -72,6 +72,8 @@ tr:hover td{background:#fafbfc}
 .vbtn-vl{background:#fef9e7;color:#9a6b00}.vbtn-vl:hover{background:#f39c12;color:white}
 .tally{font-size:.76rem;color:#888;margin-top:5px;line-height:1.6}
 .section-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#aaa;margin:12px 0 6px}
+.sheet-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#9aa5b1;margin:14px 4px 6px}
+.sheet-label:first-of-type{margin-top:2px}
 .kal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .kal-nav button{padding:4px 12px;border:1.5px solid #ddd;border-radius:6px;background:white;cursor:pointer;font-size:.9rem}
 .kal-nav button:hover{background:#f0f0f0}
@@ -391,7 +393,6 @@ html.fs-sehrgross{font-size:20.5px}
     <span id="admin-badge" class="admin-badge" style="display:none">🔑 Admin</span>
     <button id="search-btn" onclick="openSearch()" title="Suche" style="display:none;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:8px;padding:3px 9px;cursor:pointer;font-size:1.05rem;line-height:1.4">🔍</button>
     <button id="editmode-icon-btn" onclick="setEditMode(!editMode)" title="Bearbeiten-Modus" style="display:none;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:8px;padding:3px 9px;cursor:pointer;font-size:1.05rem;line-height:1.4">✏️</button>
-    <button id="abw-btn" onclick="openAbwesenheit()" title="Meine Abwesenheit" style="display:none;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:8px;padding:3px 9px;cursor:pointer;font-size:1.05rem;line-height:1.4">🏖️</button>
     <button id="bell-btn" onclick="openNotifications()" title="Benachrichtigungen" style="display:none;position:relative;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:8px;padding:3px 9px;cursor:pointer;font-size:1.05rem;line-height:1.4">
       🔔<span id="bell-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:#e74c3c;color:white;font-size:.6rem;font-weight:700;min-width:16px;height:16px;border-radius:8px;padding:0 4px;line-height:16px;text-align:center">0</span>
     </button>
@@ -399,7 +400,6 @@ html.fs-sehrgross{font-size:20.5px}
       <span id="user-display">👤</span>
       <span style="font-size:.7rem;opacity:.7">▾</span>
     </div>
-    <button onclick="doLogout()" title="Abmelden" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.8rem;display:none" id="logout-btn">⇤</button>
   </div>
 </div>
 <div class="notice" id="notice-bar">ℹ️ Diese Seite wird von der Chorleitung gepflegt und lädt Änderungen automatisch.</div>
@@ -414,9 +414,7 @@ html.fs-sehrgross{font-size:20.5px}
   <div class="mtab" onclick="showPage('mitglieder',this)">👥 Mitglieder</div>
   <div class="mtab" onclick="showPage('plakate',this)">📋 Plakate</div>
   <div class="mtab" onclick="showPage('kommentare',this)">💬 Kommentare <span id="k-count" style="background:rgba(41,128,185,.15);color:#2563b5;padding:1px 6px;border-radius:10px;font-size:.72rem;margin-left:3px"></span></div>
-  <div class="mtab admin-tab admin-only" onclick="showPage('anwesenheit',this)">📊 Anwesenheit</div>
-  <div class="mtab admin-tab admin-only" onclick="showPage('statistik',this)">📈 Statistik</div>
-  <div class="mtab user-only" id="tab-einstellungen" style="display:none" onclick="showPage('einstellungen',this)">⚙️ Einstellungen</div>
+  <div class="mtab admin-tab admin-only" onclick="showPage('statistik',this)">📊 Auswertung</div>
   <div class="mtab admin-tab admin-only" onclick="showPage('konsole',this)">⚙️ Konsole</div>
 </div>
 
@@ -732,7 +730,15 @@ html.fs-sehrgross{font-size:20.5px}
   <div id="kommentare-list"></div>
 </div>
 
-<div class="page admin-only" id="p-anwesenheit">
+<div class="page admin-only" id="p-statistik">
+  <div class="sub-tabs">
+    <button id="atab-statistik" class="stab active" onclick="setAuswertungTab('statistik')">📈 Statistik</button>
+    <button id="atab-anwesenheit" class="stab" onclick="setAuswertungTab('anwesenheit')">✅ Anwesenheit</button>
+  </div>
+  <div id="av-statistik">
+    <div id="statistik-content"></div>
+  </div>
+  <div id="av-anwesenheit" style="display:none">
   <div class="card">
     <div class="card-title">✅ Anwesenheit erfassen</div>
     <div style="font-size:.83rem;color:#666;margin-bottom:10px">Wähle die Probe und tippe alle an, die <strong>fehlen</strong> (rot). Vorab-Abmeldungen sind schon markiert.</div>
@@ -756,10 +762,7 @@ html.fs-sehrgross{font-size:20.5px}
     </div>
     <div id="anw-stats"></div>
   </div>
-</div>
-
-<div class="page admin-only" id="p-statistik">
-  <div id="statistik-content"></div>
+  </div>
 </div>
 
 <div class="page admin-only" id="p-konsole">
@@ -1009,14 +1012,22 @@ html.fs-sehrgross{font-size:20.5px}
   <div class="sheet">
     <div class="sheet-grip"></div>
     <h4>Mehr</h4>
+    <div class="sheet-label">🎶 Chor</div>
     <div class="sheet-grid">
       <button class="sheet-link" onclick="bnavMore('umfragen')"><span class="si">📊</span>Umfragen</button>
       <button class="sheet-link" onclick="bnavMore('mitglieder')"><span class="si">👥</span>Mitglieder</button>
       <button class="sheet-link" onclick="bnavMore('plakate')"><span class="si">📋</span>Plakate</button>
       <button class="sheet-link" onclick="bnavMore('kommentare')"><span class="si">💬</span>Kommentare</button>
+    </div>
+    <div class="sheet-label sheet-user" style="display:none">👤 Persönlich</div>
+    <div class="sheet-grid">
+      <button class="sheet-link sheet-user" style="display:none" onclick="closeMoreSheet();openAbwesenheit()"><span class="si">🏖️</span>Abwesenheit</button>
       <button class="sheet-link sheet-user" id="more-einst" style="display:none" onclick="bnavMore('einstellungen')"><span class="si">⚙️</span>Einstellungen</button>
-      <button class="sheet-link adm sheet-adm" style="display:none" onclick="bnavMore('anwesenheit')"><span class="si">📊</span>Anwesenheit</button>
-      <button class="sheet-link adm sheet-adm" style="display:none" onclick="bnavMore('statistik')"><span class="si">📈</span>Statistik</button>
+      <button class="sheet-link sheet-user" style="display:none" onclick="closeMoreSheet();doLogout()"><span class="si">⇤</span>Abmelden</button>
+    </div>
+    <div class="sheet-label adm sheet-adm" style="display:none">🔑 Verwaltung</div>
+    <div class="sheet-grid">
+      <button class="sheet-link adm sheet-adm" style="display:none" onclick="bnavMore('statistik')"><span class="si">📊</span>Auswertung</button>
       <button class="sheet-link adm sheet-adm" style="display:none" onclick="bnavMore('konsole')"><span class="si">🔑</span>Konsole</button>
     </div>
   </div>
@@ -1474,7 +1485,7 @@ function showPage(id,tab){
   document.getElementById('p-'+id).classList.add('active');
   if(tab) tab.classList.add('active');
   if(id==='start') renderStart();
-  if(id==='statistik') renderStatistik();
+  if(id==='statistik'){ renderStatistik(); if(document.getElementById('av-anwesenheit')?.style.display!=='none') renderAnwesenheitPage(); }
   if(id==='proben'){renderProben();renderSongPicker();}
   if(id==='termine') renderTermine();
   if(id==='umfragen') renderUmfragen();
@@ -1483,7 +1494,6 @@ function showPage(id,tab){
   if(id==='einstellungen') renderEinstellungen();
   if(id==='lieder') renderLiedwuensche();
   if(id==='plakate') renderPlakate();
-  if(id==='anwesenheit') renderAnwesenheitPage();
   syncBottomNav(id);
   try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){}
 }
@@ -1500,8 +1510,8 @@ function bnav(id){ showPage(id, null); }
 function bnavMore(id){ closeMoreSheet(); showPage(id, null); }
 function openMoreSheet(){
   const loggedIn = (typeof currentUser!=='undefined' && !!currentUser);
-  document.querySelectorAll('#more-sheet .sheet-adm').forEach(b=>b.style.display=adminMode?'flex':'none');
-  const me=document.getElementById('more-einst'); if(me) me.style.display=loggedIn?'flex':'none';
+  document.querySelectorAll('#more-sheet .sheet-adm').forEach(b=>b.style.display=adminMode?(b.classList.contains('sheet-label')?'block':'flex'):'none');
+  document.querySelectorAll('#more-sheet .sheet-user').forEach(b=>b.style.display=loggedIn?(b.classList.contains('sheet-label')?'block':'flex'):'none');
   document.getElementById('more-sheet').classList.add('open');
 }
 function closeMoreSheet(){ document.getElementById('more-sheet').classList.remove('open'); }
@@ -2254,7 +2264,7 @@ function setMitgliederTab(which){
 function setBeitragJahr(delta){ beitragJahr+=delta; renderBeitraege(); }
 function beitragPaidCount(rec){ return BEITRAG_QS.filter(k=>rec&&rec[k]).length; }
 function renderBeitraege(){
-  const canEdit = uiEdit('mitglieder');   // ändern nur Admin im Bearbeiten-Modus
+  const canEdit = isBeitragOwner() || uiEdit('mitglieder');   // Kassenwart darf immer, sonst Admin im Bearbeiten-Modus
   const jahrEl=document.getElementById('beitrag-jahr'); if(jahrEl) jahrEl.textContent=beitragJahr;
   const hintEl=document.getElementById('beitrag-hint');
   if(hintEl) hintEl.textContent = '30 € pro Quartal · 120 € pro Jahr.' + (canEdit ? ' Tippe ein Quartal an, um „bezahlt" zu markieren.' : ' Die Liste folgt automatisch der Mitgliederliste.');
@@ -2293,7 +2303,7 @@ function renderBeitraege(){
   }).join('');
 }
 async function toggleBeitrag(key, q){
-  if(!uiEdit('mitglieder')) return;
+  if(!(isBeitragOwner() || uiEdit('mitglieder'))) return;
   if(!beitraege[beitragJahr]) beitraege[beitragJahr]={};
   if(!beitraege[beitragJahr][key]) beitraege[beitragJahr][key]={};
   const val=!beitraege[beitragJahr][key][q];
@@ -2302,7 +2312,7 @@ async function toggleBeitrag(key, q){
   renderBeitraege();
 }
 async function markBeitragJahr(key){
-  if(!uiEdit('mitglieder')) return;
+  if(!(isBeitragOwner() || uiEdit('mitglieder'))) return;
   if(!beitraege[beitragJahr]) beitraege[beitragJahr]={};
   const rec=beitraege[beitragJahr][key]||{};
   const val=!BEITRAG_QS.every(k=>rec[k]);   // alle gesetzt? -> aus, sonst alle an
@@ -2557,6 +2567,14 @@ function _statBars(items, color){
     <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:3px"><span style="font-weight:600;color:#333">${esc(i.label)}</span><span style="color:#888">${i.sub||i.value}</span></div>
     <div style="background:#eef1f5;border-radius:6px;height:14px;overflow:hidden"><div style="height:100%;width:${Math.round(i.value/max*100)}%;background:${color};border-radius:6px;min-width:2px"></div></div>
   </div>`).join('');
+}
+// Unter-Tabs der Auswertung-Seite: Statistik | Anwesenheit erfassen
+function setAuswertungTab(t){
+  document.getElementById('av-statistik').style.display = t==='statistik'?'':'none';
+  document.getElementById('av-anwesenheit').style.display = t==='anwesenheit'?'':'none';
+  document.getElementById('atab-statistik').classList.toggle('active', t==='statistik');
+  document.getElementById('atab-anwesenheit').classList.toggle('active', t==='anwesenheit');
+  if(t==='anwesenheit') renderAnwesenheitPage(); else renderStatistik();
 }
 function renderStatistik(){
   const el=document.getElementById('statistik-content'); if(!el) return;
