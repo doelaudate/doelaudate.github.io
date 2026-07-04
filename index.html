@@ -710,6 +710,10 @@ html.fs-sehrgross{font-size:20.5px}
     <div style="font-size:.82rem;color:#666;margin-bottom:12px">Trage dich auf einen Standort ein, wenn du das Plakat dorthin bringst.</div>
     <div id="plakate-list"></div>
   </div>
+  <div class="card" id="plakate-ranking-card" style="margin-top:12px;display:none">
+    <div class="card-title">🏆 Wer verteilt wie viel?</div>
+    <div id="plakate-ranking"></div>
+  </div>
 </div>
 
 <div class="page" id="p-kommentare">
@@ -4064,9 +4068,9 @@ async function addPlakat(){
   await loadPlakate();
 }
 // Ortschaften rund um Dölau für die Auswahl (freie Eingabe über „Andere…" möglich)
-const PLAKAT_ORTSCHAFTEN=['Dölau','Heide-Nord','Kröllwitz','Nietleben','Halle-Neustadt','Halle (Zentrum)','Lieskau','Salzmünde','Zappendorf','Bennstedt','Sonstiges'];
+const PLAKAT_ORTSCHAFTEN=['Dölau','Heide-Nord','Heide-Süd','Lettin','Kröllwitz','Nietleben','Halle-Neustadt','Halle (Zentrum)','Giebichenstein','Trotha','Lieskau','Salzmünde','Zappendorf','Bennstedt','Beesenstedt','Höhnstedt','Schochwitz','Köllme','Langenbogen','Angersdorf','Zscherben','Holleben','Teutschenthal','Sonstiges'];
 // Typische Orte, an denen Chor-Plakate gut aufgehoben sind (Antippen füllt das Formular)
-const PLAKAT_VORSCHLAEGE=['Bäckerei','Apotheke','Supermarkt (Schwarzes Brett)','Kirche / Gemeindehaus','Kita','Grundschule','Arztpraxis','Physiotherapie','Friseur','Bibliothek','Sparkasse / Bank','Schaukasten / Bushaltestelle','Sportverein / Vereinsheim','Café','Blumenladen','Getränkemarkt','Seniorenheim'];
+const PLAKAT_VORSCHLAEGE=['Bäckerei','Apotheke','Supermarkt (Schwarzes Brett)','Kirche / Gemeindehaus','Kita','Grundschule','Arztpraxis','Physiotherapie','Friseur','Bibliothek','Sparkasse / Bank','Schaukasten / Bushaltestelle','Sportverein / Vereinsheim','Café','Gaststätte / Restaurant','Blumenladen','Getränkemarkt','Buchhandlung','Musikschule','Rathaus / Bürgerbüro','Ärztehaus','Seniorenheim'];
 function plVorschlag(name){
   const det=document.querySelector('#p-plakate details'); if(det) det.open=true;
   const inp=document.getElementById('pl-ort'); if(inp){ inp.value=name; inp.focus(); }
@@ -4141,7 +4145,11 @@ function renderPlakate(){
   // Fortschrittsbalken
   const prog=document.getElementById('plakate-progress'), fill=document.getElementById('plakate-progress-fill');
   if(prog&&fill){ prog.style.display=total?'':'none'; fill.style.width=total?Math.round(taken/total*100)+'%':'0%'; }
-  if(!plakate.length){ el.innerHTML='<div class="empty" style="padding:24px">Noch keine Plakat-Standorte angelegt.</div>'; return; }
+  if(!plakate.length){
+    el.innerHTML='<div class="empty" style="padding:24px">Noch keine Plakat-Standorte angelegt.</div>';
+    const rc=document.getElementById('plakate-ranking-card'); if(rc) rc.style.display='none';
+    return;
+  }
   const myName=getUserVoteName();
   const karte=p=>{
     const done=!!p.von;
@@ -4183,6 +4191,21 @@ function renderPlakate(){
     html+=`<details class="t-coll" style="margin-top:10px"><summary>✅ Übernommen (${fertig.length})</summary><div style="padding-top:4px">${nachOrtschaft(fertig)}</div></details>`;
   }
   el.innerHTML=html;
+  // 🏆 Verteiler-Statistik: Standorte (und Plakat-Anzahl, falls erfasst) pro Person
+  const rankCard=document.getElementById('plakate-ranking-card'), rankEl=document.getElementById('plakate-ranking');
+  if(rankCard && rankEl){
+    const rank={};
+    fertig.forEach(p=>{
+      const n=prettyName(p.von)||p.von;
+      if(!rank[n]) rank[n]={standorte:0, stueck:0};
+      rank[n].standorte++;
+      rank[n].stueck+=parseInt(p.anzahl)||1;
+    });
+    const items=Object.entries(rank).sort((a,b)=>b[1].standorte-a[1].standorte||b[1].stueck-a[1].stueck)
+      .map(([n,r])=>({label:n, value:r.standorte, sub:r.standorte+' Standort'+(r.standorte===1?'':'e')+(r.stueck>r.standorte?' · ~'+r.stueck+' Plakate':'')}));
+    rankCard.style.display=items.length?'':'none';
+    rankEl.innerHTML=items.length?_statBars(items,'#8e44ad'):'';
+  }
 }
 
 // ===== GEBURTSTAGE IN TERMINE =====
