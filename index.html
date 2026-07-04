@@ -192,7 +192,7 @@ html.fs-sehrgross{font-size:20.5px}
 /* Mehr-Sheet */
 .sheet-overlay{display:none;position:fixed;inset:0;z-index:95;background:rgba(15,25,45,.42);align-items:flex-end}
 .sheet-overlay.open{display:flex;animation:fadeIn .18s ease}
-.sheet{background:#fff;width:100%;border-radius:22px 22px 0 0;padding:10px 14px calc(18px + env(safe-area-inset-bottom));box-shadow:var(--shadow-lg);animation:sheetUp .24s cubic-bezier(.2,.8,.2,1)}
+.sheet{background:#fff;width:100%;max-width:540px;margin:0 auto;border-radius:22px 22px 0 0;padding:10px 14px calc(18px + env(safe-area-inset-bottom));box-shadow:var(--shadow-lg);animation:sheetUp .24s cubic-bezier(.2,.8,.2,1)}
 @keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
 .sheet-grip{width:40px;height:4px;border-radius:2px;background:#d3dae3;margin:6px auto 12px}
 .sheet h4{font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:6px 6px 8px}
@@ -416,6 +416,7 @@ html.fs-sehrgross{font-size:20.5px}
   <div class="mtab" onclick="showPage('kommentare',this)">💬 Kommentare <span id="k-count" style="background:rgba(41,128,185,.15);color:#2563b5;padding:1px 6px;border-radius:10px;font-size:.72rem;margin-left:3px"></span></div>
   <div class="mtab admin-tab admin-only" onclick="showPage('statistik',this)">📊 Auswertung</div>
   <div class="mtab admin-tab admin-only" onclick="showPage('konsole',this)">⚙️ Konsole</div>
+  <div class="mtab" onclick="openMoreSheet()">☰ Mehr</div>
 </div>
 
 <div class="content">
