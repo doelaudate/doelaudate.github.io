@@ -888,12 +888,9 @@ html.fs-sehrgross{font-size:20.5px}
       <div id="auto-logout-result" style="font-size:.8rem;color:#27ae60;margin-top:6px"></div>
     </div>
     <div class="konsole-section">
-      <div class="konsole-title">🔑 Admin-Passwort ändern</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-        <div><label style="display:block;font-size:.78rem;margin-bottom:3px;color:#666">Neues Passwort</label><input type="password" id="new-pw" class="fl-input" style="width:180px" placeholder="Neues Passwort"></div>
-        <button class="btn btn-primary btn-sm" onclick="changePw()">Speichern</button>
-      </div>
-      <div id="pw-result" style="font-size:.8rem;color:#27ae60;margin-top:6px"></div>
+      <div class="konsole-title">🔑 Admin-Zugang</div>
+      <div style="font-size:.83rem;color:#666">Das früher geteilte Admin-Passwort wurde aus Sicherheitsgründen abgeschafft. Admin-Rechte und Einzelberechtigungen vergibst du jetzt pro Person unter <strong>„Nutzer &amp; Rechte"</strong>. Wer dort Admin ist, kommt automatisch in den Bearbeiten-Modus.</div>
+      <div id="pw-result" style="font-size:.8rem;color:#2563b5;margin-top:6px"></div>
     </div>
     </div>
     <div class="konsole-pane" id="kp-benutzer">
@@ -1368,7 +1365,7 @@ function runSearch(){
 }
 function showLoading(on){ const lo=document.getElementById('loading-overlay'); if(lo) lo.style.display=on?'flex':'none'; }
 applyFontSize();
-const ADMIN_PW='Asf06217';
+// Admin-Rechte kommen ausschließlich aus dem Nutzerprofil (isAdmin/permissions) — kein geteiltes Passwort mehr.
 const TYP_LABEL={"konzert": "🎵 Konzert", "fest": "🎪 Fest", "chorlager": "🏕️ Chorlager", "gottesdienst": "⛪ Gottesdienst", "probe": "🎹 Probe", "sonstiges": "📌 Sonstiges"};
 const TYP_COLOR={"konzert": "#2563b5", "fest": "#e67e22", "chorlager": "#27ae60", "gottesdienst": "#8e44ad", "probe": "#c0392b", "sonstiges": "#7f8c8d"};
 const INIT_MITGLIEDER=[]; // Mitgliederdaten liegen in der Datenbank (login-geschuetzt), nicht im oeffentlichen Code
@@ -1392,15 +1389,21 @@ function setEditMode(on){
   if(typeof renderPlakate==='function') renderPlakate();
   updateEditModeUI();
 }
+// Wer darf überhaupt bearbeiten? Voll-Admin ODER Nutzer mit Einzelrechten (aus dem Profil).
+function canUseEditMode(){
+  return !!(currentUserProfile && (currentUserProfile.isAdmin || (Array.isArray(currentUserProfile.permissions) && currentUserProfile.permissions.length>0)));
+}
 function updateEditModeUI(){
+  const canEdit=canUseEditMode();
   document.querySelectorAll('.editmode-btn').forEach(b=>{
+    b.style.display = canEdit ? '' : 'none';
     b.textContent = editMode ? '🔓 Bearbeiten-Modus ist AN – ausschalten' : '✏️ Bearbeiten-Modus einschalten';
     b.style.background = editMode ? '#27ae60' : '#ecf0f1';
     b.style.color = editMode ? 'white' : '#555';
   });
   const ib=document.getElementById('editmode-icon-btn');
   if(ib){
-    ib.style.display = adminMode ? '' : 'none';
+    ib.style.display = canEdit ? '' : 'none';
     ib.textContent = editMode ? '🔓' : '✏️';
     ib.style.background = editMode ? '#27ae60' : 'rgba(255,255,255,.15)';
     ib.title = editMode ? 'Bearbeiten-Modus ist AN – ausschalten' : 'Bearbeiten-Modus einschalten';
@@ -1409,7 +1412,6 @@ function updateEditModeUI(){
 let aktiveSaison='__all__', aktiveTerminTab='anstehend';
 let liederView='aktiv'; // 'aktiv' | 'archiv'
 let kalMonat=new Date().getMonth(), kalJahr=new Date().getFullYear(), kalSel=null;
-let adminPw = localStorage.getItem('chor_admin_pw') || ADMIN_PW;
 
 // UTILS
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
@@ -1422,23 +1424,7 @@ function getStat(id){if(!D)return{last:null,count:0};const ps=(D.proben||[]).fil
 function uid(){return Math.random().toString(36).substr(2,9)}
 
 // ADMIN
-function toggleAdmin(){
-  if(adminMode){
-    adminMode=false;
-    sessionStorage.removeItem('chor_admin');
-    applyAdminMode();
-    return;
-  }
-  const pw=prompt('Admin-Passwort:');
-  if(pw===adminPw){
-    adminMode=true;
-    sessionStorage.setItem('chor_admin','1');
-    applyAdminMode();
-    alert('✅ Admin-Modus aktiviert');
-  } else if(pw!==null){
-    alert('❌ Falsches Passwort');
-  }
-}
+// (wird weiter unten durch die profilbasierte Version ersetzt)
 // Admin-Formulare standardmäßig einklappen (Label = Schalter), damit der Inhalt oben bleibt
 function initAdminCollapse(){
   document.querySelectorAll('.admin-section').forEach(sec=>{
@@ -3347,13 +3333,10 @@ function exportData(){
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='chor-doelau-backup-'+new Date().toISOString().split('T')[0]+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);
 }
+// Geteiltes Admin-Passwort wurde abgeschafft — Admin-Rechte laufen jetzt über die Benutzerverwaltung (isAdmin).
 function changePw(){
-  const nw=document.getElementById('new-pw').value;
-  if(!nw||nw.length<4){alert('Passwort zu kurz (min. 4 Zeichen).');return;}
-  localStorage.setItem('chor_admin_pw',nw);
-  adminPw=nw;
-  document.getElementById('pw-result').textContent='✅ Passwort geändert!';
-  document.getElementById('new-pw').value='';
+  const r=document.getElementById('pw-result');
+  if(r) r.textContent='ℹ️ Das geteilte Admin-Passwort gibt es nicht mehr. Admin-Rechte vergibst du unten unter „Nutzer & Rechte".';
 }
 
 
@@ -3421,21 +3404,6 @@ async function doLogin() {
   const errEl = document.getElementById('login-err');
   errEl.textContent = '';
   if(!input || !pw) { errEl.textContent = 'Bitte alle Felder ausfüllen.'; return; }
-  
-  // Special admin bypass: username "admin" with admin password
-  if(input.toLowerCase() === 'admin' && pw === adminPw) {
-    adminMode = true;
-    sessionStorage.setItem('chor_admin','1');
-    currentUser = {email:'admin@local',uid:'admin'};
-    document.getElementById('login-overlay').style.display = 'none';
-    document.getElementById('user-display').textContent = '🔑 Admin';
-    document.getElementById('user-chip').style.display = 'flex';
-    const _bell3=document.getElementById('bell-btn'); if(_bell3) _bell3.style.display='block';
-    const _lb=document.getElementById('logout-btn');if(_lb)_lb.style.display='block';
-    applyAdminMode();
-    loadAll();
-    return;
-  }
   
   let email = input;
   if(!input.includes('@')) {
@@ -3589,12 +3557,13 @@ function showUserMenu() {
   const displayName = profile ? (profile.vorname+' '+profile.nachname) : username;
   document.getElementById('menu-username').textContent = profile?.username ? profile.username + ' – ' + displayName : username;
   document.getElementById('menu-email').textContent = email;
-  // Show admin toggle
+  // Admin-Umschalter nur für echte Admins (isAdmin) — normale Mitglieder sehen ihn nicht mehr
   const adminSection = document.getElementById('admin-toggle-section');
   if(adminSection) {
-    adminSection.style.display = 'block';
+    const isAdm = !!(profile && profile.isAdmin);
+    adminSection.style.display = isAdm ? 'block' : 'none';
     const btn = document.getElementById('admin-toggle-btn');
-    if(btn) btn.textContent = adminMode ? '🔓 Admin-Modus deaktivieren' : '🔑 Admin-Modus aktivieren';
+    if(btn) btn.textContent = adminMode ? '🔓 Admin-Ansicht aus (als Mitglied ansehen)' : '🔑 Admin-Ansicht an';
   }
   document.getElementById('modal-user-menu').classList.add('open');
 }
@@ -3611,25 +3580,14 @@ async function changeUserPw() {
   }
 }
 
-// Override toggleAdmin to use user menu
+// Admin-Modus wird durch das eigene Konto bestimmt (isAdmin). Der Schalter erlaubt echten Admins nur,
+// die Ansicht vorübergehend als „normales Mitglied" zu betrachten — kein Passwort mehr.
 function toggleAdmin() {
-  if(adminMode) {
-    adminMode = false;
-    sessionStorage.removeItem('chor_admin');
-    applyAdminMode();
-    closeModal();
-    return;
-  }
-  const pw = prompt('Admin-Passwort:');
-  if(pw === adminPw) {
-    adminMode = true;
-    sessionStorage.setItem('chor_admin','1');
-    applyAdminMode();
-    closeModal();
-    alert('✅ Admin-Modus aktiviert');
-  } else if(pw !== null) {
-    alert('❌ Falsches Passwort');
-  }
+  if(!(currentUserProfile && currentUserProfile.isAdmin)) { closeModal(); return; }
+  adminMode = !adminMode;
+  if(adminMode) sessionStorage.setItem('chor_admin','1'); else { sessionStorage.removeItem('chor_admin'); setEditMode(false); }
+  applyAdminMode();
+  closeModal();
 }
 
 
