@@ -333,10 +333,13 @@ html.fs-sehrgross{font-size:20.5px}
   // Map to window globals used by the app
   window._fbAuth = _auth;
   window._fbSignIn = (auth, email, pw) => auth.signInWithEmailAndPassword(email, pw);
+  window._fbSignInCustom = (auth, token) => auth.signInWithCustomToken(token);
   window._fbCreateUser = (auth, email, pw) => auth.createUserWithEmailAndPassword(email, pw);
   window._fbSignOut = (auth) => auth.signOut();
   window._fbUpdatePassword = (user, pw) => user.updatePassword(pw);
   window._fbResetPassword = (auth, email) => auth.sendPasswordResetEmail(email);
+  // Server-Endpoint für Benutzername-Login/Reset (E-Mail bleibt serverseitig)
+  window.USERNAME_AUTH_URL = 'https://europe-west1-chor-doelau.cloudfunctions.net/usernameAuth';
   _auth.onAuthStateChanged((user) => {
     if(window.onAuthChange) window.onAuthChange(user);
   });
@@ -3404,29 +3407,29 @@ async function doLogin() {
   const errEl = document.getElementById('login-err');
   errEl.textContent = '';
   if(!input || !pw) { errEl.textContent = 'Bitte alle Felder ausfüllen.'; return; }
-  
-  let email = input;
-  if(!input.includes('@')) {
-    try {
-      const res = await dbFetch(DB+'/usernames/'+input.toLowerCase()+'.json');
-      if(res.ok) {
-        const data = await res.json();
-        if(data && data.email) email = data.email;
-        else { errEl.textContent = 'Benutzername nicht gefunden.'; return; }
-      } else { errEl.textContent = 'Benutzername nicht gefunden.'; return; }
-    } catch(e) { errEl.textContent = 'Verbindungsfehler.'; return; }
-  }
-  
+
   const btn = document.getElementById('btn-login-submit');
   if(btn){btn.textContent = '⏳'; btn.disabled = true;}
+  const done=()=>{ if(btn){btn.textContent = 'Anmelden'; btn.disabled = false;} };
   try {
-    await window._fbSignIn(window._fbAuth, email, pw);
+    if(input.includes('@')) {
+      // E-Mail-Login direkt bei Firebase
+      await window._fbSignIn(window._fbAuth, input.toLowerCase(), pw);
+    } else {
+      // Benutzername-Login über den Server — die E-Mail wird NICHT an den Browser gegeben
+      const r = await fetch(window.USERNAME_AUTH_URL, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',username:input,password:pw})});
+      if(!r.ok){ errEl.textContent = (r.status===401||r.status===404) ? 'Benutzername oder Passwort falsch.' : 'Anmeldung gerade nicht möglich. Bitte später erneut versuchen.'; done(); return; }
+      const j = await r.json().catch(()=>({}));
+      if(!j.token){ errEl.textContent = 'Benutzername oder Passwort falsch.'; done(); return; }
+      await window._fbSignInCustom(window._fbAuth, j.token);
+    }
   } catch(e) {
     let msg = 'E-Mail oder Passwort falsch.';
     if(e.code==='auth/too-many-requests') msg = 'Zu viele Versuche. Bitte warte kurz.';
+    else if(String(e&&e.message||e).includes('fetch')) msg = 'Keine Verbindung zum Server. Bitte Internet prüfen.';
     errEl.textContent = msg;
   }
-  if(btn){btn.textContent = 'Anmelden'; btn.disabled = false;}
+  done();
 }
 
 async function doRegister() {
@@ -3527,26 +3530,19 @@ async function showResetPw() {
   errEl.textContent = '';
   if(!input) { errEl.textContent = 'Bitte E-Mail-Adresse oder Benutzernamen eingeben.'; return; }
 
-  let email = input;
-
-  // If no @ → treat as username, look up email in DB
-  if(!input.includes('@')) {
-    try {
-      const r = await dbFetch(DB + '/usernames/' + input.toLowerCase() + '.json');
-      const d = r.ok ? await r.json() : null;
-      if(!d?.email) { errEl.textContent = 'Benutzername nicht gefunden.'; return; }
-      email = d.email;
-    } catch(e) { errEl.textContent = 'Fehler beim Suchen des Benutzers.'; return; }
-  }
-
+  const okMsg = 'Falls das Konto existiert, wurde eine E-Mail zum Zurücksetzen verschickt. Bitte Posteingang (und Spam) prüfen.';
+  const showOk = () => { errEl.style.color = '#27ae60'; errEl.textContent = '✅ ' + okMsg; setTimeout(() => { errEl.textContent = ''; errEl.style.color = '#e74c3c'; }, 6000); };
   try {
-    await window._fbResetPassword(window._fbAuth, email);
-    errEl.style.color = '#27ae60';
-    errEl.textContent = '✅ Reset-Mail gesendet an: ' + email;
-    setTimeout(() => { errEl.textContent = ''; errEl.style.color = '#e74c3c'; }, 5000);
+    if(input.includes('@')) {
+      await window._fbResetPassword(window._fbAuth, input.toLowerCase());
+    } else {
+      // Benutzername: Reset serverseitig auslösen — die E-Mail wird NICHT an den Browser gegeben
+      await fetch(window.USERNAME_AUTH_URL, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'reset',username:input})});
+    }
+    showOk();
   } catch(e) {
-    if(e.code === 'auth/user-not-found') errEl.textContent = 'Keine E-Mail-Adresse hinterlegt.';
-    else errEl.textContent = 'Fehler: ' + e.message;
+    // Neutrale Meldung, um die Existenz eines Kontos nicht zu verraten
+    showOk();
   }
 }
 
