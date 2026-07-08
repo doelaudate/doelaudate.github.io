@@ -338,6 +338,7 @@ html.fs-sehrgross{font-size:20.5px}
   window._fbSignOut = (auth) => auth.signOut();
   window._fbUpdatePassword = (user, pw) => user.updatePassword(pw);
   window._fbResetPassword = (auth, email) => auth.sendPasswordResetEmail(email);
+  window._fbSendVerification = (user) => user.sendEmailVerification();
   // Server-Endpoint für Benutzername-Login/Reset (E-Mail bleibt serverseitig)
   window.USERNAME_AUTH_URL = 'https://europe-west1-chor-doelau.cloudfunctions.net/usernameAuth';
   _auth.onAuthStateChanged((user) => {
@@ -3367,6 +3368,25 @@ async function loadUserProfile(uid, email) {
     const res = await dbFetch(DB+'/userprofiles/'+uid+'.json');
     const profile = res.ok ? await res.json() : null;
     currentUserProfile = profile;
+    // E-Mail-Bestätigung erzwingen — NUR für neue Konten mit pendingVerify (bestehende Konten unberührt)
+    if(profile && profile.pendingVerify){
+      if(currentUser && currentUser.emailVerified){
+        // bestätigt -> Flag entfernen, normal weiter
+        try{ await dbFetch(DB+'/userprofiles/'+uid+'/pendingVerify.json',{method:'DELETE'}); }catch(_){}
+        delete profile.pendingVerify;
+      } else {
+        // noch nicht bestätigt -> neue Mail schicken, abmelden, Hinweis zeigen
+        try{ if(currentUser) await window._fbSendVerification(currentUser); }catch(_){}
+        try{ await window._fbSignOut(window._fbAuth); }catch(_){}
+        currentUser = null; currentUserProfile = null;
+        document.getElementById('login-overlay').style.display = 'flex';
+        document.getElementById('user-chip').style.display = 'none';
+        document.querySelectorAll('.user-only').forEach(el=>el.style.display='none');
+        const le = document.getElementById('login-err');
+        if(le){ le.style.color = '#e67e22'; le.textContent = '📧 Bitte bestätige zuerst deine E-Mail. Wir haben dir gerade (erneut) einen Bestätigungslink an ' + email + ' geschickt – prüfe auch den Spam-Ordner.'; }
+        return;
+      }
+    }
     const displayName = profile?.anzeigename || profile?.username || email.split('@')[0];
     document.getElementById('user-display').textContent = '👤 ' + displayName;
     document.getElementById('user-chip').style.display = 'flex';
@@ -3418,7 +3438,7 @@ async function doLogin() {
     } else {
       // Benutzername-Login über den Server — die E-Mail wird NICHT an den Browser gegeben
       const r = await fetch(window.USERNAME_AUTH_URL, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',username:input,password:pw})});
-      if(!r.ok){ errEl.textContent = (r.status===401||r.status===404) ? 'Benutzername oder Passwort falsch.' : 'Anmeldung gerade nicht möglich. Bitte später erneut versuchen.'; done(); return; }
+      if(!r.ok){ errEl.textContent = r.status===429 ? 'Zu viele Fehlversuche. Bitte in etwa 15 Minuten erneut versuchen.' : (r.status===401||r.status===404) ? 'Benutzername oder Passwort falsch.' : 'Anmeldung gerade nicht möglich. Bitte später erneut versuchen.'; done(); return; }
       const j = await r.json().catch(()=>({}));
       if(!j.token){ errEl.textContent = 'Benutzername oder Passwort falsch.'; done(); return; }
       await window._fbSignInCustom(window._fbAuth, j.token);
@@ -3474,8 +3494,8 @@ async function doRegister() {
       username = base.substring(0,8) || ('USER'+Date.now().toString().slice(-4));
     }
 
-    // Store profile
-    const profile = { uid, username, email, vorname, nachname, geburtstag, isAdmin:false, erstellt:new Date().toISOString() };
+    // Store profile (pendingVerify: E-Mail muss vor der ersten Anmeldung bestätigt werden)
+    const profile = { uid, username, email, vorname, nachname, geburtstag, isAdmin:false, pendingVerify:true, erstellt:new Date().toISOString() };
     await dbFetch(DB+'/userprofiles/'+uid+'.json', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(profile)});
     // Store username lookup
     await dbFetch(DB+'/usernames/'+username.toLowerCase()+'.json', {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,uid})});
@@ -3497,9 +3517,17 @@ async function doRegister() {
       }
     }catch(e){ console.warn('Mitglied-Anlage', e); }
 
-    // Mitglied bestätigt -> jetzt regulär in die App
+    // Bestätigungs-Mail senden und abmelden: Anmeldung erst nach E-Mail-Bestätigung
+    try{ await window._fbSendVerification(window._fbAuth.currentUser); }catch(_){}
     window._registering = false;
-    onAuthChange(window._fbAuth.currentUser);
+    try{ await window._fbSignOut(window._fbAuth); }catch(_){}
+    currentUser = null;
+    switchAuthTab('login');
+    errEl.style.color = '#27ae60';
+    errEl.textContent = '✅ Fast fertig! Wir haben dir eine Bestätigungs-Mail an ' + email + ' geschickt. Bitte klick den Link darin – danach kannst du dich anmelden.';
+    setTimeout(()=>{ if(errEl){ errEl.style.color='#e74c3c'; } }, 12000);
+    if(btn){btn.textContent = 'Konto erstellen'; btn.disabled = false;}
+    return;
   } catch(e) {
     window._registering = false;
     let msg = 'Fehler bei der Registrierung.';
