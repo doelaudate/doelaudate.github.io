@@ -1239,9 +1239,12 @@ html.fs-sehrgross{font-size:20.5px}
         <button class="btn btn-gray btn-sm" type="button" onclick="slAddCustom()">＋ Titel</button>
       </div>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-gray" onclick="closeModal()">Abbrechen</button>
-      <button class="btn btn-success" onclick="saveSetliste()">💾 Speichern</button>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn btn-sm" type="button" style="background:#eef1f5;color:#1d4e96" onclick="slPrint()">🖨️ Drucken</button>
+      <span>
+        <button class="btn btn-gray" onclick="closeModal()">Abbrechen</button>
+        <button class="btn btn-success" onclick="saveSetliste()">💾 Speichern</button>
+      </span>
     </div>
   </div>
 </div>
@@ -4375,7 +4378,8 @@ function setlisteHtml(t){
   const songCount = items.filter(it=>it.typ!=='moderation').length;
   const modCount = items.length - songCount;
   const sub = `${songCount} Lied${songCount===1?'':'er'}${modCount?` · ${modCount} Mod.`:''}`;
-  return `<details class="t-coll"><summary>🎵 Ablauf / Setliste · ${sub}</summary><div>${rows}</div></details>`;
+  const printBtn = `<div style="margin-top:8px"><button class="btn btn-sm" type="button" style="background:#eef1f5;color:#1d4e96;font-size:.76rem" onclick="printSetliste('${esc(t.id)}')">🖨️ Setliste drucken</button></div>`;
+  return `<details class="t-coll"><summary>🎵 Ablauf / Setliste · ${sub}</summary><div>${rows}${printBtn}</div></details>`;
 }
 let _slId = null;
 let _slItems = [];
@@ -4385,11 +4389,19 @@ function editSetliste(terminId){
   _slId = terminId;
   _slItems = normSetliste(t.setliste);
   document.getElementById('sl-titel').textContent = t.titel||'';
-  // Lied-Auswahl aus allen Saisons
-  const allSongs = (D&&D.seasons) ? D.seasons.flatMap(s=>(s.songs||[]).map(song=>song.name)) : [];
-  const uniq = [...new Set(allSongs.filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+  // Lied-Auswahl nach Saison gruppiert (aktive zuerst, dann Archiv)
   const sel = document.getElementById('sl-song-select');
-  if(sel) sel.innerHTML = '<option value="">— Lied wählen —</option>' + uniq.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if(sel){
+    const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'};
+    let html = '<option value="">— Lied wählen —</option>';
+    (D&&D.seasons||[]).forEach(s=>{
+      const songs=[...new Set((s.songs||[]).map(x=>x.name).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+      if(!songs.length) return;
+      const label = (ic[s.type]||'🎵')+' '+(s.name||'Saison');
+      html += `<optgroup label="${esc(label)}">` + songs.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('') + '</optgroup>';
+    });
+    sel.innerHTML = html;
+  }
   ['sl-mod-input','sl-custom-input'].forEach(id=>{const e=document.getElementById(id); if(e) e.value='';});
   slRender();
   document.getElementById('modal-setliste').classList.add('open');
@@ -4439,6 +4451,42 @@ async function saveSetliste(){
   closeModal();
   renderTermine();
 }
+// Druckansicht der Setliste (aus dem Termin oder – im Editor – aus dem aktuellen Stand)
+function printSetliste(terminId, itemsOverride){
+  const t = termine.find(x=>x.id===terminId);
+  if(!t) return;
+  const items = itemsOverride || normSetliste(t.setliste);
+  if(!items.length){ alert('Für diesen Termin ist noch keine Setliste angelegt.'); return; }
+  let nr=0;
+  const rows = items.map(it => it.typ==='moderation'
+    ? `<li class="mod">🎤 <em>${esc(it.text)}</em></li>`
+    : `<li><span class="n">${++nr}.</span> ${esc(it.text)}</li>`).join('');
+  const dateStr = t.datum_ende?fmt(t.datum)+' – '+fmt(t.datum_ende):fmt(t.datum);
+  const w = window.open('', '_blank');
+  if(!w){ alert('Bitte Pop-ups für diese Seite erlauben, dann klappt der Druck.'); return; }
+  w.document.write(`<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Setliste – ${esc(t.titel||'')}</title>
+    <style>
+      *{box-sizing:border-box} body{font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;max-width:640px;margin:32px auto;padding:0 24px;color:#1a1a1a}
+      h1{font-size:1.6rem;margin:0 0 3px} .date{color:#555;margin-bottom:22px;font-size:1rem}
+      ul{list-style:none;padding:0;margin:0}
+      li{padding:9px 2px;border-bottom:1px solid #eee;font-size:1.12rem}
+      li .n{display:inline-block;min-width:2em;color:#2563b5;font-weight:700}
+      li.mod{color:#8e44ad;border-bottom:1px dashed #e7d8f2}
+      .foot{margin-top:28px;font-size:.72rem;color:#aaa;border-top:1px solid #eee;padding-top:8px}
+      @media print{ body{margin:0 auto} .noprint{display:none} }
+      .noprint{margin-bottom:18px}
+      .noprint button{font-size:1rem;padding:8px 18px;border:0;border-radius:8px;background:#2563b5;color:#fff;cursor:pointer}
+    </style></head><body>
+    <div class="noprint"><button onclick="window.print()">🖨️ Drucken</button></div>
+    <h1>${esc(t.titel||'Setliste')}</h1>
+    <div class="date">📅 ${dateStr}${t.uhrzeit?' · '+esc(t.uhrzeit)+' Uhr':''}</div>
+    <ul>${rows}</ul>
+    <div class="foot">Chor Dölau · Setliste gedruckt am ${new Date().toLocaleDateString('de-DE')}</div>
+    </body></html>`);
+  w.document.close(); w.focus();
+  setTimeout(()=>{ try{ w.print(); }catch(_){} }, 350);
+}
+function slPrint(){ if(_slId) printSetliste(_slId, _slItems.map(it=>({typ:it.typ, text:it.text}))); }
 
 // ===== HAUSAUFGABEN EDIT =====
 let _editHAId = null;
