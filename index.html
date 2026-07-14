@@ -2381,6 +2381,18 @@ function allProbenSorted(){
 }
 function memberKey(m){ return String(m.id||m.nr); }
 function memberName(m){ return ((m.vorname||'')+' '+(m.nachname||'')).trim(); }
+// Anzeige-Kurzform: „Martin Wolff" -> „Martin W."; nur ein Namensteil -> unverändert
+function shortName(vorname, nachname){
+  const v=String(vorname||'').trim(); const nn=String(nachname||'').trim();
+  if(v && nn) return v+' '+nn.charAt(0).toUpperCase()+'.';
+  return v || nn || '';
+}
+// Kürzt einen frei getippten „Vorname Nachname"-String zu „Vorname N." (einzelne Wörter bleiben)
+function shortenFree(s){
+  const parts=String(s||'').trim().split(/\s+/);
+  if(parts.length>=2){ const last=parts[parts.length-1]; return parts.slice(0,-1).join(' ')+' '+last.charAt(0).toUpperCase()+'.'; }
+  return s;
+}
 // Vorab-Selbstabmeldungen ('nein') einem Mitglied zuordnen (über Benutzerprofil + Namens-Fallbacks)
 function _norm(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9äöüß]/g,''); }
 
@@ -2400,23 +2412,23 @@ function _anzeigeForUsername(username){
 function prettyName(stored){
   if(stored==null || stored==='') return stored;
   const n=_norm(stored);
-  // 1) Profil, dessen Anzeigename ODER Benutzername passt
+  // 1) Profil per Benutzername/Anzeigename -> „Vorname N."
   for(const uid in userprofilesCache){
     const p=userprofilesCache[uid]; if(!p) continue;
     if(_norm(p.anzeigename)===n || _norm(p.username)===n){
-      if(p.anzeigename) return p.anzeigename;
-      const fn=((p.vorname||'')+' '+(p.nachname||'')).trim(); if(fn) return fn;
+      const sn=shortName(p.vorname, p.nachname); if(sn) return sn;
+      if(p.anzeigename) return shortenFree(p.anzeigename);
       break;
     }
   }
-  // 2) Mitglied per Benutzername -> Live-Anzeigename, sonst voller Name
+  // 2) Mitglied per Benutzername -> „Vorname N."
   let m=mitglieder.find(x=>x.username && _norm(x.username)===n);
-  if(m){ const an=_anzeigeForUsername(m.username); if(an) return an; const fn=memberName(m); if(fn) return fn; }
-  // 3) Bereits voller Mitgliedsname -> ggf. aktuellen Anzeigenamen bevorzugen
+  if(m){ const sn=shortName(m.vorname, m.nachname); if(sn) return sn; }
+  // 3) Bereits voller Mitgliedsname -> „Vorname N."
   m=mitglieder.find(x=>memberName(x) && _norm(memberName(x))===n);
-  if(m){ const an=_anzeigeForUsername(m.username); if(an) return an; return memberName(m)||stored; }
-  // 4) Gast / frei eingetippter Name -> unverändert
-  return stored;
+  if(m){ const sn=shortName(m.vorname, m.nachname); if(sn) return sn; return stored; }
+  // 4) Gast / frei eingetippter Name -> „Vorname N." falls zwei Teile
+  return shortenFree(stored);
 }
 function prettyNames(arr){ return (arr||[]).map(prettyName); }
 // Alle Namens-Varianten, unter denen der aktuelle Benutzer evtl. früher gespeichert wurde
@@ -2730,7 +2742,7 @@ function terminVoteBreakdown(t){
     let v=null;
     for(const k of Object.keys(abs)){ if(cands.includes(_norm(k))){ v=abs[k]; usedKeys.add(_norm(k)); } }
     if(v===null && cands.some(c=>urlaubNorm.has(c))) v='nein';
-    const nm=memberName(m)||('Nr. '+(m.nr||'?'));
+    const nm=shortName(m.vorname,m.nachname)||memberName(m)||('Nr. '+(m.nr||'?'));
     const voice=SATB_VOICES.includes(m.stimme)?m.stimme:'—';
     stat[voice].total++;
     if(v==='ja'){ ja.push(nm); stat[voice].ja++; }
@@ -2753,7 +2765,7 @@ function rueckmeldungenHtml(t, bd){
   const cells=SATB_VOICES.map(v=>cell(v,bd.stat[v])).join('')+cell('o. Stimme',bd.stat['—']);
   const tally=(bd.ja.length||bd.nein.length||bd.vl.length)?`<div class="tally">${bd.ja.length?`<span style="color:#27ae60">✅ ${bd.ja.length}: ${esc(bd.ja.join(', '))}</span><br>`:''}${bd.nein.length?`<span style="color:#e74c3c">❌ ${bd.nein.length}: ${esc(bd.nein.join(', '))}</span><br>`:''}${bd.vl.length?`<span style="color:#f39c12">❓ ${bd.vl.length}: ${esc(bd.vl.join(', '))}</span>`:''}</div>`:'';
   const offen=bd.notVoted.length
-    ? `<div style="font-size:.78rem;color:#7d6608;margin-top:8px"><strong>⏳ Noch nicht abgestimmt (${bd.notVoted.length}):</strong> ${esc(bd.notVoted.map(m=>memberName(m)||('Nr. '+(m.nr||'?'))).join(', '))}</div>`
+    ? `<div style="font-size:.78rem;color:#7d6608;margin-top:8px"><strong>⏳ Noch nicht abgestimmt (${bd.notVoted.length}):</strong> ${esc(bd.notVoted.map(m=>shortName(m.vorname,m.nachname)||memberName(m)||('Nr. '+(m.nr||'?'))).join(', '))}</div>`
     : `<div style="font-size:.78rem;color:#22a559;margin-top:8px">✅ Alle haben abgestimmt.</div>`;
   // Admin: einzelne Stimm-Einträge (roh) verwalten/löschen
   const abs=t.abstimmungen||{};
