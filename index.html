@@ -557,6 +557,10 @@ html.fs-sehrgross{font-size:20.5px}
     <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">
       <div style="flex:1;min-width:150px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Rückmeldefrist (optional)</label><input class="fl-input" type="date" id="t-frist"></div>
     </div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px">
+      <label style="display:flex;align-items:center;gap:7px;font-size:.85rem;cursor:pointer;user-select:none"><input type="checkbox" id="t-keine-abstimmung" style="accent-color:#8e44ad;width:16px;height:16px"> 📢 Nur Info (ohne Abstimmung)</label>
+      <label style="display:flex;align-items:center;gap:7px;font-size:.85rem;cursor:pointer;user-select:none"><input type="checkbox" id="t-startseite" checked style="accent-color:#2563b5;width:16px;height:16px"> 🏠 Auf Startseite anzeigen</label>
+    </div>
     <button class="btn btn-primary" onclick="addTermin()">＋ Termin hinzufügen</button>
   </div>
   <div class="card">
@@ -1532,22 +1536,24 @@ function renderStart(){
 
   // Nächste Termine (max 3) mit Abstimm-Status + Schnell-Abstimmung
   const myName=getUserVoteName();
-  const nextTermine=(termine||[]).filter(t=>((t.datum_ende||t.datum)>=today)).sort((a,b)=>a.datum.localeCompare(b.datum)).slice(0,3);
+  const nextTermine=(termine||[]).filter(t=>((t.datum_ende||t.datum)>=today) && t.startseite!==false).sort((a,b)=>a.datum.localeCompare(b.datum)).slice(0,3);
   html+='<div class="card" style="margin-top:12px">';
   html+='<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="showPageByName(\'termine\')"><span class="card-title" style="margin-bottom:0">📆 Nächste Termine</span><span style="font-size:.76rem;color:#2563b5">Alle ›</span></div>';
   if(nextTermine.length){
     nextTermine.forEach(t=>{
-      const mv=myName?((t.abstimmungen||{})[myName]||null):null;
-      const chip=mv==='ja'?'<span style="background:#d5f5e3;color:#1a7a40;border-radius:12px;padding:2px 9px;font-size:.72rem;font-weight:700">✅ Zugesagt</span>'
+      const infoOnly=!!t.keineAbstimmung;
+      const mv=(myName&&!infoOnly)?((t.abstimmungen||{})[myName]||null):null;
+      const chip=infoOnly?'<span style="background:#f3ecfa;color:#8e44ad;border-radius:12px;padding:2px 9px;font-size:.72rem;font-weight:700">📢 Info</span>'
+        :mv==='ja'?'<span style="background:#d5f5e3;color:#1a7a40;border-radius:12px;padding:2px 9px;font-size:.72rem;font-weight:700">✅ Zugesagt</span>'
         :mv==='nein'?'<span style="background:#fdecea;color:#922b21;border-radius:12px;padding:2px 9px;font-size:.72rem;font-weight:700">❌ Abgesagt</span>'
         :mv==='vielleicht'?'<span style="background:#fef9e7;color:#9a6b00;border-radius:12px;padding:2px 9px;font-size:.72rem;font-weight:700">❓ Vielleicht</span>'
         :(myName?'<span style="background:#eaeef3;color:#666;border-radius:12px;padding:2px 9px;font-size:.72rem;font-weight:700">⚪ Noch offen</span>':'');
       html+=`<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
-          <div><strong>${TYP_IC[t.typ]||'📌'} ${esc(t.titel)}</strong><div style="font-size:.8rem;color:#777;margin-top:2px">${fmt(t.datum)}${t.datum_ende?' – '+fmt(t.datum_ende):''}${t.uhrzeit?' · '+esc(t.uhrzeit):''}</div></div>
+          <div><strong>${TYP_IC[t.typ]||'📌'} ${esc(t.titel)}</strong><div style="font-size:.8rem;color:#777;margin-top:2px">${fmt(t.datum)}${t.datum_ende?' – '+fmt(t.datum_ende):''}${t.uhrzeit?' · '+esc(t.uhrzeit):''}</div>${infoOnly&&t.beschreibung?`<div style="font-size:.78rem;color:#888;margin-top:3px">${esc(t.beschreibung)}</div>`:''}</div>
           ${chip}
         </div>
-        ${(myName&&!mv)?`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        ${(myName&&!mv&&!infoOnly)?`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
           <button class="btn btn-sm" style="background:#27ae60;color:white" onclick="abstimmen('${t.id}','ja').then(()=>renderStart())">✅ Komme</button>
           <button class="btn btn-sm" style="background:#e74c3c;color:white" onclick="abstimmen('${t.id}','nein').then(()=>renderStart())">❌ Komme nicht</button>
           <button class="btn btn-sm" style="background:#f39c12;color:white" onclick="abstimmen('${t.id}','vielleicht').then(()=>renderStart())">❓ Vielleicht</button>
@@ -2792,13 +2798,15 @@ function terminHtml(t,past=false){
   const color=TYP_COLOR[t.typ]||'#888';
   const label=TYP_LABEL[t.typ]||t.typ;
   const dateStr=t.datum_ende?fmt(t.datum)+' – '+fmt(t.datum_ende):fmt(t.datum);
+  const infoOnly = !!t.keineAbstimmung;
   const bd=terminVoteBreakdown(t);
-  const showRueck = !past || bd.ja.length || bd.nein.length || bd.vl.length;
+  const showRueck = !infoOnly && (!past || bd.ja.length || bd.nein.length || bd.vl.length);
   return`<div class="termin-card" style="border-left-color:${color};${past?'opacity:.6':''}">
     <span class="t-badge" style="background:${color}">${label}</span>
-    <div class="t-title">${esc(t.titel)}</div>
-    <div class="t-meta">📅 ${dateStr}${t.uhrzeit?' &nbsp;🕐 '+esc(t.uhrzeit):''}${t.frist&&!past?` &nbsp;<span style="color:${t.frist<localToday()?'#e74c3c':'#7d6608'}">⏳ bis ${fmt(t.frist)}${t.frist<localToday()?' (abgelaufen)':''}</span>`:''}</div>
-    ${!past?`<div class="vote-row" id="vrow-${t.id}">${buildVoteRow(t)}</div>`:''}
+    <div class="t-title">${esc(t.titel)}${infoOnly?' <span style="font-size:.66rem;font-weight:600;color:#8e44ad;background:#f3ecfa;border-radius:8px;padding:1px 7px;vertical-align:middle">📢 Info</span>':''}</div>
+    <div class="t-meta">📅 ${dateStr}${t.uhrzeit?' &nbsp;🕐 '+esc(t.uhrzeit):''}${t.frist&&!past&&!infoOnly?` &nbsp;<span style="color:${t.frist<localToday()?'#e74c3c':'#7d6608'}">⏳ bis ${fmt(t.frist)}${t.frist<localToday()?' (abgelaufen)':''}</span>`:''}</div>
+    ${(!past&&!infoOnly)?`<div class="vote-row" id="vrow-${t.id}">${buildVoteRow(t)}</div>`:''}
+    ${infoOnly&&t.beschreibung?`<div style="font-size:.85rem;color:#555;margin:2px 0 4px">${esc(t.beschreibung)}</div>`:''}
     ${setlisteHtml(t)}
     ${showRueck?rueckmeldungenHtml(t, bd):''}
     <details class="t-coll"><summary>ℹ️ Details${t.beschreibung?' & Beschreibung':''}</summary><div>
@@ -2886,9 +2894,13 @@ async function addTermin(){
   if(!titel||!datum){alert('Bezeichnung und Datum erforderlich.');return;}
   const tUhr=document.getElementById('t-uhrzeit').value.trim();
   const tFrist=document.getElementById('t-frist').value||'';
-  termine.push({id:uid(),titel,datum,datum_ende:document.getElementById('t-datum-ende').value||'',uhrzeit:tUhr,typ:document.getElementById('t-typ').value,beschreibung:document.getElementById('t-beschreibung').value.trim(),frist:tFrist,abstimmungen:{}});
+  const keineAbstimmung=!!document.getElementById('t-keine-abstimmung')?.checked;
+  const startseite=document.getElementById('t-startseite') ? !!document.getElementById('t-startseite').checked : true;
+  termine.push({id:uid(),titel,datum,datum_ende:document.getElementById('t-datum-ende').value||'',uhrzeit:tUhr,typ:document.getElementById('t-typ').value,beschreibung:document.getElementById('t-beschreibung').value.trim(),frist:tFrist,keineAbstimmung,startseite,abstimmungen:{}});
   await dbFetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
   ['t-titel','t-datum','t-datum-ende','t-uhrzeit','t-beschreibung','t-frist'].forEach(id=>document.getElementById(id).value='');
+  if(document.getElementById('t-keine-abstimmung')) document.getElementById('t-keine-abstimmung').checked=false;
+  if(document.getElementById('t-startseite')) document.getElementById('t-startseite').checked=true;
   renderTermine(); renderKalender();
   notifyPush('termin','🗓️ Neuer Termin: '+titel, fmt(datum)+(tUhr?' um '+tUhr+' Uhr':''));
   alert('✅ Termin gespeichert!');
