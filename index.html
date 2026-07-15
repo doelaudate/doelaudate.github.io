@@ -2186,7 +2186,8 @@ function buildProbeAttendance(p){
   const st=(probenstatus && probenstatus[p.id])||{};
   const nein=Object.values(st).filter(e=>e&&e.status==='nein').map(e=>e.name);
   const urlaub=absentNamesForDate(p.datum);
-  const alle=[...new Set([...nein, ...urlaub])];
+  // Anzeige als „Vorname N." — und danach entdoppeln (jemand kann unter Kürzel UND vollem Namen auftauchen)
+  const alle=[...new Set([...nein, ...urlaub].map(x=>prettyName(x)).filter(Boolean))];
   const myUid=currentUser&&currentUser.uid;
   const selfNein=(myUid && st[myUid] && st[myUid].status==='nein');
   const selfUrlaub=myAbsent(p.datum);
@@ -2485,7 +2486,14 @@ function getUserAliases(){
 }
 // Alle Ansichten, die Namen über prettyName() anzeigen, neu aufbauen
 function refreshNameDisplays(){
-  try{ renderTermine(); renderUmfragen(); renderKommentare(); renderLiedwuensche(); }catch(e){}
+  // Alle Ansichten mit Namen neu aufbauen, sobald Profile/Mitglieder geladen sind
+  try{ renderTermine(); }catch(e){}
+  try{ renderUmfragen(); }catch(e){}
+  try{ renderKommentare(); }catch(e){}
+  try{ renderLiedwuensche(); }catch(e){}
+  try{ renderProben(); }catch(e){}     // Probe-Abmeldungen („Abgemeldet: …")
+  try{ renderStart(); }catch(e){}      // Startseite (nächste Probe/Termine)
+  try{ renderPlakate(); }catch(e){}    // Plakat-Verteiler + Rangliste
 }
 function _matchMemberByProfile(uid, nm){
   let m=mitglieder.find(x=>x.uid && x.uid===uid); if(m) return m;  // explizite Verknüpfung zuerst
