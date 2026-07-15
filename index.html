@@ -1253,6 +1253,42 @@ html.fs-sehrgross{font-size:20.5px}
   </div>
 </div>
 
+<!-- TERMIN BEARBEITEN MODAL -->
+<div class="modal-overlay" id="modal-termin-edit">
+  <div class="modal" style="max-width:560px">
+    <h3>✏️ Termin bearbeiten</h3>
+    <input type="hidden" id="te-id">
+    <div class="form-row">
+      <input class="fl-input" type="text" id="te-titel" placeholder="Bezeichnung *" style="flex:2;min-width:160px">
+      <select id="te-typ" class="fl-input" style="flex:1;min-width:120px">
+        <option value="konzert">🎵 Konzert</option>
+        <option value="fest">🎪 Fest</option>
+        <option value="chorlager">🏕️ Chorlager</option>
+        <option value="gottesdienst">⛪ Gottesdienst</option>
+        <option value="probe">🎹 Probe</option>
+        <option value="sonstiges">📌 Sonstiges</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div style="flex:1;min-width:130px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Von</label><input class="fl-input" type="date" id="te-datum"></div>
+      <div style="flex:1;min-width:130px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Bis (optional)</label><input class="fl-input" type="date" id="te-datum-ende"></div>
+      <div style="flex:1;min-width:100px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Uhrzeit</label><input class="fl-input" type="text" id="te-uhrzeit" placeholder="15:00"></div>
+    </div>
+    <input class="fl-input" type="text" id="te-beschreibung" placeholder="Beschreibung (optional)" style="margin-bottom:8px">
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">
+      <div style="flex:1;min-width:150px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Rückmeldefrist (optional)</label><input class="fl-input" type="date" id="te-frist"></div>
+    </div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:6px">
+      <label style="display:flex;align-items:center;gap:7px;font-size:.85rem;cursor:pointer;user-select:none"><input type="checkbox" id="te-keine-abstimmung" style="accent-color:#8e44ad;width:16px;height:16px"> 📢 Nur Info (ohne Abstimmung)</label>
+      <label style="display:flex;align-items:center;gap:7px;font-size:.85rem;cursor:pointer;user-select:none"><input type="checkbox" id="te-startseite" style="accent-color:#2563b5;width:16px;height:16px"> 🏠 Auf Startseite anzeigen</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-success" onclick="saveTerminEdit()">💾 Speichern</button>
+    </div>
+  </div>
+</div>
+
 <!-- HAUSAUFGABEN MODAL -->
 <div class="modal-overlay" id="modal-hausaufgaben">
   <div class="modal" style="max-width:500px">
@@ -2815,6 +2851,7 @@ function terminHtml(t,past=false){
       <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
         <button class="btn btn-sm" style="background:transparent;border:1px solid #8e44ad;color:#8e44ad;font-size:.72rem" onclick="exportTerminICS('${t.id}')">📥 Kalender (.ics)</button>
         ${uiEdit('termine')?`
+          <button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96;font-size:.72rem" onclick="editTermin('${t.id}')">✏️ Bearbeiten</button>
           ${(t.typ==='konzert'||t.typ==='fest')?`<button class="btn btn-sm" style="background:#3498db;color:white;font-size:.72rem" onclick="editSetliste('${t.id}')">🎵 Setliste</button>`:''}
           <button class="btn btn-danger btn-sm del-btn" style="opacity:1;position:static" onclick="deleteTermin('${t.id}')">✕ Termin löschen</button>
         `:''}
@@ -2910,6 +2947,41 @@ async function deleteTermin(id){
   termine=termine.filter(t=>t.id!==id);
   await dbFetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
   renderTermine(); renderKalender();
+}
+function editTermin(id){
+  if(!uiEdit('termine')) return;
+  const t=termine.find(x=>x.id===id); if(!t) return;
+  document.getElementById('te-id').value=id;
+  document.getElementById('te-titel').value=t.titel||'';
+  document.getElementById('te-typ').value=t.typ||'sonstiges';
+  document.getElementById('te-datum').value=t.datum||'';
+  document.getElementById('te-datum-ende').value=t.datum_ende||'';
+  document.getElementById('te-uhrzeit').value=t.uhrzeit||'';
+  document.getElementById('te-beschreibung').value=t.beschreibung||'';
+  document.getElementById('te-frist').value=t.frist||'';
+  document.getElementById('te-keine-abstimmung').checked=!!t.keineAbstimmung;
+  document.getElementById('te-startseite').checked=(t.startseite!==false);
+  document.getElementById('modal-termin-edit').classList.add('open');
+}
+async function saveTerminEdit(){
+  if(!uiEdit('termine')){alert('Keine Berechtigung.');return;}
+  const id=document.getElementById('te-id').value;
+  const t=termine.find(x=>x.id===id); if(!t) return;
+  const titel=document.getElementById('te-titel').value.trim();
+  const datum=document.getElementById('te-datum').value;
+  if(!titel||!datum){alert('Bezeichnung und Datum erforderlich.');return;}
+  t.titel=titel;
+  t.typ=document.getElementById('te-typ').value;
+  t.datum=datum;
+  t.datum_ende=document.getElementById('te-datum-ende').value||'';
+  t.uhrzeit=document.getElementById('te-uhrzeit').value.trim();
+  t.beschreibung=document.getElementById('te-beschreibung').value.trim();
+  t.frist=document.getElementById('te-frist').value||'';
+  t.keineAbstimmung=!!document.getElementById('te-keine-abstimmung').checked;
+  t.startseite=!!document.getElementById('te-startseite').checked;
+  await dbFetch(DB+'/termine.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(termine)}).catch(e=>console.warn(e));
+  closeModal();
+  renderTermine(); renderKalender(); try{renderStart();}catch(e){}
 }
 
 // ===== UMFRAGEN (mit Auswertung) =====
