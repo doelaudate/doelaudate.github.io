@@ -158,6 +158,10 @@ input[type=checkbox]{accent-color:#2563b5}
 /* Schriftgröße (Barrierefreiheit) */
 html.fs-gross{font-size:18px}
 html.fs-sehrgross{font-size:20.5px}
+/* Dunkles Design: Invert-Technik auf <html> (zieht auch Inline-Farben mit, bricht kein fixed-Layout);
+   Bilder & explizit markierte Elemente werden zurück-invertiert, damit Logo/Fotos normal bleiben. */
+html.dark{ filter: invert(1) hue-rotate(180deg); background:#12171d; }
+html.dark img, html.dark video, html.dark .no-invert{ filter: invert(1) hue-rotate(180deg); }
 /* Ladeanzeige */
 #loading-overlay{position:fixed;inset:0;background:#f0f2f5;z-index:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
 .spinner{width:42px;height:42px;border:4px solid #d6e0ea;border-top-color:#2563b5;border-radius:50%;animation:spin 1s linear infinite}
@@ -989,6 +993,15 @@ html.fs-sehrgross{font-size:20.5px}
   </div>
 
   <div class="card" style="max-width:480px">
+    <div class="card-title">🎨 Darstellung</div>
+    <div style="font-size:.83rem;color:#666;margin-bottom:10px">Helles oder dunkles Design (schont Augen und Akku).</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="theme-btn btn btn-sm" data-theme="hell" onclick="setTheme('hell')">☀️ Hell</button>
+      <button class="theme-btn btn btn-sm" data-theme="dark" onclick="setTheme('dark')">🌙 Dunkel</button>
+    </div>
+  </div>
+
+  <div class="card" style="max-width:480px">
     <div class="card-title">🔔 Push-Benachrichtigungen</div>
     <div style="font-size:.84rem;color:#666;margin-bottom:12px;line-height:1.5">
       Lass dich auf diesem Gerät benachrichtigen, wenn es neue Termine, Proben oder Liedwünsche gibt – auch wenn die App geschlossen ist.
@@ -1382,6 +1395,15 @@ function applyFontSize(){
   document.querySelectorAll('.fs-btn').forEach(b=>{ const on=b.getAttribute('data-fs')===fs; b.style.background=on?'#2563b5':'#ecf0f1'; b.style.color=on?'#fff':'#555'; });
 }
 function setFontSize(fs){ localStorage.setItem('chor_fontsize',fs); applyFontSize(); }
+function applyTheme(){
+  const dark = localStorage.getItem('chor_theme')==='dark';
+  document.documentElement.classList.toggle('dark', dark);
+  document.querySelectorAll('.theme-btn').forEach(b=>{
+    const on=(b.getAttribute('data-theme')===(dark?'dark':'hell'));
+    b.style.background=on?'#2563b5':'#ecf0f1'; b.style.color=on?'#fff':'#555';
+  });
+}
+function setTheme(mode){ localStorage.setItem('chor_theme', mode==='dark'?'dark':'hell'); applyTheme(); }
 
 function showPageByName(id){
   const tab=[...document.querySelectorAll('.mtab')].find(t=>{const o=t.getAttribute('onclick');return o&&o.indexOf("showPage('"+id+"'")>=0;});
@@ -1412,6 +1434,7 @@ function runSearch(){
 }
 function showLoading(on){ const lo=document.getElementById('loading-overlay'); if(lo) lo.style.display=on?'flex':'none'; }
 applyFontSize();
+applyTheme();
 // Admin-Rechte kommen ausschließlich aus dem Nutzerprofil (isAdmin/permissions) — kein geteiltes Passwort mehr.
 const TYP_LABEL={"konzert": "🎵 Konzert", "fest": "🎪 Fest", "chorlager": "🏕️ Chorlager", "gottesdienst": "⛪ Gottesdienst", "probe": "🎹 Probe", "sonstiges": "📌 Sonstiges"};
 const TYP_COLOR={"konzert": "#2563b5", "fest": "#e67e22", "chorlager": "#27ae60", "gottesdienst": "#8e44ad", "probe": "#c0392b", "sonstiges": "#7f8c8d"};
