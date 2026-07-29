@@ -419,6 +419,7 @@ html.dark img, html.dark video, html.dark .no-invert{ filter: invert(1) hue-rota
   <div class="mtab" onclick="showPage('proben',this)">📅 Proben</div>
   <div class="mtab" onclick="showPage('termine',this)">📆 Termine</div>
   <div class="mtab" onclick="showPage('umfragen',this)">📊 Umfragen</div>
+  <div class="mtab" onclick="showPage('terminfindung',this)">🗓️ Terminfindung</div>
   <div class="mtab" onclick="showPage('mitglieder',this)">👥 Mitglieder</div>
   <div class="mtab" onclick="showPage('plakate',this)">📋 Plakate</div>
   <div class="mtab" onclick="showPage('kommentare',this)">💬 Kommentare <span id="k-count" style="background:rgba(41,128,185,.15);color:#2563b5;padding:1px 6px;border-radius:10px;font-size:.72rem;margin-left:3px"></span></div>
@@ -430,6 +431,7 @@ html.dark img, html.dark video, html.dark .no-invert{ filter: invert(1) hue-rota
 <div class="content">
 
 <div class="page active" id="p-start">
+  <div id="pinnwand-card"></div>
   <div id="start-content"></div>
 </div>
 
@@ -602,6 +604,20 @@ html.dark img, html.dark video, html.dark .no-invert{ filter: invert(1) hue-rota
     <div id="uf-create-result" style="font-size:.82rem;min-height:16px;margin-top:6px"></div>
   </div>
   <div id="umfragen-list"></div>
+</div>
+
+<div class="page" id="p-terminfindung">
+  <div class="admin-section admin-only" data-perm="termine">
+    <div class="admin-label">🔑 Admin: Neue Terminfindung</div>
+    <input class="fl-input" type="text" id="tf-titel" placeholder="Titel * (z. B. Wann proben wir extra?)" maxlength="160">
+    <label style="display:block;font-size:.8rem;font-weight:600;margin:8px 0 5px;color:#444">Datums-Vorschläge</label>
+    <div id="tf-optionen"></div>
+    <button class="btn btn-gray btn-sm" type="button" onclick="addTfOption()" style="margin-bottom:10px">＋ Vorschlag hinzufügen</button>
+    <button class="btn btn-primary" onclick="createTerminfindung()">🗓️ Terminfindung starten</button>
+    <div id="tf-create-result" style="font-size:.82rem;min-height:16px;margin-top:6px"></div>
+  </div>
+  <div style="font-size:.82rem;color:#888;margin-bottom:10px">✅ passt · ❓ vielleicht · ❌ passt nicht — die beste Option wird markiert.</div>
+  <div id="tf-list"></div>
 </div>
 
 <div class="page" id="p-mitglieder">
@@ -982,6 +998,24 @@ html.dark img, html.dark video, html.dark .no-invert{ filter: invert(1) hue-rota
     </div>
   </div>
 
+  <div class="card" style="max-width:480px" id="meine-kontaktdaten-card">
+    <div class="card-title">📇 Meine Kontaktdaten</div>
+    <div style="font-size:.83rem;color:#666;margin-bottom:12px">Halte deine eigenen Daten aktuell – nur du kannst deinen Eintrag ändern.</div>
+    <div id="kd-hinweis" style="font-size:.82rem;color:#888;margin-bottom:10px"></div>
+    <div id="kd-felder" style="display:none">
+      <div class="form-row">
+        <div style="flex:1;min-width:130px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Handy</label><input class="fl-input" type="tel" id="kd-handy" autocomplete="tel"></div>
+        <div style="flex:1;min-width:130px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Telefon (Festnetz)</label><input class="fl-input" type="tel" id="kd-telefon"></div>
+      </div>
+      <div class="form-row">
+        <div style="flex:2;min-width:150px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Adresse</label><input class="fl-input" type="text" id="kd-adresse" placeholder="Straße & Hausnummer, Ort" autocomplete="street-address"></div>
+        <div style="flex:0 0 100px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">PLZ</label><input class="fl-input" type="text" id="kd-plz" maxlength="5" autocomplete="postal-code"></div>
+      </div>
+      <button class="btn btn-primary" onclick="saveMeineKontaktdaten()">💾 Speichern</button>
+      <div id="kd-result" style="font-size:.82rem;min-height:16px;margin-top:8px"></div>
+    </div>
+  </div>
+
   <div class="card" style="max-width:480px">
     <div class="card-title">🔤 Schriftgröße</div>
     <div style="font-size:.83rem;color:#666;margin-bottom:10px">Macht die ganze App größer und besser lesbar.</div>
@@ -1034,6 +1068,7 @@ html.dark img, html.dark video, html.dark .no-invert{ filter: invert(1) hue-rota
     <div class="sheet-label">🎶 Chor</div>
     <div class="sheet-grid">
       <button class="sheet-link" onclick="bnavMore('umfragen')"><span class="si">📊</span>Umfragen</button>
+      <button class="sheet-link" onclick="bnavMore('terminfindung')"><span class="si">🗓️</span>Terminfindung</button>
       <button class="sheet-link" onclick="bnavMore('mitglieder')"><span class="si">👥</span>Mitglieder</button>
       <button class="sheet-link" onclick="bnavMore('plakate')"><span class="si">📋</span>Plakate</button>
       <button class="sheet-link" onclick="bnavMore('kommentare')"><span class="si">💬</span>Kommentare</button>
@@ -1443,6 +1478,7 @@ const INIT_MITGLIEDER=[]; // Mitgliederdaten liegen in der Datenbank (login-gesc
 const INIT_TERMINE=[];
 
 let D=null, termine=[], kommentare=[], probenplan=[], mitglieder=[], liedwuensche=[], plakate=[], probenstatus={}, benachrichtigungen=[], anwesenheit={}, anwWork=null, userprofilesCache={}, abwesenheiten={};
+let pinnwand={}, fahrten={}, terminfindungen={};
 let adminMode = sessionStorage.getItem('chor_admin')==='1';
 let editMode = sessionStorage.getItem('chor_editmode')==='1';
 // Sichtbarkeit von Admin-Bearbeitungs-Elementen: nur wenn Bearbeiten-Modus AN und Berechtigung vorhanden
@@ -1546,6 +1582,7 @@ function showPage(id,tab){
   if(id==='proben'){renderProben();renderSongPicker();}
   if(id==='termine') renderTermine();
   if(id==='umfragen') renderUmfragen();
+  if(id==='terminfindung'){ if(!document.querySelector('#tf-optionen .tf-opt')) resetTfForm(); renderTerminfindung(); }
   if(id==='mitglieder') renderMitglieder();
   if(id==='konsole') renderKonsole();
   if(id==='einstellungen') renderEinstellungen();
@@ -1575,6 +1612,7 @@ function closeMoreSheet(){ document.getElementById('more-sheet').classList.remov
 
 // START-ÜBERSICHT
 function renderStart(){
+  try{ renderPinnwand(); }catch(e){}
   const el=document.getElementById('start-content'); if(!el) return;
   const today=localToday();
   const TYP_IC={konzert:'🎵',fest:'🎪',chorlager:'🏕️',gottesdienst:'⛪',probe:'🎹',sonstiges:'📌'};
@@ -2875,6 +2913,7 @@ function terminHtml(t,past=false){
     ${(!past&&!infoOnly)?`<div class="vote-row" id="vrow-${t.id}">${buildVoteRow(t)}</div>`:''}
     ${infoOnly&&t.beschreibung?`<div style="font-size:.85rem;color:#555;margin:2px 0 4px">${esc(t.beschreibung)}</div>`:''}
     ${setlisteHtml(t)}
+    ${!past?fahrtenHtml(t):''}
     ${showRueck?rueckmeldungenHtml(t, bd):''}
     <details class="t-coll"><summary>ℹ️ Details${t.beschreibung?' & Beschreibung':''}</summary><div>
       ${t.beschreibung?`<div style="font-size:.84rem;color:#555;margin-bottom:8px">${esc(t.beschreibung)}</div>`:''}
@@ -4762,7 +4801,9 @@ function renderEinstellungen(){
   if(pw2) pw2.value='';
   const pr = document.getElementById('push-result'); if(pr) pr.textContent='';
   applyFontSize();
+  applyTheme();
   renderPushStatus();
+  renderMeineKontaktdaten();
   // Bearbeiten-Modus-Karte nur für Bearbeiter (Admin oder mit Berechtigung) zeigen
   const emCard = document.getElementById('editmode-card');
   if(emCard){
@@ -4770,6 +4811,50 @@ function renderEinstellungen(){
     emCard.style.display = isEditor ? 'block' : 'none';
   }
   updateEditModeUI();
+}
+// Index des zum aktuellen Konto gehörenden Mitglieds (über uid, sonst Benutzername)
+function myMemberIndex(){
+  if(!currentUser && !currentUserProfile) return -1;
+  const uid=currentUser&&currentUser.uid;
+  let i=(mitglieder||[]).findIndex(m=>m && m.uid && uid && m.uid===uid);
+  if(i<0){ const un=currentUserProfile&&currentUserProfile.username; if(un) i=(mitglieder||[]).findIndex(m=>m && m.username && _norm(m.username)===_norm(un)); }
+  return i;
+}
+function renderMeineKontaktdaten(){
+  const hint=document.getElementById('kd-hinweis'), felder=document.getElementById('kd-felder');
+  if(!hint||!felder) return;
+  const i=myMemberIndex();
+  if(i<0){
+    hint.textContent='ℹ️ Dein Konto ist noch keinem Mitglied-Eintrag zugeordnet. Bitte kurz an die Chorleitung wenden.';
+    felder.style.display='none'; return;
+  }
+  const m=mitglieder[i];
+  hint.textContent='Angemeldet als '+(memberName(m)||m.username||'');
+  document.getElementById('kd-handy').value=m.handy||'';
+  document.getElementById('kd-telefon').value=m.telefon||'';
+  document.getElementById('kd-adresse').value=m.adresse||'';
+  document.getElementById('kd-plz').value=m.plz||'';
+  felder.style.display='';
+  const r=document.getElementById('kd-result'); if(r) r.textContent='';
+}
+async function saveMeineKontaktdaten(){
+  const i=myMemberIndex();
+  const res=document.getElementById('kd-result');
+  if(i<0){ if(res){res.style.color='#e74c3c';res.textContent='❌ Kein zugeordnetes Mitglied gefunden.';} return; }
+  const upd={
+    handy:document.getElementById('kd-handy').value.trim(),
+    telefon:document.getElementById('kd-telefon').value.trim(),
+    adresse:document.getElementById('kd-adresse').value.trim(),
+    plz:document.getElementById('kd-plz').value.trim()
+  };
+  Object.assign(mitglieder[i], upd);
+  try{
+    // Nur die eigenen Kontaktfelder gezielt schreiben (kein Überschreiben fremder Einträge)
+    await dbFetch(DB+'/mitglieder/'+i+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(upd)});
+    if(res){res.style.color='#27ae60';res.textContent='✅ Gespeichert – danke fürs Aktuell-Halten!';}
+    setTimeout(()=>{if(res)res.textContent='';},3000);
+    if(typeof renderMitglieder==='function') renderMitglieder();
+  }catch(e){ if(res){res.style.color='#e74c3c';res.textContent='❌ Speichern fehlgeschlagen: '+e;} }
 }
 
 async function saveAnzeigename(){
@@ -4964,6 +5049,219 @@ function hasPermission(perm){
 const _origRenderKonsole = typeof renderKonsole !== 'undefined' ? renderKonsole : null;
 
 // LOAD ALL
+// ===== Gemeinsame Kennung: stabiler Schlüssel + Anzeige für Pinnwand/Fahrten/Terminfindung =====
+function myKey(){
+  if(typeof currentUser!=='undefined' && currentUser && currentUser.uid) return currentUser.uid;
+  const n=getUserVoteName(); return n?('u_'+_norm(n)):null;
+}
+
+// ===== PINNWAND / ANKÜNDIGUNGEN (getrennt von Kommentaren, mit „gelesen von …") =====
+async function loadPinnwand(){
+  try{ const r=await dbFetch(DB+'/pinnwand.json'); if(r.ok){ pinnwand=(await r.json())||{}; } }catch(e){ console.warn('loadPinnwand',e); }
+}
+function renderPinnwand(){
+  const card=document.getElementById('pinnwand-card'); if(!card) return;
+  const editor=canUseEditMode();
+  const entries=Object.entries(pinnwand||{}).map(([k,v])=>Object.assign({_key:k},v||{})).filter(x=>x&&x.text).sort((a,b)=>(b.ts||0)-(a.ts||0));
+  if(!entries.length && !editor){ card.innerHTML=''; return; }
+  const compose = editor ? `
+    <div style="margin-bottom:${entries.length?'12px':'0'}">
+      <textarea id="pw-text" class="fl-input" rows="2" placeholder="Neue Ankündigung an alle…" style="resize:vertical"></textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:6px"><button class="btn btn-primary btn-sm" onclick="addPinnwand()">📌 Anpinnen</button></div>
+    </div>` : '';
+  const myk=myKey();
+  const list=entries.map(e=>{
+    const gel=e.gelesen||{};
+    const gelNames=Object.values(gel).filter(Boolean);
+    const cnt=gelNames.length;
+    const gelHtml = cnt
+      ? `<details class="t-coll" style="margin-top:6px"><summary style="font-size:.74rem;color:#888">👁️ Gelesen von ${cnt}</summary><div style="font-size:.78rem;color:#777;padding-top:4px">${esc(gelNames.map(n=>prettyName(n)||n).join(', '))}</div></details>`
+      : `<div style="font-size:.74rem;color:#bbb;margin-top:6px">Noch nicht gelesen</div>`;
+    const del = editor ? `<button class="btn btn-danger btn-sm" style="opacity:1;position:static;margin-left:auto;padding:2px 8px" onclick="deletePinnwand('${e._key}')">✕</button>` : '';
+    return `<div style="border-left:3px solid #e67e22;background:#fff8f1;border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="white-space:pre-wrap;font-size:.9rem;color:#333">${esc(e.text)}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:.72rem;color:#a06020">📌 ${esc(prettyName(e.autor)||e.autor||'Chorleitung')} · ${e.ts?fmt(new Date(e.ts).toISOString().split('T')[0]):''}${del}</div>
+      ${gelHtml}
+    </div>`;
+  }).join('');
+  card.innerHTML=`<div class="card" style="border-top:3px solid #e67e22">
+    <div class="card-title" style="color:#c0620f">📌 Ankündigungen</div>
+    ${compose}${list||(editor?'<div style="font-size:.82rem;color:#aaa">Noch keine Ankündigungen.</div>':'')}
+  </div>`;
+  // Still als „gelesen" markieren (nur eigene Kennung)
+  if(myk){ entries.forEach(e=>{ if(!(e.gelesen&&e.gelesen[myk])) markPinnwandRead(e._key); }); }
+}
+async function addPinnwand(){
+  const ta=document.getElementById('pw-text'); if(!ta) return;
+  const text=ta.value.trim(); if(!text){ ta.focus(); return; }
+  const id=uid();
+  const entry={text, autor:getUserVoteName()||'Chorleitung', ts:Date.now()};
+  pinnwand[id]=entry; ta.value='';
+  await dbFetch(DB+'/pinnwand/'+id+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(entry)}).catch(e=>console.warn(e));
+  renderPinnwand();
+}
+async function deletePinnwand(id){
+  if(!canUseEditMode()) return;
+  if(!confirm('Diese Ankündigung löschen?')) return;
+  delete pinnwand[id];
+  await dbFetch(DB+'/pinnwand/'+id+'.json',{method:'DELETE'}).catch(e=>console.warn(e));
+  renderPinnwand();
+}
+async function markPinnwandRead(id){
+  const myk=myKey(); if(!myk) return;
+  const nm=getUserVoteName()||'?';
+  if(!pinnwand[id]) return;
+  if(!pinnwand[id].gelesen) pinnwand[id].gelesen={};
+  if(pinnwand[id].gelesen[myk]) return;
+  pinnwand[id].gelesen[myk]=nm;
+  await dbFetch(DB+'/pinnwand/'+id+'/gelesen/'+encodeURIComponent(myk)+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(nm)}).catch(e=>console.warn(e));
+}
+
+// ===== FAHRGEMEINSCHAFTEN (pro Termin) =====
+async function loadFahrten(){
+  try{ const r=await dbFetch(DB+'/fahrten.json'); if(r.ok){ fahrten=(await r.json())||{}; } }catch(e){ console.warn('loadFahrten',e); }
+}
+function fahrtenHtml(t){
+  const f=(fahrten&&fahrten[t.id])||{};
+  const entries=Object.entries(f).map(([k,v])=>Object.assign({_key:k},v||{})).filter(x=>x&&x.typ);
+  const biete=entries.filter(e=>e.typ==='biete');
+  const suche=entries.filter(e=>e.typ==='suche');
+  const myk=myKey();
+  const mine=myk?entries.find(e=>e._key===myk):null;
+  const freeSeats=biete.reduce((s,e)=>s+(parseInt(e.plaetze)||0),0);
+  const row=(e,ic)=>`<div style="display:flex;align-items:center;gap:6px;font-size:.82rem;padding:2px 0">
+      <span>${ic}</span><span style="flex:1">${esc(prettyName(e.name)||e.name||'?')}${e.ort?` <span style="color:#888">· ab ${esc(e.ort)}</span>`:''}${e.typ==='biete'?` <span style="color:#27ae60">(${parseInt(e.plaetze)||0} Pl.)</span>`:''}</span>
+      ${(e._key===myk)?`<button class="btn btn-danger btn-sm" style="opacity:1;position:static;padding:2px 7px" onclick="removeFahrt('${esc(t.id)}')">✕</button>`:''}
+    </div>`;
+  const lists=`
+    ${biete.length?`<div style="margin-top:4px"><strong style="font-size:.76rem;color:#1a7a40">🚗 Bietet Mitfahrt (${freeSeats} Plätze):</strong>${biete.map(e=>row(e,'🚗')).join('')}</div>`:''}
+    ${suche.length?`<div style="margin-top:4px"><strong style="font-size:.76rem;color:#a05a00">🙋 Sucht Mitfahrt (${suche.length}):</strong>${suche.map(e=>row(e,'🙋')).join('')}</div>`:''}
+    ${(!biete.length&&!suche.length)?'<div style="font-size:.8rem;color:#aaa;margin-top:4px">Noch keine Einträge.</div>':''}`;
+  const actions = (typeof currentUser!=='undefined'&&currentUser) ? (mine
+    ? `<div style="font-size:.76rem;color:#888;margin-top:8px">Dein Eintrag: ${mine.typ==='biete'?'🚗 du bietest Mitfahrt':'🙋 du suchst Mitfahrt'} · <a href="#" onclick="removeFahrt('${esc(t.id)}');return false" style="color:#e74c3c">entfernen</a></div>`
+    : `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:#27ae60;color:#fff;font-size:.74rem" onclick="addFahrt('${esc(t.id)}','biete')">🚗 Ich biete Plätze</button>
+        <button class="btn btn-sm" style="background:#e67e22;color:#fff;font-size:.74rem" onclick="addFahrt('${esc(t.id)}','suche')">🙋 Ich suche Mitfahrt</button>
+      </div>`) : '';
+  const total=entries.length;
+  return `<details class="t-coll"><summary>🚗 Fahrgemeinschaft${total?` · ${total}`:''}</summary><div>${lists}${actions}</div></details>`;
+}
+async function addFahrt(terminId, typ){
+  const myk=myKey(); if(!myk){ alert('Bitte zuerst anmelden.'); return; }
+  let plaetze=1, ort='';
+  if(typ==='biete'){
+    const p=prompt('Wie viele Plätze bietest du an?','3'); if(p===null) return;
+    plaetze=Math.max(1,parseInt(p)||1);
+  }
+  const o=prompt(typ==='biete'?'Ab wo / Treffpunkt? (optional)':'Wo möchtest du zusteigen? (optional)',''); if(o===null) return; ort=o.trim();
+  const entry={typ, plaetze, ort, name:getUserVoteName()||'?', ts:Date.now()};
+  if(!fahrten[terminId]) fahrten[terminId]={};
+  fahrten[terminId][myk]=entry;
+  await dbFetch(DB+'/fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(myk)+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(entry)}).catch(e=>console.warn(e));
+  renderTermine();
+}
+async function removeFahrt(terminId){
+  const myk=myKey(); if(!myk) return;
+  if(fahrten[terminId]) delete fahrten[terminId][myk];
+  await dbFetch(DB+'/fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(myk)+'.json',{method:'DELETE'}).catch(e=>console.warn(e));
+  renderTermine();
+}
+
+// ===== TERMINFINDUNG (Doodle-Stil) =====
+async function loadTerminfindungen(){
+  try{ const r=await dbFetch(DB+'/terminfindungen.json'); if(r.ok){ terminfindungen=(await r.json())||{}; } }catch(e){ console.warn('loadTerminfindungen',e); }
+}
+function addTfOption(d='',z=''){
+  const box=document.getElementById('tf-optionen'); if(!box) return;
+  const div=document.createElement('div');
+  div.className='tf-opt';
+  div.style.cssText='display:flex;gap:6px;margin-bottom:6px;align-items:center';
+  div.innerHTML=`<input type="date" class="fl-input tf-d" style="flex:1;min-width:130px" value="${d}"><input type="text" class="fl-input tf-z" placeholder="Uhrzeit / Notiz (optional)" style="flex:1;min-width:110px" value="${esc(z)}"><button class="btn btn-danger btn-sm" style="opacity:1;position:static" onclick="this.parentElement.remove()">✕</button>`;
+  box.appendChild(div);
+}
+function resetTfForm(){
+  const box=document.getElementById('tf-optionen'); if(box){ box.innerHTML=''; addTfOption(); addTfOption(); }
+  const t=document.getElementById('tf-titel'); if(t) t.value='';
+}
+async function createTerminfindung(){
+  const titel=(document.getElementById('tf-titel').value||'').trim();
+  if(!titel){ alert('Bitte einen Titel eingeben.'); return; }
+  const opts=[...document.querySelectorAll('#tf-optionen .tf-opt')].map(r=>({d:r.querySelector('.tf-d').value,z:r.querySelector('.tf-z').value.trim()})).filter(o=>o.d);
+  if(opts.length<2){ alert('Bitte mindestens zwei Datums-Optionen angeben.'); return; }
+  const id=uid();
+  const entry={titel, autor:getUserVoteName()||'—', ts:Date.now(), optionen:opts, stimmen:{}};
+  terminfindungen[id]=entry;
+  await dbFetch(DB+'/terminfindungen/'+id+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(entry)}).catch(e=>console.warn(e));
+  resetTfForm();
+  const r=document.getElementById('tf-create-result'); if(r){ r.style.color='#27ae60'; r.textContent='✅ Terminfindung erstellt.'; setTimeout(()=>{r.textContent='';},3000); }
+  renderTerminfindung();
+}
+async function tfVote(id, optIdx, val){
+  const myk=myKey(); if(!myk){ alert('Bitte anmelden.'); return; }
+  const p=terminfindungen[id]; if(!p||p.geschlossen) return;
+  if(!p.stimmen) p.stimmen={};
+  if(!p.stimmen[myk]) p.stimmen[myk]={name:getUserVoteName()||'?', v:{}};
+  if(!p.stimmen[myk].v) p.stimmen[myk].v={};
+  if(p.stimmen[myk].v[optIdx]===val) delete p.stimmen[myk].v[optIdx];
+  else p.stimmen[myk].v[optIdx]=val;
+  await dbFetch(DB+'/terminfindungen/'+id+'/stimmen/'+encodeURIComponent(myk)+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(p.stimmen[myk])}).catch(e=>console.warn(e));
+  renderTerminfindung();
+}
+async function tfToggleClose(id){
+  if(!canUseEditMode()) return;
+  const p=terminfindungen[id]; if(!p) return;
+  p.geschlossen=!p.geschlossen;
+  await dbFetch(DB+'/terminfindungen/'+id+'/geschlossen.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(!!p.geschlossen)}).catch(e=>console.warn(e));
+  renderTerminfindung();
+}
+async function tfDelete(id){
+  if(!canUseEditMode()) return;
+  if(!confirm('Diese Terminfindung löschen?')) return;
+  delete terminfindungen[id];
+  await dbFetch(DB+'/terminfindungen/'+id+'.json',{method:'DELETE'}).catch(e=>console.warn(e));
+  renderTerminfindung();
+}
+function renderTerminfindung(){
+  const el=document.getElementById('tf-list'); if(!el) return;
+  const editor=canUseEditMode();
+  const polls=Object.entries(terminfindungen||{}).map(([k,v])=>Object.assign({_key:k},v||{})).filter(x=>x&&x.titel).sort((a,b)=>(b.ts||0)-(a.ts||0));
+  if(!polls.length){ el.innerHTML='<div class="empty">Noch keine Terminfindung.'+(editor?' Erstelle oben eine neue.':'')+'</div>'; return; }
+  const myk=myKey();
+  el.innerHTML=polls.map(p=>{
+    const opts=p.optionen||[];
+    const stimmen=p.stimmen||{};
+    const voters=Object.values(stimmen);
+    const tally=opts.map((o,i)=>{
+      let ja=0,ev=0,ne=0; const jaN=[];
+      voters.forEach(s=>{ const v=s&&s.v&&s.v[i]; if(v==='ja'){ja++;jaN.push(prettyName(s.name)||s.name);} else if(v==='evtl'){ev++;} else if(v==='nein'){ne++;} });
+      return {ja,ev,ne,jaN,score:ja*2+ev};
+    });
+    const maxScore=Math.max(0,...tally.map(t=>t.score));
+    const mine=myk?stimmen[myk]:null;
+    const loggedIn=(typeof currentUser!=='undefined'&&currentUser);
+    const rows=opts.map((o,i)=>{
+      const t=tally[i];
+      const best=t.score===maxScore && maxScore>0;
+      const myv=mine&&mine.v?mine.v[i]:null;
+      const dstr=o.d?fmt(o.d):''; const zstr=o.z?' · '+esc(o.z):'';
+      const btn=(val,ic,col)=>`<button class="btn btn-sm" style="padding:3px 9px;font-size:.82rem;${myv===val?`background:${col};color:#fff`:'background:#ececec;color:#666'}" onclick="tfVote('${p._key}',${i},'${val}')">${ic}</button>`;
+      return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 9px;border-radius:8px;margin-bottom:5px;background:${best?'#eafaf0':'#f7f7f8'}">
+        <div style="flex:1;min-width:140px;font-size:.86rem"><strong>${dstr}</strong>${zstr} ${best?'<span style="font-size:.68rem;color:#1a7a40;font-weight:700">★ beste</span>':''}
+          <div style="font-size:.72rem;color:#888">✅ ${t.ja}${t.ev?` · ❓${t.ev}`:''}${t.ne?` · ❌${t.ne}`:''}${t.jaN.length?' — '+esc(t.jaN.join(', ')):''}</div>
+        </div>
+        ${(loggedIn&&!p.geschlossen)?`<div style="display:flex;gap:4px">${btn('ja','✅','#27ae60')}${btn('evtl','❓','#f39c12')}${btn('nein','❌','#e74c3c')}</div>`:''}
+      </div>`;
+    }).join('');
+    const ctrls=editor?`<div style="display:flex;gap:6px;margin-top:8px">
+        <button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96;font-size:.74rem" onclick="tfToggleClose('${p._key}')">${p.geschlossen?'🔓 Wieder öffnen':'🔒 Abschließen'}</button>
+        <button class="btn btn-danger btn-sm" style="opacity:1;position:static;font-size:.74rem" onclick="tfDelete('${p._key}')">✕ Löschen</button>
+      </div>`:'';
+    return `<div class="card"><div class="card-title">🗓️ ${esc(p.titel)}${p.geschlossen?' <span style="font-size:.66rem;color:#888">(abgeschlossen)</span>':''}</div>
+      <div style="font-size:.74rem;color:#999;margin-bottom:8px">von ${esc(prettyName(p.autor)||p.autor||'—')} · ${voters.length} Rückmeldung${voters.length===1?'':'en'}</div>
+      ${rows}${ctrls}</div>`;
+  }).join('');
+}
+
 async function loadAll(){
   showLoading(true);
   try{
@@ -4997,8 +5295,14 @@ async function loadAll(){
     loadUmfragen(),
     loadBeitraege(),
     loadKasse(),
+    loadPinnwand(),
+    loadFahrten(),
+    loadTerminfindungen(),
     loadUserProfiles().then(p=>{ userprofilesCache=p||{}; }).catch(()=>{})
   ]);
+  try{ renderPinnwand(); }catch(e){ console.warn('renderPinnwand',e); }
+  try{ renderTermine(); }catch(e){}
+  try{ if(document.getElementById('p-terminfindung')?.classList.contains('active')) renderTerminfindung(); }catch(e){}
   // Profile sind jetzt geladen -> Namens-Anzeigen mit aktuellen Anzeigenamen neu aufbauen
   refreshNameDisplays();
   try{ renderStart(); }catch(e){ console.warn('renderStart',e); }
