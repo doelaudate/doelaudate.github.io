@@ -419,7 +419,6 @@ html.dark img, html.dark video, html.dark .no-invert{ filter: invert(1) hue-rota
   <div class="mtab" onclick="showPage('proben',this)">📅 Proben</div>
   <div class="mtab" onclick="showPage('termine',this)">📆 Termine</div>
   <div class="mtab" onclick="showPage('umfragen',this)">📊 Umfragen</div>
-  <div class="mtab" onclick="showPage('terminfindung',this)">🗓️ Terminfindung</div>
   <div class="mtab" onclick="showPage('mitglieder',this)">👥 Mitglieder</div>
   <div class="mtab" onclick="showPage('plakate',this)">📋 Plakate</div>
   <div class="mtab" onclick="showPage('kommentare',this)">💬 Kommentare <span id="k-count" style="background:rgba(41,128,185,.15);color:#2563b5;padding:1px 6px;border-radius:10px;font-size:.72rem;margin-left:3px"></span></div>
@@ -590,34 +589,39 @@ html.dark img, html.dark video, html.dark .no-invert{ filter: invert(1) hue-rota
 </div>
 
 <div class="page" id="p-umfragen">
-  <div class="admin-section admin-only" data-perm="termine">
-    <div class="admin-label">🔑 Admin: Neue Umfrage erstellen</div>
-    <input class="fl-input" type="text" id="uf-frage" placeholder="Frage * (z. B. Welcher Termin passt fürs Sommerfest?)" maxlength="160">
-    <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:5px;color:#444">Antwortmöglichkeiten</label>
-    <div id="uf-optionen"></div>
-    <button class="btn btn-gray btn-sm" type="button" onclick="addUmfrageOption()" style="margin-bottom:10px">＋ Option hinzufügen</button>
-    <label style="display:flex;align-items:center;gap:8px;font-size:.86rem;cursor:pointer;margin-bottom:12px">
-      <input type="checkbox" id="uf-mehrfach" style="accent-color:#2563b5;width:16px;height:16px">
-      <span>Mehrfachauswahl erlauben (mehrere Antworten pro Person)</span>
-    </label>
-    <button class="btn btn-primary" onclick="createUmfrage()">📊 Umfrage starten</button>
-    <div id="uf-create-result" style="font-size:.82rem;min-height:16px;margin-top:6px"></div>
+  <div class="sub-tabs">
+    <button id="utab-umfragen" class="stab active" onclick="setUmfragenTab('umfragen')">📊 Umfragen</button>
+    <button id="utab-terminfindung" class="stab" onclick="setUmfragenTab('terminfindung')">🗓️ Terminfindung</button>
   </div>
-  <div id="umfragen-list"></div>
-</div>
-
-<div class="page" id="p-terminfindung">
-  <div class="admin-section admin-only" data-perm="termine">
-    <div class="admin-label">🔑 Admin: Neue Terminfindung</div>
-    <input class="fl-input" type="text" id="tf-titel" placeholder="Titel * (z. B. Wann proben wir extra?)" maxlength="160">
-    <label style="display:block;font-size:.8rem;font-weight:600;margin:8px 0 5px;color:#444">Datums-Vorschläge</label>
-    <div id="tf-optionen"></div>
-    <button class="btn btn-gray btn-sm" type="button" onclick="addTfOption()" style="margin-bottom:10px">＋ Vorschlag hinzufügen</button>
-    <button class="btn btn-primary" onclick="createTerminfindung()">🗓️ Terminfindung starten</button>
-    <div id="tf-create-result" style="font-size:.82rem;min-height:16px;margin-top:6px"></div>
+  <div id="uv-umfragen">
+    <div class="admin-section admin-only" data-perm="termine">
+      <div class="admin-label">🔑 Admin: Neue Umfrage erstellen</div>
+      <input class="fl-input" type="text" id="uf-frage" placeholder="Frage * (z. B. Welcher Termin passt fürs Sommerfest?)" maxlength="160">
+      <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:5px;color:#444">Antwortmöglichkeiten</label>
+      <div id="uf-optionen"></div>
+      <button class="btn btn-gray btn-sm" type="button" onclick="addUmfrageOption()" style="margin-bottom:10px">＋ Option hinzufügen</button>
+      <label style="display:flex;align-items:center;gap:8px;font-size:.86rem;cursor:pointer;margin-bottom:12px">
+        <input type="checkbox" id="uf-mehrfach" style="accent-color:#2563b5;width:16px;height:16px">
+        <span>Mehrfachauswahl erlauben (mehrere Antworten pro Person)</span>
+      </label>
+      <button class="btn btn-primary" onclick="createUmfrage()">📊 Umfrage starten</button>
+      <div id="uf-create-result" style="font-size:.82rem;min-height:16px;margin-top:6px"></div>
+    </div>
+    <div id="umfragen-list"></div>
   </div>
-  <div style="font-size:.82rem;color:#888;margin-bottom:10px">✅ passt · ❓ vielleicht · ❌ passt nicht — die beste Option wird markiert.</div>
-  <div id="tf-list"></div>
+  <div id="uv-terminfindung" style="display:none">
+    <div class="admin-section admin-only" data-perm="termine">
+      <div class="admin-label">🔑 Admin: Neue Terminfindung</div>
+      <input class="fl-input" type="text" id="tf-titel" placeholder="Titel * (z. B. Wann proben wir extra?)" maxlength="160">
+      <label style="display:block;font-size:.8rem;font-weight:600;margin:8px 0 5px;color:#444">Datums-Vorschläge</label>
+      <div id="tf-optionen"></div>
+      <button class="btn btn-gray btn-sm" type="button" onclick="addTfOption()" style="margin-bottom:10px">＋ Vorschlag hinzufügen</button>
+      <button class="btn btn-primary" onclick="createTerminfindung()">🗓️ Terminfindung starten</button>
+      <div id="tf-create-result" style="font-size:.82rem;min-height:16px;margin-top:6px"></div>
+    </div>
+    <div style="font-size:.82rem;color:#888;margin-bottom:10px">✅ passt · ❓ vielleicht · ❌ passt nicht — die beste Option wird markiert.</div>
+    <div id="tf-list"></div>
+  </div>
 </div>
 
 <div class="page" id="p-mitglieder">
@@ -1068,7 +1072,6 @@ html.dark img, html.dark video, html.dark .no-invert{ filter: invert(1) hue-rota
     <div class="sheet-label">🎶 Chor</div>
     <div class="sheet-grid">
       <button class="sheet-link" onclick="bnavMore('umfragen')"><span class="si">📊</span>Umfragen</button>
-      <button class="sheet-link" onclick="bnavMore('terminfindung')"><span class="si">🗓️</span>Terminfindung</button>
       <button class="sheet-link" onclick="bnavMore('mitglieder')"><span class="si">👥</span>Mitglieder</button>
       <button class="sheet-link" onclick="bnavMore('plakate')"><span class="si">📋</span>Plakate</button>
       <button class="sheet-link" onclick="bnavMore('kommentare')"><span class="si">💬</span>Kommentare</button>
@@ -1581,8 +1584,7 @@ function showPage(id,tab){
   if(id==='statistik'){ renderStatistik(); if(document.getElementById('av-anwesenheit')?.style.display!=='none') renderAnwesenheitPage(); }
   if(id==='proben'){renderProben();renderSongPicker();}
   if(id==='termine') renderTermine();
-  if(id==='umfragen') renderUmfragen();
-  if(id==='terminfindung'){ if(!document.querySelector('#tf-optionen .tf-opt')) resetTfForm(); renderTerminfindung(); }
+  if(id==='umfragen'){ renderUmfragen(); if(!document.querySelector('#tf-optionen .tf-opt')) resetTfForm(); renderTerminfindung(); }
   if(id==='mitglieder') renderMitglieder();
   if(id==='konsole') renderKonsole();
   if(id==='einstellungen') renderEinstellungen();
@@ -1740,6 +1742,16 @@ function setLiederPageTab(t){
   if(t==='wuensche') renderLiedwuensche();
 }
 function setLiederView(v){ liederView=v; aktiveSaison='__all__'; renderLieder(); }
+function setUmfragenTab(which){
+  const views={umfragen:'uv-umfragen', terminfindung:'uv-terminfindung'};
+  const tabs={umfragen:'utab-umfragen', terminfindung:'utab-terminfindung'};
+  Object.keys(views).forEach(k=>{
+    const v=document.getElementById(views[k]); if(v) v.style.display=(k===which)?'':'none';
+    const t=document.getElementById(tabs[k]); if(t) t.classList.toggle('active', k===which);
+  });
+  if(which==='terminfindung'){ if(!document.querySelector('#tf-optionen .tf-opt')) resetTfForm(); renderTerminfindung(); }
+  else renderUmfragen();
+}
 async function toggleSeasonHidden(id){
   if(!hasPermission('lieder')){alert('Keine Berechtigung.');return;}
   const si=(D.seasons||[]).findIndex(s=>s.id===id); if(si<0)return;
@@ -2913,7 +2925,7 @@ function terminHtml(t,past=false){
     ${(!past&&!infoOnly)?`<div class="vote-row" id="vrow-${t.id}">${buildVoteRow(t)}</div>`:''}
     ${infoOnly&&t.beschreibung?`<div style="font-size:.85rem;color:#555;margin:2px 0 4px">${esc(t.beschreibung)}</div>`:''}
     ${setlisteHtml(t)}
-    ${!past?fahrtenHtml(t):''}
+    ${!past?fahrtenBlock(t):''}
     ${showRueck?rueckmeldungenHtml(t, bd):''}
     <details class="t-coll"><summary>ℹ️ Details${t.beschreibung?' & Beschreibung':''}</summary><div>
       ${t.beschreibung?`<div style="font-size:.84rem;color:#555;margin-bottom:8px">${esc(t.beschreibung)}</div>`:''}
@@ -5121,6 +5133,24 @@ async function markPinnwandRead(id){
 async function loadFahrten(){
   try{ const r=await dbFetch(DB+'/fahrten.json'); if(r.ok){ fahrten=(await r.json())||{}; } }catch(e){ console.warn('loadFahrten',e); }
 }
+// Pro Termin: Fahrgemeinschaften an/aus (nur Bearbeiter schalten; standardmäßig aus)
+function fahrtenBlock(t){
+  const on = t.fahrten===true;
+  const canEdit = uiEdit('termine');
+  if(on){
+    const off = canEdit ? `<div style="text-align:right;margin-top:2px"><button class="btn btn-sm" style="background:transparent;color:#e74c3c;font-size:.7rem;padding:1px 6px" onclick="toggleFahrtenAktiv('${esc(t.id)}')">🚗 Fahrgemeinschaften deaktivieren</button></div>` : '';
+    return fahrtenHtml(t)+off;
+  }
+  return canEdit ? `<button class="btn btn-sm" style="background:#eef7f0;color:#1a7a40;font-size:.72rem;margin:3px 0" onclick="toggleFahrtenAktiv('${esc(t.id)}')">🚗 Fahrgemeinschaften aktivieren</button>` : '';
+}
+async function toggleFahrtenAktiv(id){
+  if(!uiEdit('termine')){ alert('Nur im Bearbeiten-Modus.'); return; }
+  const t=termine.find(x=>x.id===id); if(!t) return;
+  const idx=termine.indexOf(t);
+  t.fahrten=!t.fahrten;
+  await dbFetch(DB+'/termine/'+idx+'/fahrten.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(!!t.fahrten)}).catch(e=>console.warn(e));
+  renderTermine();
+}
 function fahrtenHtml(t){
   const f=(fahrten&&fahrten[t.id])||{};
   const entries=Object.entries(f).map(([k,v])=>Object.assign({_key:k},v||{})).filter(x=>x&&x.typ);
@@ -5302,7 +5332,7 @@ async function loadAll(){
   ]);
   try{ renderPinnwand(); }catch(e){ console.warn('renderPinnwand',e); }
   try{ renderTermine(); }catch(e){}
-  try{ if(document.getElementById('p-terminfindung')?.classList.contains('active')) renderTerminfindung(); }catch(e){}
+  try{ if(document.getElementById('p-umfragen')?.classList.contains('active')) renderTerminfindung(); }catch(e){}
   // Profile sind jetzt geladen -> Namens-Anzeigen mit aktuellen Anzeigenamen neu aufbauen
   refreshNameDisplays();
   try{ renderStart(); }catch(e){ console.warn('renderStart',e); }
