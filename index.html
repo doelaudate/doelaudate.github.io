@@ -315,6 +315,68 @@ html.dark img, html.dark video, html.dark .no-invert{ filter: invert(1) hue-rota
   /* sehr schmale Handys: Datumsspalte in der Liederliste ausblenden (Status zeigt Frische) */
   #lieder-list th:nth-child(2),#lieder-list td:nth-child(2){display:none}
 }
+
+/* ============================================================
+   FEINSCHLIFF-EBENE (2026-07): Dashboard, Bedienung, Zugänglichkeit
+   ============================================================ */
+/* Sanfter Seiten-Hintergrund */
+body{background:
+  radial-gradient(1100px 460px at 100% -8%, #e6eefb 0%, rgba(230,238,251,0) 60%),
+  radial-gradient(900px 420px at -10% 4%, #eef2f8 0%, rgba(238,242,248,0) 55%),
+  var(--bg);}
+
+/* Zugänglichkeit: klarer Fokus-Ring für Tastatur-Navigation */
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,
+.stab:focus-visible,.mtab:focus-visible,.bnav-item:focus-visible,.sheet-link:focus-visible,.qa:focus-visible{
+  outline:3px solid rgba(37,99,181,.45); outline-offset:2px; border-radius:8px;
+}
+/* Karten heben sich beim Überfahren leicht */
+.card,.termin-card{transition:box-shadow .18s ease,transform .18s ease}
+@media(hover:hover){
+  .card:hover,.termin-card:hover{box-shadow:0 4px 14px rgba(20,40,80,.09),0 14px 36px rgba(20,40,80,.08)}
+}
+
+/* ---- Dashboard-Kopf (Startseite) ---- */
+.hero{margin:2px 0 12px}
+.hero-greet{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;color:var(--navy);line-height:1.15}
+.hero-date{font-size:.86rem;color:var(--muted);margin-top:3px;text-transform:capitalize}
+.qa-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:9px;margin-bottom:16px}
+.qa{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:13px 6px;
+  background:var(--card);border:1px solid rgba(20,40,80,.06);border-radius:var(--radius-sm);
+  box-shadow:var(--shadow);cursor:pointer;font-size:.75rem;font-weight:600;color:var(--ink);
+  font-family:inherit;transition:transform .14s ease,box-shadow .14s ease,border-color .14s}
+.qa:hover{border-color:var(--primary);color:var(--primary);transform:translateY(-2px);box-shadow:0 6px 18px rgba(37,99,181,.16)}
+.qa:active{transform:translateY(0)}
+.qa-ic{font-size:1.5rem;line-height:1}
+.qa.qa-adm{background:linear-gradient(135deg,#fff6ec,#fdecdb);border-color:#f6d9bd;color:#a2600f}
+.qa.qa-adm:hover{border-color:#e67e22;color:#a2600f}
+
+/* ---- Leerzustände mit mehr Ruhe ---- */
+.empty{text-align:center;padding:26px 16px;color:var(--muted);font-size:.9rem;line-height:1.5}
+
+/* ---- Toaster (dezente Erfolg-/Fehlermeldungen) ---- */
+#toast-wrap{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 74px);z-index:1200;
+  display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;padding:0 12px}
+@media(min-width:641px){#toast-wrap{bottom:24px}}
+.toast{pointer-events:auto;max-width:440px;width:fit-content;background:#243244;color:#fff;
+  padding:11px 16px;border-radius:12px;font-size:.86rem;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.25);
+  display:flex;align-items:center;gap:9px;opacity:0;transform:translateY(12px);transition:opacity .22s,transform .22s}
+.toast.show{opacity:1;transform:none}
+.toast.ok{background:#1f8a4c}
+.toast.err{background:#c0392b}
+.toast.info{background:#243244}
+.toast-ic{font-size:1.05rem;line-height:1}
+
+/* ---- Größere Tap-Ziele auf dem Handy (Zugänglichkeit) ---- */
+@media(max-width:640px){
+  .btn{min-height:44px}
+  .bnav-item{min-height:56px}
+  .vbtn{min-height:40px}
+  .qa{min-height:64px}
+}
+
+/* Neue Elemente im Dunkelmodus: Filter-Invert zieht sie mit (nur Fokus-Ring dezenter) */
+html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,170,240,.5)}
 </style>
 </head>
 
@@ -351,6 +413,7 @@ html.dark img, html.dark video, html.dark .no-invert{ filter: invert(1) hue-rota
 </script>
 <body>
 
+<div id="toast-wrap"></div>
 
 <!-- LADEANZEIGE -->
 <div id="loading-overlay" style="display:none">
@@ -1471,6 +1534,17 @@ function runSearch(){
   res.slice(0,40).forEach(r=>{ const d=document.createElement('div'); d.className='search-result'; d.innerHTML=`<span style="font-size:1.15rem">${r.icon}</span><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:.88rem">${esc(r.label)}</div>${r.sub?`<div style="font-size:.76rem;color:#888">${esc(r.sub)}</div>`:''}</div>`; d.onclick=r.go; el.appendChild(d); });
 }
 function showLoading(on){ const lo=document.getElementById('loading-overlay'); if(lo) lo.style.display=on?'flex':'none'; }
+// Dezente Erfolg-/Fehlermeldung unten einblenden
+function showToast(msg, type){
+  const wrap=document.getElementById('toast-wrap'); if(!wrap) { return; }
+  const ic = type==='ok'?'✅':type==='err'?'⚠️':'ℹ️';
+  const el=document.createElement('div');
+  el.className='toast '+(type||'info');
+  el.innerHTML='<span class="toast-ic">'+ic+'</span><span>'+esc(msg)+'</span>';
+  wrap.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(),260); }, type==='err'?4200:2600);
+}
 applyFontSize();
 applyTheme();
 // Admin-Rechte kommen ausschließlich aus dem Nutzerprofil (isAdmin/permissions) — kein geteiltes Passwort mehr.
@@ -1619,6 +1693,20 @@ function renderStart(){
   const today=localToday();
   const TYP_IC={konzert:'🎵',fest:'🎪',chorlager:'🏕️',gottesdienst:'⛪',probe:'🎹',sonstiges:'📌'};
   let html='';
+
+  // ---- Dashboard-Kopf: persönliche Begrüßung + Schnellaktionen ----
+  const _h=new Date().getHours();
+  const _gruss=_h<11?'Guten Morgen':_h<17?'Hallo':'Guten Abend';
+  const _me=(typeof currentUser!=='undefined'&&currentUser)?(prettyName(getUserVoteName())||'').split(' ')[0]:'';
+  const _heute=new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'});
+  html+=`<div class="hero"><div class="hero-greet">${_gruss}${_me?', '+esc(_me):''} 👋</div><div class="hero-date">${esc(_heute)}</div></div>`;
+  const _qa=[
+    `<button class="qa" onclick="showPageByName('termine')"><span class="qa-ic">📆</span>Zu-/Absagen</button>`,
+    `<button class="qa" onclick="openAbwesenheit()"><span class="qa-ic">🏖️</span>Abmelden</button>`,
+    `<button class="qa" onclick="showPageByName('lieder')"><span class="qa-ic">🎵</span>Lieder</button>`
+  ];
+  if(canUseEditMode()) _qa.push(`<button class="qa qa-adm" onclick="document.getElementById('pw-text')&&document.getElementById('pw-text').focus();window.scrollTo({top:0,behavior:'smooth'})"><span class="qa-ic">📌</span>Ankündigen</button>`);
+  html+=`<div class="qa-row">${_qa.join('')}</div>`;
 
   // Nächste Probe (mit Abmelde-Möglichkeit direkt hier)
   const nextProbe=(probenplan||[]).filter(p=>p.datum>=today).sort((a,b)=>a.datum.localeCompare(b.datum))[0];
@@ -3004,6 +3092,7 @@ async function abstimmen(id,antwort){
   // Update just this vote row for instant feedback
   const vrow=document.getElementById('vrow-'+id);
   if(vrow) vrow.innerHTML=buildVoteRow(t);
+  showToast(antwort==='ja'?'Zusage gespeichert':antwort==='nein'?'Absage gespeichert':'Als „Vielleicht" gespeichert','ok');
   // Also refresh tally
   renderTermine();
 }
@@ -4864,9 +4953,10 @@ async function saveMeineKontaktdaten(){
     // Nur die eigenen Kontaktfelder gezielt schreiben (kein Überschreiben fremder Einträge)
     await dbFetch(DB+'/mitglieder/'+i+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(upd)});
     if(res){res.style.color='#27ae60';res.textContent='✅ Gespeichert – danke fürs Aktuell-Halten!';}
+    showToast('Kontaktdaten gespeichert','ok');
     setTimeout(()=>{if(res)res.textContent='';},3000);
     if(typeof renderMitglieder==='function') renderMitglieder();
-  }catch(e){ if(res){res.style.color='#e74c3c';res.textContent='❌ Speichern fehlgeschlagen: '+e;} }
+  }catch(e){ if(res){res.style.color='#e74c3c';res.textContent='❌ Speichern fehlgeschlagen: '+e;} showToast('Speichern fehlgeschlagen','err'); }
 }
 
 async function saveAnzeigename(){
@@ -5111,6 +5201,7 @@ async function addPinnwand(){
   pinnwand[id]=entry; ta.value='';
   await dbFetch(DB+'/pinnwand/'+id+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(entry)}).catch(e=>console.warn(e));
   renderPinnwand();
+  showToast('Ankündigung angepinnt','ok');
 }
 async function deletePinnwand(id){
   if(!canUseEditMode()) return;
@@ -5189,6 +5280,7 @@ async function addFahrt(terminId, typ){
   fahrten[terminId][myk]=entry;
   await dbFetch(DB+'/fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(myk)+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(entry)}).catch(e=>console.warn(e));
   renderTermine();
+  showToast(typ==='biete'?'Mitfahrt angeboten':'Als Mitfahrer eingetragen','ok');
 }
 async function removeFahrt(terminId){
   const myk=myKey(); if(!myk) return;
@@ -5225,6 +5317,7 @@ async function createTerminfindung(){
   resetTfForm();
   const r=document.getElementById('tf-create-result'); if(r){ r.style.color='#27ae60'; r.textContent='✅ Terminfindung erstellt.'; setTimeout(()=>{r.textContent='';},3000); }
   renderTerminfindung();
+  showToast('Terminfindung gestartet','ok');
 }
 async function tfVote(id, optIdx, val){
   const myk=myKey(); if(!myk){ alert('Bitte anmelden.'); return; }
