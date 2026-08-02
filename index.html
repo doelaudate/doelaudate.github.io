@@ -1168,6 +1168,25 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-abmelden">
+  <div class="modal">
+    <h3>🙋 Abmelden</h3>
+    <div id="abmelden-body"></div>
+    <div class="modal-actions"><button class="btn btn-gray" onclick="closeModal()">Schließen</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-zusagen">
+  <div class="modal">
+    <h3>📆 Zu- & Absagen</h3>
+    <div id="zusagen-body" style="max-height:64vh;overflow-y:auto"></div>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeModal()">Schließen</button>
+      <button class="btn btn-primary" onclick="closeModal();showPageByName('termine')">Alle Termine ›</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-search">
   <div class="modal">
     <h3>🔍 Suche</h3>
@@ -1515,6 +1534,67 @@ function openAbwesenheit(){
   renderAbwesenheit();
   document.getElementById('modal-abwesenheit').classList.add('open');
 }
+// Abmelde-Chooser: nächste Probe ODER Urlaub/längere Abwesenheit
+function openAbmelden(){
+  if(!currentUser){ alert('Bitte zuerst anmelden.'); return; }
+  const today=localToday();
+  const nextProbe=(probenplan||[]).filter(p=>p.datum>=today).sort((a,b)=>a.datum.localeCompare(b.datum))[0];
+  const box=document.getElementById('abmelden-body'); if(!box) return;
+  let h='';
+  if(nextProbe){
+    const st=(probenstatus&&probenstatus[nextProbe.id])||{};
+    const myUid=currentUser&&currentUser.uid;
+    const selfNein=(myUid&&st[myUid]&&st[myUid].status==='nein');
+    const selfUrlaub=myAbsent(nextProbe.datum);
+    h+=`<div style="border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px">
+      <div style="font-weight:700;color:var(--navy)">🎹 Nächste Probe</div>
+      <div style="font-size:.85rem;color:#666;margin:2px 0 10px">${fmt(nextProbe.datum)}${nextProbe.notiz?' · '+esc(nextProbe.notiz):''}</div>`;
+    if(selfUrlaub) h+=`<div style="font-size:.82rem;color:#8a6d3b">🏖️ Du bist in diesem Zeitraum bereits als abwesend eingetragen.</div>`;
+    else if(selfNein) h+=`<div style="font-size:.84rem;color:#922b21;font-weight:600;margin-bottom:8px">❌ Du bist für diese Probe abgemeldet.</div><button class="btn btn-sm" style="background:#d5f5e3;color:#1a7a40" onclick="abmeldenProbeToggle('${nextProbe.id}')">↩ Doch dabei</button>`;
+    else h+=`<button class="btn" style="background:#fdecea;color:#922b21" onclick="abmeldenProbeToggle('${nextProbe.id}')">❌ Für diese Probe abmelden</button>`;
+    h+=`</div>`;
+  } else {
+    h+=`<div style="border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;font-size:.85rem;color:#888">🎹 Aktuell ist keine Probe geplant.</div>`;
+  }
+  h+=`<div style="border:1px solid var(--line);border-radius:12px;padding:14px">
+      <div style="font-weight:700;color:var(--navy)">🏖️ Urlaub / längere Abwesenheit</div>
+      <div style="font-size:.82rem;color:#666;margin:2px 0 10px">Zeitraum eintragen – du zählst dann bei allen Proben &amp; Terminen in der Zeit automatisch als „nicht da".</div>
+      <button class="btn btn-primary" onclick="closeModal();openAbwesenheit()">🏖️ Urlaub eintragen</button>
+    </div>`;
+  box.innerHTML=h;
+  document.getElementById('modal-abmelden').classList.add('open');
+}
+async function abmeldenProbeToggle(id){
+  await setProbeStatus(id,'nein');
+  const isNein = !!(probenstatus[id] && currentUser && probenstatus[id][currentUser.uid] && probenstatus[id][currentUser.uid].status==='nein');
+  showToast(isNein?'Für die Probe abgemeldet':'Wieder dabei','ok');
+  openAbmelden();
+  try{ renderStart(); }catch(e){}
+}
+// Kurze Zu-/Absagen-Übersicht der anstehenden Termine als Popup
+function openZusagen(){
+  const box=document.getElementById('zusagen-body'); if(!box) return;
+  const today=new Date().toISOString().split('T')[0];
+  const myName=getUserVoteName();
+  const IC={konzert:'🎵',fest:'🎪',chorlager:'🏕️',gottesdienst:'⛪',probe:'🎹',sonstiges:'📌'};
+  const up=(termine||[]).filter(t=>((t.datum_ende||t.datum)>=today) && !t.keineAbstimmung).sort((a,b)=>a.datum.localeCompare(b.datum));
+  if(!up.length){ box.innerHTML='<div class="empty">Keine anstehenden Termine mit Abstimmung.</div>'; }
+  else box.innerHTML=up.map(t=>{
+    const bd=terminVoteBreakdown(t);
+    const mv=myName?((t.abstimmungen||{})[myName]||null):null;
+    const meChip = mv==='ja'?'<span style="color:#1a7a40;font-weight:700">· du: ✅</span>':mv==='nein'?'<span style="color:#922b21;font-weight:700">· du: ❌</span>':mv==='vielleicht'?'<span style="color:#9a6b00;font-weight:700">· du: ❓</span>':'<span style="color:#999">· du: offen</span>';
+    const line=(ic,arr,col)=>arr.length?`<div style="font-size:.79rem;color:${col};margin-top:3px"><strong>${ic} ${arr.length}:</strong> ${esc(arr.join(', '))}</div>`:'';
+    return `<div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:9px">
+      <div style="font-weight:700;color:var(--navy)">${IC[t.typ]||'📌'} ${esc(t.titel)}</div>
+      <div style="font-size:.78rem;color:#777;margin:1px 0 6px">${fmt(t.datum)}${t.datum_ende?' – '+fmt(t.datum_ende):''}${t.uhrzeit?' · '+esc(t.uhrzeit):''} ${meChip}</div>
+      <div style="font-size:.82rem;color:#444;font-weight:600">✅ ${bd.ja.length} · ❌ ${bd.nein.length} · ❓ ${bd.vl.length} · ⏳ ${bd.notVoted.length} offen</div>
+      ${line('✅',bd.ja,'#1a7a40')}
+      ${line('❌',bd.nein,'#922b21')}
+      ${line('❓',bd.vl,'#9a6b00')}
+    </div>`;
+  }).join('');
+  document.getElementById('modal-zusagen').classList.add('open');
+}
 function openSearch(){
   const inp=document.getElementById('search-input'); if(inp) inp.value='';
   const r=document.getElementById('search-results'); if(r) r.innerHTML='<div style="color:#aaa;font-size:.85rem;padding:10px">Tippe einen Suchbegriff ein…</div>';
@@ -1576,6 +1656,8 @@ function setEditMode(on){
 function canUseEditMode(){
   return !!(currentUserProfile && (currentUserProfile.isAdmin || (Array.isArray(currentUserProfile.permissions) && currentUserProfile.permissions.length>0)));
 }
+// Ankündigungen anpinnen dürfen nur echte Admins (nicht Nutzer mit Einzelrechten)
+function canPin(){ return !!(currentUserProfile && currentUserProfile.isAdmin); }
 function updateEditModeUI(){
   const canEdit=canUseEditMode();
   document.querySelectorAll('.editmode-btn').forEach(b=>{
@@ -1701,11 +1783,11 @@ function renderStart(){
   const _heute=new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'});
   html+=`<div class="hero"><div class="hero-greet">${_gruss}${_me?', '+esc(_me):''} 👋</div><div class="hero-date">${esc(_heute)}</div></div>`;
   const _qa=[
-    `<button class="qa" onclick="showPageByName('termine')"><span class="qa-ic">📆</span>Zu-/Absagen</button>`,
-    `<button class="qa" onclick="openAbwesenheit()"><span class="qa-ic">🏖️</span>Abmelden</button>`,
+    `<button class="qa" onclick="openZusagen()"><span class="qa-ic">📆</span>Zu-/Absagen</button>`,
+    `<button class="qa" onclick="openAbmelden()"><span class="qa-ic">🙋</span>Abmelden</button>`,
     `<button class="qa" onclick="showPageByName('lieder')"><span class="qa-ic">🎵</span>Lieder</button>`
   ];
-  if(canUseEditMode()) _qa.push(`<button class="qa qa-adm" onclick="document.getElementById('pw-text')&&document.getElementById('pw-text').focus();window.scrollTo({top:0,behavior:'smooth'})"><span class="qa-ic">📌</span>Ankündigen</button>`);
+  if(canPin()) _qa.push(`<button class="qa qa-adm" onclick="document.getElementById('pw-text')&&document.getElementById('pw-text').focus();window.scrollTo({top:0,behavior:'smooth'})"><span class="qa-ic">📌</span>Ankündigen</button>`);
   html+=`<div class="qa-row">${_qa.join('')}</div>`;
 
   // Nächste Probe (mit Abmelde-Möglichkeit direkt hier)
@@ -5163,7 +5245,7 @@ async function loadPinnwand(){
 }
 function renderPinnwand(){
   const card=document.getElementById('pinnwand-card'); if(!card) return;
-  const editor=canUseEditMode();
+  const editor=canPin();
   const entries=Object.entries(pinnwand||{}).map(([k,v])=>Object.assign({_key:k},v||{})).filter(x=>x&&x.text).sort((a,b)=>(b.ts||0)-(a.ts||0));
   if(!entries.length && !editor){ card.innerHTML=''; return; }
   const compose = editor ? `
@@ -5194,6 +5276,7 @@ function renderPinnwand(){
   if(myk){ entries.forEach(e=>{ if(!(e.gelesen&&e.gelesen[myk])) markPinnwandRead(e._key); }); }
 }
 async function addPinnwand(){
+  if(!canPin()){ showToast('Nur Admins können anpinnen','err'); return; }
   const ta=document.getElementById('pw-text'); if(!ta) return;
   const text=ta.value.trim(); if(!text){ ta.focus(); return; }
   const id=uid();
@@ -5204,7 +5287,7 @@ async function addPinnwand(){
   showToast('Ankündigung angepinnt','ok');
 }
 async function deletePinnwand(id){
-  if(!canUseEditMode()) return;
+  if(!canPin()) return;
   if(!confirm('Diese Ankündigung löschen?')) return;
   delete pinnwand[id];
   await dbFetch(DB+'/pinnwand/'+id+'.json',{method:'DELETE'}).catch(e=>console.warn(e));
