@@ -1,0 +1,2392 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bandkasse – Buchhaltung</title>
+<meta name="description" content="Lokale Buchhaltung für Bands: Kassenbuch, Auftritte &amp; Gagen, Belege, EÜR und Steuer-Auswertung.">
+<meta name="theme-color" content="#16315c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bandkasse">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{
+  color-scheme:light;
+  --navy:#16315c; --primary:#2563b5; --primary-dark:#1d4e96;
+  --primary-50:#eaf1fb; --primary-100:#dbe8f8;
+  --gold:#f0b429;
+  --ink:#1a2330; --muted:#6b7685; --line:#e7ebf0; --line-soft:#f0f3f7;
+  --bg:#eef1f6; --card:#ffffff; --card-2:#f7f9fc;
+  --pos:#17924c; --pos-bg:#e8f7ee;
+  --neg:#d6402c; --neg-bg:#fdecea;
+  --warn:#a76a00; --warn-bg:#fff5e0; --warn-line:#f5dda4;
+  --radius:16px; --radius-sm:11px; --radius-pill:999px;
+  --shadow:0 1px 3px rgba(20,40,80,.06),0 6px 20px rgba(20,40,80,.05);
+  --shadow-lg:0 14px 44px rgba(20,40,80,.22);
+}
+html[data-theme="dark"]{
+  color-scheme:dark;
+  --navy:#0e1a2d; --primary:#5aa0ea; --primary-dark:#4a8fd8;
+  --primary-50:#182740; --primary-100:#22374f;
+  --ink:#e8edf4; --muted:#9aa7b8; --line:#2a3648; --line-soft:#232e3e;
+  --bg:#111826; --card:#1a2331; --card-2:#212c3d;
+  --pos:#41c47c; --pos-bg:#16321f;
+  --neg:#f2705c; --neg-bg:#38201c;
+  --warn:#f0b429; --warn-bg:#33290f; --warn-line:#5a4715;
+  --shadow:0 1px 3px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25);
+  --shadow-lg:0 14px 44px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;
+  padding-bottom:calc(76px + env(safe-area-inset-bottom));
+}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+a{color:var(--primary)}
+
+/* ---------- Kopf ---------- */
+.header{
+  background:linear-gradient(120deg,#0f2244 0%,var(--navy) 46%,#2563b5 140%);
+  color:#fff;padding:calc(12px + env(safe-area-inset-top)) 18px 12px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  position:sticky;top:0;z-index:50;box-shadow:0 2px 16px rgba(10,25,55,.28);
+}
+.header h1{font-size:1.05rem;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.header .sub{font-size:.74rem;opacity:.82;font-weight:500;margin-top:2px}
+.icon-btn{
+  background:rgba(255,255,255,.14);border:none;color:#fff;width:38px;height:38px;
+  border-radius:12px;cursor:pointer;font-size:1.05rem;display:grid;place-items:center;transition:background .15s;
+}
+.icon-btn:hover{background:rgba(255,255,255,.26)}
+
+/* ---------- Tabs ---------- */
+.main-tabs{
+  background:var(--card);border-bottom:1px solid var(--line);display:flex;
+  overflow-x:auto;padding:0 6px;position:sticky;top:0;z-index:40;scrollbar-width:none;
+}
+.main-tabs::-webkit-scrollbar{display:none}
+.mtab{
+  padding:13px 15px;cursor:pointer;font-size:.86rem;font-weight:600;color:var(--muted);
+  border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap;
+  background:none;border-top:none;border-left:none;border-right:none;transition:color .15s,border-color .15s;
+}
+.mtab:hover{color:var(--ink)}
+.mtab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.container{max-width:1100px;margin:0 auto;padding:16px}
+.page{display:none}.page.active{display:block;animation:fade .18s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ---------- Karten ---------- */
+.card{
+  background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:14px;
+  box-shadow:var(--shadow);border:1px solid var(--line);
+}
+.card-title{font-size:.98rem;font-weight:700;color:var(--ink);margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card-title .grow{flex:1}
+.sec-hint{font-size:.8rem;color:var(--muted);line-height:1.5}
+.divider{height:1px;background:var(--line);margin:14px 0}
+
+/* ---------- Buttons ---------- */
+.btn{
+  padding:10px 16px;border:none;border-radius:var(--radius-sm);font-size:.86rem;font-weight:600;
+  cursor:pointer;transition:filter .15s,transform .05s,box-shadow .15s;display:inline-flex;
+  align-items:center;gap:6px;justify-content:center;line-height:1.2;
+}
+.btn:hover{filter:brightness(1.06)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-success{background:var(--pos);color:#fff}
+.btn-danger{background:var(--neg);color:#fff}
+.btn-gray{background:var(--card-2);color:var(--ink);border:1px solid var(--line)}
+.btn-ghost{background:transparent;color:var(--primary);border:1.5px solid var(--primary)}
+.btn-sm{padding:6px 11px;font-size:.78rem;border-radius:9px}
+.btn-block{width:100%}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ---------- Formulare ---------- */
+.form-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.f{display:flex;flex-direction:column;gap:4px;flex:1;min-width:150px}
+.f.wide{min-width:100%}
+.f label{font-size:.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.fl-input{
+  width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:var(--radius-sm);
+  background:var(--card);font-size:.9rem;transition:border-color .15s,box-shadow .15s;
+}
+.fl-input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-50)}
+textarea.fl-input{min-height:70px;resize:vertical}
+.hint{font-size:.74rem;color:var(--muted);line-height:1.45}
+.req::after{content:" *";color:var(--neg)}
+
+/* ---------- Kennzahlen ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--card-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px 14px}
+.kpi-l{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.kpi-n{font-size:1.4rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:4px}
+.kpi-s{font-size:.74rem;color:var(--muted);margin-top:3px}
+.kpi.big .kpi-n{font-size:1.9rem}
+.pos{color:var(--pos)}.neg{color:var(--neg)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- Listen ---------- */
+.row{
+  display:flex;align-items:center;gap:11px;padding:11px 4px;border-bottom:1px solid var(--line-soft);
+}
+.row:last-child{border-bottom:none}
+.row-main{flex:1;min-width:0}
+.row-t{font-weight:600;font-size:.9rem;word-break:break-word}
+.row-s{font-size:.74rem;color:var(--muted);margin-top:2px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.row-r{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.amt{font-weight:800;font-size:.94rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip{
+  display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:var(--radius-pill);
+  font-size:.7rem;font-weight:700;background:var(--card-2);border:1px solid var(--line);color:var(--muted);
+}
+.chip.b{background:var(--primary-50);border-color:var(--primary-100);color:var(--primary)}
+.chip.g{background:var(--pos-bg);border-color:transparent;color:var(--pos)}
+.chip.r{background:var(--neg-bg);border-color:transparent;color:var(--neg)}
+.chip.y{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+.empty{text-align:center;padding:30px 16px;color:var(--muted);font-size:.86rem;line-height:1.6}
+.empty .em{font-size:2rem;display:block;margin-bottom:8px;opacity:.65}
+.strike{text-decoration:line-through;opacity:.55}
+
+/* ---------- Tabellen ---------- */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.t{width:100%;border-collapse:collapse;font-size:.84rem;min-width:340px}
+table.t th{
+  text-align:left;font-size:.71rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
+  font-weight:700;padding:8px 9px;border-bottom:1.5px solid var(--line);white-space:nowrap;
+}
+table.t td{padding:9px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+table.t td.r,table.t th.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.t tr.sum td{font-weight:800;border-top:1.5px solid var(--line);border-bottom:none;background:var(--card-2)}
+table.t tr.grp td{font-weight:700;background:var(--card-2);font-size:.79rem;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+
+/* ---------- Hinweise ---------- */
+.note{
+  border-radius:var(--radius-sm);padding:11px 13px;font-size:.8rem;line-height:1.55;
+  background:var(--primary-50);border:1px solid var(--primary-100);color:var(--ink);
+}
+.note.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.note.bad{background:var(--neg-bg);border-color:transparent}
+.note+.note{margin-top:8px}
+.note b{font-weight:700}
+
+/* ---------- Sub-Tabs / Filter ---------- */
+.sub-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.stab{
+  padding:7px 14px;border-radius:var(--radius-pill);border:1.5px solid var(--line);background:var(--card);
+  font-size:.8rem;font-weight:600;cursor:pointer;color:var(--muted);transition:all .15s;
+}
+.stab:hover{border-color:var(--primary);color:var(--primary)}
+.stab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.yearbar{display:flex;align-items:center;gap:8px}
+.yearbar strong{font-size:1.05rem;color:var(--ink);min-width:56px;text-align:center;font-variant-numeric:tabular-nums}
+
+/* ---------- Modal ---------- */
+.modal{
+  position:fixed;inset:0;background:rgba(10,20,40,.55);backdrop-filter:blur(2px);
+  display:none;align-items:flex-end;justify-content:center;z-index:200;
+}
+.modal.open{display:flex}
+.modal-box{
+  background:var(--card);width:100%;max-width:640px;max-height:92vh;overflow-y:auto;
+  border-radius:20px 20px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));
+  box-shadow:var(--shadow-lg);animation:slideup .22s ease;
+}
+@keyframes slideup{from{transform:translateY(28px);opacity:.6}to{transform:none;opacity:1}}
+@media(min-width:700px){
+  .modal{align-items:center}
+  .modal-box{border-radius:var(--radius);max-height:88vh}
+}
+.modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.modal-head h3{font-size:1.02rem;font-weight:700}
+.x{background:none;border:none;font-size:1.5rem;line-height:1;color:var(--muted);cursor:pointer;padding:0 4px}
+
+/* ---------- Untere Navigation ---------- */
+.fab{
+  position:fixed;right:18px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:60;
+  width:56px;height:56px;border-radius:50%;border:none;background:var(--primary);color:#fff;
+  font-size:1.6rem;box-shadow:0 8px 24px rgba(37,99,181,.45);cursor:pointer;display:grid;place-items:center;
+}
+.bnav{
+  position:fixed;left:0;right:0;bottom:0;z-index:70;background:var(--card);
+  border-top:1px solid var(--line);display:flex;padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+}
+.bn{
+  flex:1;background:none;border:none;cursor:pointer;padding:7px 2px;border-radius:12px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--muted);font-size:.66rem;font-weight:700;
+}
+.bn i{font-style:normal;font-size:1.15rem;line-height:1}
+.bn.active{color:var(--primary);background:var(--primary-50)}
+
+/* ---------- Toast ---------- */
+#toast{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom));
+  background:var(--navy);color:#fff;padding:11px 18px;border-radius:var(--radius-pill);font-size:.84rem;
+  font-weight:600;box-shadow:var(--shadow-lg);z-index:300;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;
+  max-width:90vw;text-align:center;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
+#toast.bad{background:var(--neg)}
+#toast.good{background:var(--pos)}
+
+/* ---------- Belege ---------- */
+.beleg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.beleg{
+  border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;background:var(--card-2);
+  cursor:pointer;position:relative;
+}
+.beleg img{width:100%;height:92px;object-fit:cover;display:block}
+.beleg .pdf{height:92px;display:grid;place-items:center;font-size:1.9rem}
+.beleg .cap{padding:6px 7px;font-size:.68rem;color:var(--muted);line-height:1.3;word-break:break-word}
+.beleg.unlinked{border-color:var(--warn-line);box-shadow:inset 0 0 0 1px var(--warn-line)}
+.drop{
+  border:2px dashed var(--line);border-radius:var(--radius-sm);padding:18px;text-align:center;
+  color:var(--muted);font-size:.83rem;cursor:pointer;transition:all .15s;
+}
+.drop:hover,.drop.over{border-color:var(--primary);color:var(--primary);background:var(--primary-50)}
+
+/* ---------- Balken ---------- */
+.bar{height:7px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:5px}
+.bar>i{display:block;height:100%;border-radius:4px}
+
+/* ---------- Drucken ---------- */
+#print-area{display:none}
+@media print{
+  body{background:#fff;padding:0;color:#000;font-size:11pt}
+  .header,.main-tabs,.bnav,.fab,.no-print,#toast,.modal{display:none !important}
+  .page{display:none !important}
+  #print-area{display:block !important;padding:0}
+  .container{padding:0;max-width:none}
+  .card{box-shadow:none;border:none;padding:0;margin:0 0 14px}
+  table.t{font-size:9.5pt;min-width:0}
+  table.t th{border-bottom:1px solid #000}
+  table.t td{border-bottom:1px solid #ddd}
+  .pb{page-break-after:always}
+  a{color:#000;text-decoration:none}
+  /* auf Papier ist Platz – alle Spalten zeigen */
+  table.t th.s-hide,table.t td.s-hide{display:table-cell !important}
+}
+@media(max-width:620px){
+  /* Nebensächliche Spalten weglassen, damit die Beträge sichtbar bleiben */
+  table.t th.s-hide,table.t td.s-hide{display:none}
+}
+@media(max-width:520px){
+  .kpi.big .kpi-n{font-size:1.6rem}
+  .container{padding:12px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1><span>🎸</span> <span id="hd-band">Bandkasse</span></h1>
+    <div class="sub" id="hd-sub">Buchhaltung &amp; Steuer · nur auf diesem Gerät</div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="icon-btn" onclick="toggleTheme()" title="Hell/Dunkel" id="theme-btn">🌙</button>
+    <button class="icon-btn" onclick="showPage('einst')" title="Einstellungen">⚙️</button>
+  </div>
+</div>
+
+<div class="main-tabs" id="main-tabs">
+  <button class="mtab active" data-page="start"  onclick="showPage('start')">🏠 Übersicht</button>
+  <button class="mtab"        data-page="kasse"  onclick="showPage('kasse')">📒 Kassenbuch</button>
+  <button class="mtab"        data-page="gigs"   onclick="showPage('gigs')">🎤 Auftritte</button>
+  <button class="mtab"        data-page="belege" onclick="showPage('belege')">🧾 Belege</button>
+  <button class="mtab"        data-page="steuer" onclick="showPage('steuer')">📊 Steuer &amp; EÜR</button>
+  <button class="mtab"        data-page="einst"  onclick="showPage('einst')">⚙️ Einstellungen</button>
+</div>
+
+<div class="container">
+
+  <div id="backup-banner"></div>
+
+  <!-- ============ ÜBERSICHT ============ -->
+  <div class="page active" id="p-start">
+    <div class="card">
+      <div class="card-title">
+        <span class="grow">📅 Geschäftsjahr</span>
+        <span class="yearbar">
+          <button class="btn btn-gray btn-sm" onclick="setJahr(-1)" aria-label="Vorjahr">◀</button>
+          <strong id="jahr-label">—</strong>
+          <button class="btn btn-gray btn-sm" onclick="setJahr(1)" aria-label="Folgejahr">▶</button>
+        </span>
+      </div>
+      <div class="kpis" id="start-kpis"></div>
+      <div id="start-hinweise" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="grow">⚡ Schnell erfassen</span></div>
+      <div class="btn-row">
+        <button class="btn btn-success" onclick="openBuchung(null,'ein')">➕ Einnahme</button>
+        <button class="btn btn-danger" onclick="openBuchung(null,'aus')">➖ Ausgabe</button>
+        <button class="btn btn-primary" onclick="openGig()">🎤 Auftritt anlegen</button>
+        <button class="btn btn-gray" onclick="showPage('belege');setTimeout(()=>document.getElementById('beleg-file').click(),120)">📷 Beleg fotografieren</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="grow">🎤 Nächste &amp; letzte Auftritte</span>
+        <button class="btn btn-gray btn-sm" onclick="showPage('gigs')">alle →</button>
+      </div>
+      <div id="start-gigs"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="grow">📒 Letzte Buchungen</span>
+        <button class="btn btn-gray btn-sm" onclick="showPage('kasse')">alle →</button>
+      </div>
+      <div id="start-buchungen"></div>
+    </div>
+  </div>
+
+  <!-- ============ KASSENBUCH ============ -->
+  <div class="page" id="p-kasse">
+    <div class="card">
+      <div class="card-title">
+        <span class="grow">📒 Kassenbuch <span id="kb-jahr-chip" class="chip b"></span></span>
+        <span class="yearbar">
+          <button class="btn btn-gray btn-sm" onclick="setJahr(-1)">◀</button>
+          <strong id="jahr-label-2">—</strong>
+          <button class="btn btn-gray btn-sm" onclick="setJahr(1)">▶</button>
+        </span>
+      </div>
+      <div class="kpis" id="kb-kpis"></div>
+    </div>
+
+    <div class="card">
+      <div class="form-row" style="margin-bottom:6px">
+        <div class="f" style="min-width:180px">
+          <label for="kb-search">Suche</label>
+          <input class="fl-input" id="kb-search" type="search" placeholder="Text, Betrag, Beleg-Nr …" oninput="renderKassenbuch()">
+        </div>
+        <div class="f" style="max-width:200px">
+          <label for="kb-filter-art">Art</label>
+          <select class="fl-input" id="kb-filter-art" onchange="renderKassenbuch()">
+            <option value="">alle</option>
+            <option value="ein">nur Einnahmen</option>
+            <option value="aus">nur Ausgaben</option>
+          </select>
+        </div>
+        <div class="f" style="max-width:260px">
+          <label for="kb-filter-kat">Kategorie</label>
+          <select class="fl-input" id="kb-filter-kat" onchange="renderKassenbuch()"><option value="">alle</option></select>
+        </div>
+        <div class="f" style="max-width:200px">
+          <label for="kb-filter-zahl">Zahlungsart</label>
+          <select class="fl-input" id="kb-filter-zahl" onchange="renderKassenbuch()">
+            <option value="">alle</option>
+            <option value="bar">Bar (Bandkasse)</option>
+            <option value="bank">Bankkonto</option>
+            <option value="privat">privat verauslagt</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row no-print" style="margin-bottom:10px">
+        <button class="btn btn-success btn-sm" onclick="openBuchung(null,'ein')">➕ Einnahme</button>
+        <button class="btn btn-danger btn-sm" onclick="openBuchung(null,'aus')">➖ Ausgabe</button>
+        <button class="btn btn-gray btn-sm" onclick="exportKassenbuchCSV()">⬇️ CSV</button>
+        <button class="btn btn-gray btn-sm" onclick="druckeKassenbuch()">🖨️ Kassenbericht</button>
+      </div>
+      <div id="kb-list"></div>
+    </div>
+  </div>
+
+  <!-- ============ AUFTRITTE ============ -->
+  <div class="page" id="p-gigs">
+    <div class="card">
+      <div class="card-title">
+        <span class="grow">🎤 Auftritte &amp; Gagen</span>
+        <span class="yearbar">
+          <button class="btn btn-gray btn-sm" onclick="setJahr(-1)">◀</button>
+          <strong id="jahr-label-3">—</strong>
+          <button class="btn btn-gray btn-sm" onclick="setJahr(1)">▶</button>
+        </span>
+      </div>
+      <div class="kpis" id="gig-kpis"></div>
+      <div class="btn-row no-print" style="margin-top:12px">
+        <button class="btn btn-primary btn-sm" onclick="openGig()">➕ Auftritt anlegen</button>
+        <button class="btn btn-gray btn-sm" onclick="exportGigsCSV()">⬇️ CSV</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="grow">Liste</span></div>
+      <div class="sub-tabs" id="gig-filter">
+        <button class="stab active" data-f="alle" onclick="setGigFilter('alle')">alle</button>
+        <button class="stab" data-f="offen" onclick="setGigFilter('offen')">offene Gage</button>
+        <button class="stab" data-f="geplant" onclick="setGigFilter('geplant')">geplant</button>
+        <button class="stab" data-f="gespielt" onclick="setGigFilter('gespielt')">gespielt</button>
+      </div>
+      <div id="gig-list"></div>
+    </div>
+  </div>
+
+  <!-- ============ BELEGE ============ -->
+  <div class="page" id="p-belege">
+    <div class="card">
+      <div class="card-title"><span class="grow">🧾 Belege</span></div>
+      <div class="sec-hint" style="margin-bottom:10px">
+        Foto oder PDF pro Buchung. Belege werden lokal in diesem Browser gespeichert und landen in jedem Backup
+        sowie im Steuerberater-Paket.
+      </div>
+      <input type="file" id="beleg-file" accept="image/*,application/pdf" multiple style="display:none" onchange="belegeHinzufuegen(this.files)">
+      <div class="drop" id="beleg-drop" onclick="document.getElementById('beleg-file').click()">
+        📷 Beleg fotografieren oder Datei wählen<br><span class="hint">(auch per Drag &amp; Drop)</span>
+      </div>
+      <div class="kpis" id="beleg-kpis" style="margin-top:12px"></div>
+      <div class="btn-row no-print" style="margin-top:10px">
+        <button class="btn btn-gray btn-sm" onclick="exportBelegeZip()">⬇️ Alle Belege als ZIP</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">
+        <span class="grow">Übersicht</span>
+        <select class="fl-input" id="beleg-filter" style="width:auto;min-width:180px" onchange="renderBelege()">
+          <option value="alle">alle Belege</option>
+          <option value="offen">ohne Buchung</option>
+          <option value="jahr">nur aktuelles Jahr</option>
+        </select>
+      </div>
+      <div id="beleg-list"></div>
+    </div>
+  </div>
+
+  <!-- ============ STEUER ============ -->
+  <div class="page" id="p-steuer">
+    <div class="card">
+      <div class="card-title">
+        <span class="grow">📊 Auswertung für die Steuererklärung</span>
+        <span class="yearbar">
+          <button class="btn btn-gray btn-sm" onclick="setJahr(-1)">◀</button>
+          <strong id="jahr-label-4">—</strong>
+          <button class="btn btn-gray btn-sm" onclick="setJahr(1)">▶</button>
+        </span>
+      </div>
+      <div class="note" style="margin-bottom:12px">
+        <b>Kein Ersatz für Steuerberatung.</b> Die App rechnet nach den üblichen Regeln der
+        Einnahmen-Überschuss-Rechnung (§ 4 Abs. 3 EStG) und bereitet die Zahlen prüffähig auf.
+        Prüfe die Zuordnung vor der Abgabe – die Verantwortung für die Erklärung bleibt bei dir.
+      </div>
+      <div class="kpis" id="st-kpis"></div>
+      <div class="btn-row no-print" style="margin-top:12px">
+        <button class="btn btn-primary btn-sm" onclick="druckeEUER()">🖨️ EÜR drucken / als PDF</button>
+        <button class="btn btn-gray btn-sm" onclick="exportEuerCSV()">⬇️ EÜR-Summen CSV</button>
+        <button class="btn btn-gray btn-sm" onclick="exportSteuerpaket()">📦 Steuerberater-Paket (ZIP)</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="grow">Betriebseinnahmen</span></div>
+      <div class="tw"><table class="t" id="st-ein"></table></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="grow">Betriebsausgaben</span></div>
+      <div class="tw"><table class="t" id="st-aus"></table></div>
+    </div>
+
+    <div class="card" id="st-ust-card">
+      <div class="card-title"><span class="grow">Umsatzsteuer</span></div>
+      <div id="st-ust"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="grow">👥 Gewinnverteilung</span></div>
+      <div id="st-verteilung"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="grow">🚗 Reisekosten &amp; Sonderfälle</span></div>
+      <div id="st-sonder"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="grow">✅ Prüfliste vor der Abgabe</span></div>
+      <div id="st-check"></div>
+    </div>
+  </div>
+
+  <!-- ============ EINSTELLUNGEN ============ -->
+  <div class="page" id="p-einst">
+    <div class="card">
+      <div class="card-title"><span class="grow">💾 Datensicherung</span></div>
+      <div id="backup-status" style="margin-bottom:12px"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="exportBackup()">⬇️ Vollbackup speichern (inkl. Belege)</button>
+        <button class="btn btn-gray" onclick="document.getElementById('restore-file').click()">⬆️ Backup einspielen</button>
+      </div>
+      <input type="file" id="restore-file" accept="application/json,.json" style="display:none" onchange="importBackup(this.files[0])">
+      <div class="note warn" style="margin-top:12px">
+        <b>Wichtig:</b> Alle Daten liegen ausschließlich in diesem Browser. Wenn du „Websitedaten löschen“ nutzt,
+        den privaten Modus verwendest oder das Gerät wechselst, sind sie weg. Steuerunterlagen musst du
+        <b>10 Jahre</b> aufbewahren (§ 147 AO) – lege Backups regelmäßig auf einem zweiten Speicherort ab.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="grow">🎸 Band &amp; Steuer-Stammdaten</span></div>
+      <div class="form-row">
+        <div class="f"><label for="s-band">Name der Band</label>
+          <input class="fl-input" id="s-band" oninput="saveEinstellungen()"></div>
+        <div class="f"><label for="s-rechtsform">Rechtsform</label>
+          <select class="fl-input" id="s-rechtsform" onchange="saveEinstellungen()">
+            <option value="gbr">GbR (mehrere Musiker gemeinsam)</option>
+            <option value="einzel">Einzelunternehmen / Freiberufler</option>
+            <option value="hobby">Liebhaberei / kein Gewerbe (nur Übersicht)</option>
+            <option value="verein">Verein</option>
+          </select></div>
+      </div>
+      <div class="form-row">
+        <div class="f"><label for="s-stnr">Steuernummer</label>
+          <input class="fl-input" id="s-stnr" placeholder="z. B. 123/456/78901" oninput="saveEinstellungen()"></div>
+        <div class="f"><label for="s-fa">Finanzamt</label>
+          <input class="fl-input" id="s-fa" placeholder="z. B. Halle (Saale)" oninput="saveEinstellungen()"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="form-row">
+        <div class="f"><label for="s-klein">Umsatzsteuer</label>
+          <select class="fl-input" id="s-klein" onchange="saveEinstellungen()">
+            <option value="1">Kleinunternehmer (§ 19 UStG) – keine USt</option>
+            <option value="0">Regelbesteuerung – mit USt &amp; Vorsteuer</option>
+          </select></div>
+        <div class="f"><label for="s-ustsatz">Standard-USt-Satz</label>
+          <select class="fl-input" id="s-ustsatz" onchange="saveEinstellungen()">
+            <option value="19">19 %</option>
+            <option value="7">7 % (ermäßigt, z. B. Konzerte)</option>
+            <option value="0">0 % / steuerfrei</option>
+          </select></div>
+      </div>
+      <div class="form-row">
+        <div class="f"><label for="s-km">Kilometerpauschale (€/km)</label>
+          <input class="fl-input" id="s-km" type="number" step="0.01" min="0" oninput="saveEinstellungen()"></div>
+        <div class="f"><label for="s-vmehr">Verpflegungspauschale ab 8 h (€)</label>
+          <input class="fl-input" id="s-vmehr" type="number" step="1" min="0" oninput="saveEinstellungen()"></div>
+      </div>
+      <div class="hint">Pauschalen können sich jährlich ändern – Werte bitte für dein Steuerjahr prüfen.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="grow">👥 Bandmitglieder</span>
+        <button class="btn btn-primary btn-sm" onclick="openMitglied()">➕ Mitglied</button>
+      </div>
+      <div class="sec-hint" style="margin-bottom:10px">
+        Für die Gewinnverteilung (bei einer GbR: „gesonderte und einheitliche Feststellung“) und
+        für die Aufteilung der Gagen.
+      </div>
+      <div id="mitglied-list"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="grow">🔒 Jahresabschluss</span></div>
+      <div class="sec-hint" style="margin-bottom:10px">
+        Ein festgeschriebenes Jahr lässt sich nicht mehr verändern. Korrekturen laufen dann als
+        Stornobuchung im laufenden Jahr – so bleibt die Buchführung nachvollziehbar (GoBD).
+      </div>
+      <div id="jahresabschluss"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="grow">📝 Änderungsprotokoll</span>
+        <button class="btn btn-gray btn-sm" onclick="exportProtokollCSV()">⬇️ CSV</button>
+      </div>
+      <div class="sec-hint" style="margin-bottom:10px">Jede Änderung an einer Buchung wird protokolliert.</div>
+      <div id="protokoll-list"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="grow">🗑️ Alles löschen</span></div>
+      <div class="sec-hint" style="margin-bottom:10px">Löscht sämtliche Buchungen, Auftritte und Belege in diesem Browser. Unwiderruflich.</div>
+      <button class="btn btn-danger btn-sm" onclick="alleDatenLoeschen()">Daten unwiderruflich löschen</button>
+    </div>
+
+    <div class="card">
+      <div class="sec-hint">
+        <b>Bandkasse</b> – lokale Buchhaltung, keine Server, keine Konten, keine Cloud.
+        Version <span id="app-version"></span>.
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="fab no-print" id="fab" onclick="fabAktion()" title="Neu erfassen">＋</button>
+
+<nav class="bnav no-print">
+  <button class="bn active" data-page="start"  onclick="showPage('start')"><i>🏠</i>Übersicht</button>
+  <button class="bn" data-page="kasse"  onclick="showPage('kasse')"><i>📒</i>Kasse</button>
+  <button class="bn" data-page="gigs"   onclick="showPage('gigs')"><i>🎤</i>Auftritte</button>
+  <button class="bn" data-page="belege" onclick="showPage('belege')"><i>🧾</i>Belege</button>
+  <button class="bn" data-page="steuer" onclick="showPage('steuer')"><i>📊</i>Steuer</button>
+</nav>
+
+<div id="toast"></div>
+<div id="print-area"></div>
+
+<!-- ============ MODAL: BUCHUNG ============ -->
+<div class="modal" id="m-buchung" onclick="if(event.target===this)closeModal('m-buchung')">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="mb-title">Buchung</h3>
+      <button class="x" onclick="closeModal('m-buchung')">×</button>
+    </div>
+    <div class="form-row">
+      <div class="f"><label class="req" for="mb-datum">Datum</label>
+        <input class="fl-input" type="date" id="mb-datum"></div>
+      <div class="f"><label for="mb-typ">Art</label>
+        <select class="fl-input" id="mb-typ" onchange="mbTypChanged()">
+          <option value="ein">Einnahme</option>
+          <option value="aus">Ausgabe</option>
+        </select></div>
+    </div>
+    <div class="form-row">
+      <div class="f wide"><label class="req" for="mb-kat">Kategorie</label>
+        <select class="fl-input" id="mb-kat" onchange="mbKatChanged()"></select>
+        <div class="hint" id="mb-kat-hint"></div></div>
+    </div>
+    <div class="form-row">
+      <div class="f wide"><label class="req" for="mb-text">Beschreibung</label>
+        <input class="fl-input" id="mb-text" placeholder="z. B. Gage Sommerfest Dölau"></div>
+    </div>
+    <div class="form-row">
+      <div class="f"><label class="req" for="mb-brutto">Betrag (brutto) €</label>
+        <input class="fl-input" type="number" step="0.01" min="0" id="mb-brutto" inputmode="decimal" oninput="mbRechne()"></div>
+      <div class="f" id="mb-ust-wrap"><label for="mb-ust">USt-Satz</label>
+        <select class="fl-input" id="mb-ust" onchange="mbRechne()">
+          <option value="19">19 %</option>
+          <option value="7">7 %</option>
+          <option value="0">0 % / steuerfrei</option>
+        </select></div>
+    </div>
+    <div id="mb-rechnung" class="note" style="margin-bottom:10px"></div>
+    <div class="form-row">
+      <div class="f"><label for="mb-zahl">Zahlungsart</label>
+        <select class="fl-input" id="mb-zahl">
+          <option value="bar">Bar (Bandkasse)</option>
+          <option value="bank">Bankkonto</option>
+          <option value="privat">privat verauslagt</option>
+        </select></div>
+      <div class="f"><label for="mb-gig">Auftritt zuordnen</label>
+        <select class="fl-input" id="mb-gig"><option value="">– kein Auftritt –</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="f wide"><label for="mb-notiz">Notiz (optional)</label>
+        <textarea class="fl-input" id="mb-notiz" placeholder="Geschäftlicher Anlass, Teilnehmer bei Bewirtung, …"></textarea></div>
+    </div>
+    <div class="form-row">
+      <div class="f wide"><label>Belege</label>
+        <div id="mb-belege" class="beleg-grid" style="margin-bottom:8px"></div>
+        <input type="file" id="mb-file" accept="image/*,application/pdf" multiple style="display:none" onchange="mbBelegeAnhaengen(this.files)">
+        <button class="btn btn-gray btn-sm" onclick="document.getElementById('mb-file').click()">📎 Beleg anhängen</button>
+      </div>
+    </div>
+    <div id="mb-warn"></div>
+    <div class="divider"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveBuchung()">Speichern</button>
+      <button class="btn btn-gray" onclick="closeModal('m-buchung')">Abbrechen</button>
+      <button class="btn btn-danger btn-sm" id="mb-storno" style="margin-left:auto" onclick="stornoBuchung()">Stornieren</button>
+    </div>
+    <div id="mb-meta" class="hint" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- ============ MODAL: AUFTRITT ============ -->
+<div class="modal" id="m-gig" onclick="if(event.target===this)closeModal('m-gig')">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="mg-title">Auftritt</h3>
+      <button class="x" onclick="closeModal('m-gig')">×</button>
+    </div>
+    <div class="form-row">
+      <div class="f"><label class="req" for="mg-datum">Datum</label>
+        <input class="fl-input" type="date" id="mg-datum"></div>
+      <div class="f"><label for="mg-status">Status</label>
+        <select class="fl-input" id="mg-status">
+          <option value="angefragt">angefragt</option>
+          <option value="bestaetigt">bestätigt</option>
+          <option value="gespielt">gespielt</option>
+          <option value="abgesagt">abgesagt</option>
+        </select></div>
+    </div>
+    <div class="form-row">
+      <div class="f"><label class="req" for="mg-titel">Bezeichnung</label>
+        <input class="fl-input" id="mg-titel" placeholder="z. B. Sommerfest"></div>
+      <div class="f"><label for="mg-ort">Ort</label>
+        <input class="fl-input" id="mg-ort" placeholder="z. B. Halle-Dölau"></div>
+    </div>
+    <div class="form-row">
+      <div class="f"><label for="mg-veranst">Veranstalter / Rechnung an</label>
+        <input class="fl-input" id="mg-veranst" placeholder="Name, Anschrift"></div>
+      <div class="f"><label for="mg-gage">Vereinbarte Gage (brutto) €</label>
+        <input class="fl-input" type="number" step="0.01" min="0" id="mg-gage" inputmode="decimal"></div>
+    </div>
+    <div class="form-row">
+      <div class="f"><label for="mg-km">Gefahrene Kilometer (gesamt)</label>
+        <input class="fl-input" type="number" step="1" min="0" id="mg-km" inputmode="numeric"></div>
+      <div class="f"><label for="mg-stunden">Abwesenheit (Stunden)</label>
+        <input class="fl-input" type="number" step="1" min="0" id="mg-stunden" inputmode="numeric"></div>
+    </div>
+    <div class="form-row">
+      <div class="f wide"><label>Mitwirkende</label>
+        <div id="mg-mitwirkende" class="btn-row"></div>
+        <div class="hint">Bestimmt, auf wen die Gage in der Auswertung verteilt wird.</div></div>
+    </div>
+    <div class="form-row">
+      <div class="f wide"><label for="mg-notiz">Notiz</label>
+        <textarea class="fl-input" id="mg-notiz" placeholder="Absprachen, Technik, Ansprechpartner …"></textarea></div>
+    </div>
+    <div id="mg-bilanz"></div>
+    <div class="divider"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveGig()">Speichern</button>
+      <button class="btn btn-gray" onclick="closeModal('m-gig')">Abbrechen</button>
+      <button class="btn btn-danger btn-sm" id="mg-del" style="margin-left:auto" onclick="deleteGig()">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: MITGLIED ============ -->
+<div class="modal" id="m-mitglied" onclick="if(event.target===this)closeModal('m-mitglied')">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="mm-title">Mitglied</h3>
+      <button class="x" onclick="closeModal('m-mitglied')">×</button>
+    </div>
+    <div class="form-row">
+      <div class="f"><label class="req" for="mm-name">Name</label>
+        <input class="fl-input" id="mm-name" placeholder="Vor- und Nachname"></div>
+      <div class="f"><label for="mm-anteil">Gewinnanteil (%)</label>
+        <input class="fl-input" type="number" step="0.1" min="0" max="100" id="mm-anteil" inputmode="decimal"></div>
+    </div>
+    <div class="form-row">
+      <div class="f"><label for="mm-instr">Instrument / Rolle</label>
+        <input class="fl-input" id="mm-instr" placeholder="z. B. Gitarre"></div>
+      <div class="f"><label for="mm-stnr">Steuernummer (optional)</label>
+        <input class="fl-input" id="mm-stnr"></div>
+    </div>
+    <div class="hint">Summe aller Anteile sollte 100 % ergeben. Bei 0 % wird gleichmäßig verteilt.</div>
+    <div class="divider"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveMitglied()">Speichern</button>
+      <button class="btn btn-gray" onclick="closeModal('m-mitglied')">Abbrechen</button>
+      <button class="btn btn-danger btn-sm" id="mm-del" style="margin-left:auto" onclick="deleteMitglied()">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: BELEG-ANSICHT ============ -->
+<div class="modal" id="m-beleg" onclick="if(event.target===this)closeModal('m-beleg')">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="mv-title">Beleg</h3>
+      <button class="x" onclick="closeModal('m-beleg')">×</button>
+    </div>
+    <div id="mv-body"></div>
+  </div>
+</div>
+
+<!-- ============ MODAL: BESTÄTIGEN ============ -->
+<div class="modal" id="m-confirm">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-head"><h3 id="mc-title">Bestätigen</h3></div>
+    <div id="mc-text" style="font-size:.9rem;line-height:1.6;margin-bottom:8px"></div>
+    <div id="mc-input-wrap" style="display:none;margin-bottom:8px">
+      <input class="fl-input" id="mc-input" placeholder="Grund angeben">
+    </div>
+    <div class="divider"></div>
+    <div class="btn-row">
+      <button class="btn btn-danger" id="mc-ok">Ja, weiter</button>
+      <button class="btn btn-gray" onclick="closeModal('m-confirm')">Abbrechen</button>
+    </div>
+  </div>
+</div>
+<script>
+/* =========================================================================
+   BANDKASSE – lokale Buchhaltung für Bands
+   Alle Daten bleiben im Browser (IndexedDB). Kein Server, keine Cloud.
+   ========================================================================= */
+const APP_VERSION = '1.0.0';
+const DATA_VERSION = 1;
+
+/* ---------------------------------------------------------------- Helfer */
+const $  = id => document.getElementById(id);
+const euroFmt = new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'});
+const numFmt  = new Intl.NumberFormat('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const euro = n => euroFmt.format(Math.round((Number(n)||0)*100)/100);
+const num2 = n => numFmt.format(Math.round((Number(n)||0)*100)/100);
+const esc  = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid  = () => Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const heute = () => new Date().toISOString().slice(0,10);
+const r2 = n => Math.round((Number(n)||0)*100)/100;
+function dt(iso){ if(!iso) return '—'; const [y,m,d]=String(iso).slice(0,10).split('-'); return d&&m&&y?`${d}.${m}.${y}`:iso; }
+function dtLang(iso){
+  if(!iso) return '—';
+  const d=new Date(iso+'T12:00:00');
+  return isNaN(d)?dt(iso):d.toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+}
+function jahrVon(iso){ return parseInt(String(iso||'').slice(0,4),10)||0; }
+function quartal(iso){ const m=parseInt(String(iso||'').slice(5,7),10)||1; return Math.ceil(m/3); }
+
+/* ------------------------------------------------------------- Kategorien
+   gruppe = Zeilengruppe der Anlage EÜR. Die konkreten Zeilennummern ändern
+   sich jährlich, deshalb wird nach Bezeichnung gruppiert.                  */
+const GRUPPEN = {
+  // Einnahmen
+  e_umsatz : 'Umsatzsteuerpflichtige Betriebseinnahmen',
+  e_frei   : 'Umsatzsteuerfreie / nicht steuerbare Betriebseinnahmen',
+  e_ust    : 'Vereinnahmte Umsatzsteuer und Erstattungen des Finanzamts',
+  e_neutral: 'Nicht erfolgswirksam (keine Betriebseinnahme)',
+  // Ausgaben
+  a_waren  : 'Waren, Roh- und Hilfsstoffe',
+  a_fremd  : 'Fremdleistungen',
+  a_raum   : 'Raumkosten und Grundstücksaufwendungen',
+  a_afa    : 'Abschreibungen und geringwertige Wirtschaftsgüter',
+  a_reise  : 'Fahrt- und Reisekosten',
+  a_werbung: 'Werbekosten',
+  a_beschr : 'Beschränkt abziehbare Betriebsausgaben',
+  a_uebrig : 'Übrige unbeschränkt abziehbare Betriebsausgaben',
+  a_ust    : 'Gezahlte Vorsteuer und Umsatzsteuer an das Finanzamt',
+  a_neutral: 'Nicht erfolgswirksam (keine Betriebsausgabe)'
+};
+
+const KATEGORIEN = [
+  /* ---- Einnahmen ---- */
+  {id:'gage',      art:'ein', name:'Gage / Auftritt',            gruppe:'e_umsatz', ust:19,
+   hinweis:'Reine Konzerte können dem ermäßigten Satz von 7 % unterliegen; mit Bescheinigung nach § 4 Nr. 20a UStG sogar steuerfrei sein.'},
+  {id:'merch',     art:'ein', name:'Merchandise-Verkauf',        gruppe:'e_umsatz', ust:19},
+  {id:'tontraeger',art:'ein', name:'Tonträger, Downloads, Streaming', gruppe:'e_umsatz', ust:19},
+  {id:'gema_ein',  art:'ein', name:'GEMA-/GVL-Ausschüttung',     gruppe:'e_umsatz', ust:7},
+  {id:'unterricht',art:'ein', name:'Unterricht / Workshops',     gruppe:'e_frei',   ust:0,
+   hinweis:'Unterrichtsleistungen können nach § 4 Nr. 21 UStG steuerfrei sein – im Zweifel prüfen lassen.'},
+  {id:'hutgeld',   art:'ein', name:'Hutgeld / Straßenmusik',     gruppe:'e_frei',   ust:0,
+   hinweis:'Hutgeld ist Betriebseinnahme. Ohne Fremdbeleg einen Eigenbeleg mit Datum, Ort und Betrag anlegen.'},
+  {id:'zuschuss',  art:'ein', name:'Zuschuss / Fördermittel',    gruppe:'e_frei',   ust:0,
+   hinweis:'Echte Zuschüsse sind nicht umsatzsteuerbar, aber in der Regel Betriebseinnahme.'},
+  {id:'anlagenverkauf', art:'ein', name:'Verkauf von Equipment', gruppe:'e_umsatz', ust:19,
+   hinweis:'Verkauf aus dem Betriebsvermögen – auch wenn das Gerät schon abgeschrieben ist.'},
+  {id:'sonstige_ein', art:'ein', name:'Sonstige Betriebseinnahme', gruppe:'e_frei', ust:0},
+  {id:'ust_erstattung', art:'ein', name:'Umsatzsteuer-Erstattung vom Finanzamt', gruppe:'e_ust', ust:0, nurRegel:true},
+  {id:'einlage',   art:'ein', name:'Privateinlage (kein Ertrag)', gruppe:'e_neutral', ust:0, neutral:true,
+   hinweis:'Geld aus dem Privatvermögen in die Bandkasse – keine Betriebseinnahme.'},
+
+  /* ---- Ausgaben ---- */
+  {id:'material',  art:'aus', name:'Wareneinkauf (Merch, CDs)',  gruppe:'a_waren',  ust:19},
+  {id:'fremd',     art:'aus', name:'Fremdleistung (Aushilfsmusiker, Technik, Studio)', gruppe:'a_fremd', ust:19,
+   hinweis:'Ab 2.500 € pro Person und Jahr ggf. Meldepflicht zur Künstlersozialabgabe. Immer Rechnung anfordern.'},
+  {id:'proberaum', art:'aus', name:'Miete Proberaum',            gruppe:'a_raum',   ust:19},
+  {id:'nebenkosten',art:'aus',name:'Strom / Nebenkosten Proberaum', gruppe:'a_raum', ust:19},
+  {id:'equipment', art:'aus', name:'Instrumente & Technik',      gruppe:'a_afa',    ust:19,
+   hinweis:'Bis 800 € netto sofort absetzbar (GWG). Teureres wird über die Nutzungsdauer abgeschrieben – dann Kategorie „Abschreibung“ nutzen.'},
+  {id:'afa',       art:'aus', name:'Abschreibung (AfA)',         gruppe:'a_afa',    ust:0,
+   hinweis:'Jahresbetrag der Abschreibung. Kein Zahlungsvorgang – keine Vorsteuer eintragen.'},
+  {id:'fahrt',     art:'aus', name:'Fahrtkosten (Kilometerpauschale)', gruppe:'a_reise', ust:0,
+   hinweis:'Pauschale je gefahrenem Kilometer, Eigenbeleg mit Datum, Ziel, Anlass und Kilometern.'},
+  {id:'kfz',       art:'aus', name:'Fahrzeugkosten (Sprit, Mietwagen, Anhänger)', gruppe:'a_reise', ust:19},
+  {id:'uebernachtung',art:'aus',name:'Übernachtung',             gruppe:'a_reise',  ust:7},
+  {id:'verpflegung',art:'aus',name:'Verpflegungsmehraufwand (Pauschale)', gruppe:'a_reise', ust:0,
+   hinweis:'Nur die gesetzliche Pauschale ansetzen, nicht die tatsächlichen Kosten. Keine Vorsteuer.'},
+  {id:'werbung',   art:'aus', name:'Werbung, Website, Fotos',    gruppe:'a_werbung',ust:19},
+  {id:'druck',     art:'aus', name:'Flyer, Plakate, Design',     gruppe:'a_werbung',ust:19},
+  {id:'bewirtung', art:'aus', name:'Bewirtung (geschäftlich)',   gruppe:'a_beschr', ust:19, quote:0.7,
+   hinweis:'Nur 70 % sind Betriebsausgabe, die Vorsteuer aber zu 100 %. Anlass und Teilnehmer in der Notiz festhalten!'},
+  {id:'geschenke', art:'aus', name:'Geschenke an Geschäftspartner', gruppe:'a_beschr', ust:19,
+   hinweis:'Nur abziehbar bis zur gesetzlichen Freigrenze je Empfänger und Jahr – Empfänger notieren.'},
+  {id:'gema_aus',  art:'aus', name:'GEMA-Gebühren / Lizenzen',   gruppe:'a_uebrig', ust:7},
+  {id:'ksk',       art:'aus', name:'Künstlersozialabgabe, Berufsverband', gruppe:'a_uebrig', ust:0},
+  {id:'telefon',   art:'aus', name:'Telefon, Internet, Porto',   gruppe:'a_uebrig', ust:19,
+   hinweis:'Nur den betrieblichen Anteil buchen.'},
+  {id:'buero',     art:'aus', name:'Bürobedarf, Software, Noten',gruppe:'a_uebrig', ust:19},
+  {id:'versicherung',art:'aus',name:'Versicherungen & Beiträge', gruppe:'a_uebrig', ust:0},
+  {id:'fortbildung',art:'aus',name:'Fortbildung, Unterricht, Fachliteratur', gruppe:'a_uebrig', ust:19},
+  {id:'beratung',  art:'aus', name:'Steuerberatung, Buchführung, Recht', gruppe:'a_uebrig', ust:19},
+  {id:'bank',      art:'aus', name:'Bankgebühren, Zahlungsdienste', gruppe:'a_uebrig', ust:0},
+  {id:'sonstige_aus',art:'aus',name:'Sonstige Betriebsausgabe',  gruppe:'a_uebrig', ust:19},
+  {id:'ust_zahlung',art:'aus',name:'Umsatzsteuer-Zahlung ans Finanzamt', gruppe:'a_ust', ust:0, nurRegel:true},
+  {id:'entnahme',  art:'aus', name:'Privatentnahme (kein Aufwand)', gruppe:'a_neutral', ust:0, neutral:true,
+   hinweis:'Auszahlung an die Musiker aus dem Bandvermögen – keine Betriebsausgabe, sondern Gewinnverwendung.'}
+];
+const katById = id => KATEGORIEN.find(k=>k.id===id) || null;
+const katName = id => (katById(id)||{}).name || '—';
+
+/* ------------------------------------------------------------- Datenbank */
+const IDB_NAME='bandkasse', IDB_VER=1;
+let _db=null, _idbOk=true;
+function idb(){
+  return new Promise((res,rej)=>{
+    if(_db) return res(_db);
+    let req;
+    try{ req = indexedDB.open(IDB_NAME, IDB_VER); }catch(e){ return rej(e); }
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains('kv'))    db.createObjectStore('kv');
+      if(!db.objectStoreNames.contains('files')) db.createObjectStore('files');
+    };
+    req.onsuccess = e => { _db = e.target.result; res(_db); };
+    req.onerror   = () => rej(req.error);
+  });
+}
+function idbTx(store, mode, fn){
+  return idb().then(db => new Promise((res,rej)=>{
+    const tx = db.transaction(store, mode);
+    const rq = fn(tx.objectStore(store));
+    tx.oncomplete = () => res(rq ? rq.result : undefined);
+    tx.onerror    = () => rej(tx.error);
+    tx.onabort    = () => rej(tx.error);
+  }));
+}
+const idbGet  = (s,k)   => idbTx(s,'readonly',  st=>st.get(k));
+const idbPut  = (s,k,v) => idbTx(s,'readwrite', st=>st.put(v,k));
+const idbDel  = (s,k)   => idbTx(s,'readwrite', st=>st.delete(k));
+const idbKeys = (s)     => idbTx(s,'readonly',  st=>st.getAllKeys());
+
+/* --------------------------------------------------------------- Zustand */
+function leereDaten(){
+  return {
+    version: DATA_VERSION,
+    einstellungen:{
+      bandName:'Meine Band', rechtsform:'gbr', kleinunternehmer:true, ustSatz:19,
+      steuernummer:'', finanzamt:'', kmSatz:0.30, verpflegung8:14,
+      mitglieder:[], festgeschrieben:[], theme:'', letztesBackup:null
+    },
+    buchungen:[], gigs:[], belege:[], protokoll:[], zaehler:{}
+  };
+}
+let D = leereDaten();
+let jahr = new Date().getFullYear();
+let gigFilter = 'alle';
+let aktuelleSeite = 'start';
+
+/* Speichern – gebündelt, plus Notkopie in localStorage */
+let _saveTimer=null;
+function save(sofort){
+  clearTimeout(_saveTimer);
+  const tun = () => {
+    idbPut('kv','data',JSON.parse(JSON.stringify(D))).catch(e=>{
+      console.warn('IndexedDB-Speichern fehlgeschlagen',e); _idbOk=false;
+    });
+    try{ localStorage.setItem('bandkasse-notkopie', JSON.stringify(D)); }
+    catch(e){ /* zu groß oder gesperrt – IndexedDB bleibt maßgeblich */ }
+  };
+  if(sofort) tun(); else _saveTimer = setTimeout(tun, 300);
+}
+async function load(){
+  let d=null;
+  try{ d = await idbGet('kv','data'); }
+  catch(e){ _idbOk=false; console.warn('IndexedDB nicht verfügbar',e); }
+  if(!d){
+    try{ const raw = localStorage.getItem('bandkasse-notkopie'); if(raw) d = JSON.parse(raw); }catch(e){}
+  }
+  if(d && typeof d==='object'){
+    D = Object.assign(leereDaten(), d);
+    D.einstellungen = Object.assign(leereDaten().einstellungen, d.einstellungen||{});
+    ['buchungen','gigs','belege','protokoll'].forEach(k=>{ if(!Array.isArray(D[k])) D[k]=[]; });
+  }
+}
+
+/* ------------------------------------------------------------- Protokoll */
+function protokoll(aktion, ref, details){
+  D.protokoll.unshift({ ts:new Date().toISOString(), aktion, ref, details:details||'' });
+  if(D.protokoll.length > 800) D.protokoll.length = 800;
+}
+
+/* ---------------------------------------------------- Steuerliche Rechnung */
+const istKlein = () => !!D.einstellungen.kleinunternehmer;
+/** Zerlegt eine Buchung in netto / USt / abziehbaren Anteil. */
+function rechne(b){
+  const brutto = Number(b.brutto)||0;
+  const satz   = istKlein() ? 0 : (Number(b.ust)||0);
+  const netto  = satz ? brutto/(1+satz/100) : brutto;
+  const ust    = brutto - netto;
+  const kat    = katById(b.kat) || {};
+  const quote  = kat.quote==null ? 1 : kat.quote;
+  return {
+    brutto: r2(brutto),
+    netto:  r2(netto),
+    ust:    r2(ust),
+    satz,
+    quote,
+    abziehbar:    r2(netto*quote),        // wirkt sich auf den Gewinn aus
+    nichtAbzieh:  r2(netto*(1-quote)),
+    neutral: !!kat.neutral,
+    gruppe: kat.gruppe || 'a_uebrig'
+  };
+}
+const aktiveBuchungen = j => D.buchungen.filter(b => !b.storniert && (j==null || jahrVon(b.datum)===j));
+
+/** Gesamtauswertung eines Jahres. */
+function auswertung(j){
+  const bs = aktiveBuchungen(j);
+  const res = {
+    jahr:j, einnahmen:0, ausgaben:0, gewinn:0,
+    ustEinnahmen:0, vorsteuer:0, ustZahllast:0,
+    nichtAbziehbar:0, gruppen:{}, kategorien:{}, gesamtumsatz:0,
+    anzahl:bs.length, bar:0, bank:0, privat:0, quartale:[0,0,0,0], quartaleVor:[0,0,0,0]
+  };
+  bs.forEach(b=>{
+    const r = rechne(b), k = katById(b.kat)||{};
+    const key = b.kat||'sonstige';
+    const e = res.kategorien[key] || (res.kategorien[key] = {kat:key, art:b.typ, gruppe:r.gruppe, netto:0, ust:0, brutto:0, abziehbar:0, anzahl:0});
+    e.netto += r.netto; e.ust += r.ust; e.brutto += r.brutto; e.abziehbar += r.abziehbar; e.anzahl++;
+    const g = res.gruppen[r.gruppe] || (res.gruppen[r.gruppe] = {gruppe:r.gruppe, art:b.typ, netto:0, ust:0, brutto:0, abziehbar:0});
+    g.netto += r.netto; g.ust += r.ust; g.brutto += r.brutto; g.abziehbar += r.abziehbar;
+
+    if(!r.neutral){
+      if(b.typ==='ein'){
+        res.einnahmen += r.abziehbar;                 // netto (bzw. brutto bei Kleinunternehmern)
+        res.ustEinnahmen += r.ust;
+        // Gesamtumsatz i. S. d. § 19 UStG: alle Umsatzerlöse, ohne Erstattungen des Finanzamts
+        if(k.gruppe !== 'e_ust') res.gesamtumsatz += r.brutto;
+        res.quartale[quartal(b.datum)-1] += r.ust;
+      }else{
+        res.ausgaben += r.abziehbar;
+        res.nichtAbziehbar += r.nichtAbzieh;
+        res.vorsteuer += r.ust;
+        res.quartaleVor[quartal(b.datum)-1] += r.ust;
+      }
+    }
+    const vz = b.typ==='ein' ? r.brutto : -r.brutto;
+    if(b.zahl==='bar') res.bar += vz; else if(b.zahl==='bank') res.bank += vz; else res.privat += vz;
+  });
+  // Vereinnahmte USt und gezahlte Vorsteuer sind eigene EÜR-Zeilen
+  res.einnahmen += res.ustEinnahmen;
+  res.ausgaben  += res.vorsteuer;
+  res.gewinn    = r2(res.einnahmen - res.ausgaben);
+  res.ustZahllast = r2(res.ustEinnahmen - res.vorsteuer);
+  ['einnahmen','ausgaben','ustEinnahmen','vorsteuer','nichtAbziehbar','gesamtumsatz','bar','bank','privat']
+    .forEach(k=>res[k]=r2(res[k]));
+  return res;
+}
+
+/* ------------------------------------------------------- Oberflächen-Hilfen */
+function toast(msg, art){
+  const t=$('toast'); t.textContent=msg; t.className='show'+(art?' '+art:'');
+  clearTimeout(t._h); t._h=setTimeout(()=>t.className='',2600);
+}
+function openModal(id){ $(id).classList.add('open'); document.body.style.overflow='hidden'; }
+function closeModal(id){ $(id).classList.remove('open'); document.body.style.overflow=''; }
+function confirmDialog(titel, text, okText, mitGrund){
+  return new Promise(res=>{
+    $('mc-title').textContent = titel;
+    $('mc-text').innerHTML = text;
+    $('mc-ok').textContent = okText || 'Ja, weiter';
+    $('mc-input-wrap').style.display = mitGrund ? 'block' : 'none';
+    $('mc-input').value = '';
+    const ok = $('mc-ok');
+    const neu = ok.cloneNode(true); ok.parentNode.replaceChild(neu, ok);
+    neu.onclick = () => {
+      const grund = $('mc-input').value.trim();
+      if(mitGrund && !grund){ toast('Bitte einen Grund angeben','bad'); return; }
+      closeModal('m-confirm'); res(mitGrund ? grund : true);
+    };
+    $('m-confirm').onclick = e => { if(e.target===$('m-confirm')){ closeModal('m-confirm'); res(false); } };
+    openModal('m-confirm');
+  });
+}
+function istGesperrt(j){ return (D.einstellungen.festgeschrieben||[]).indexOf(j) >= 0; }
+
+function showPage(id){
+  aktuelleSeite = id;
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id==='p-'+id));
+  document.querySelectorAll('.mtab').forEach(t=>t.classList.toggle('active', t.dataset.page===id));
+  document.querySelectorAll('.bn').forEach(t=>t.classList.toggle('active', t.dataset.page===id));
+  $('fab').style.display = (id==='einst'||id==='steuer') ? 'none' : 'grid';
+  window.scrollTo({top:0,behavior:'instant'});
+  renderSeite(id);
+}
+function fabAktion(){
+  if(aktuelleSeite==='gigs') openGig();
+  else if(aktuelleSeite==='belege') $('beleg-file').click();
+  else openBuchung(null,'aus');
+}
+function setJahr(delta){
+  jahr += delta;
+  ['jahr-label','jahr-label-2','jahr-label-3','jahr-label-4'].forEach(id=>{ if($(id)) $(id).textContent=jahr; });
+  renderSeite(aktuelleSeite);
+}
+function toggleTheme(){
+  const dunkel = document.documentElement.getAttribute('data-theme')==='dark';
+  setTheme(dunkel ? 'light' : 'dark');
+  D.einstellungen.theme = dunkel ? 'light' : 'dark';
+  save();
+}
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme', t==='dark'?'dark':'light');
+  $('theme-btn').textContent = t==='dark' ? '☀️' : '🌙';
+  const meta=document.querySelector('meta[name=theme-color]');
+  if(meta) meta.setAttribute('content', t==='dark' ? '#0e1a2d' : '#16315c');
+}
+
+/* --------------------------------------------------------------- CSV/ZIP */
+function csv(zeilen){
+  const s = zeilen.map(z => z.map(f => {
+    let v = f==null ? '' : String(f);
+    if(typeof f === 'number') v = num2(f);
+    return /[";\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;
+  }).join(';')).join('\r\n');
+  return '﻿' + s;   // BOM, damit Excel Umlaute richtig liest
+}
+function download(blob, name){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+const downloadText = (text, name, mime) =>
+  download(new Blob([text], {type:(mime||'text/csv')+';charset=utf-8'}), name);
+
+/* Minimaler ZIP-Schreiber (unkomprimiert) – ohne externe Bibliothek */
+const _crcTab = (()=>{ const t=new Uint32Array(256);
+  for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; t[n]=c>>>0; }
+  return t; })();
+function crc32(u8){ let c=0xFFFFFFFF; for(let i=0;i<u8.length;i++) c=_crcTab[(c^u8[i])&0xFF]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function dosZeit(d){
+  const t = ((d.getHours()&31)<<11) | ((d.getMinutes()&63)<<5) | ((d.getSeconds()/2)&31);
+  const f = (((d.getFullYear()-1980)&127)<<9) | (((d.getMonth()+1)&15)<<5) | (d.getDate()&31);
+  return {t,f};
+}
+function zip(dateien){
+  const enc = new TextEncoder();
+  const teile = [], zentral = [];
+  let offset = 0;
+  dateien.forEach(f => {
+    const name = enc.encode(f.name);
+    const data = f.data instanceof Uint8Array ? f.data : enc.encode(String(f.data));
+    const {t,f:fd} = dosZeit(f.datum || new Date());
+    const crc = crc32(data);
+    const lokal = new Uint8Array(30 + name.length);
+    const dv = new DataView(lokal.buffer);
+    dv.setUint32(0, 0x04034b50, true); dv.setUint16(4, 20, true); dv.setUint16(6, 0x0800, true);
+    dv.setUint16(8, 0, true); dv.setUint16(10, t, true); dv.setUint16(12, fd, true);
+    dv.setUint32(14, crc, true); dv.setUint32(18, data.length, true); dv.setUint32(22, data.length, true);
+    dv.setUint16(26, name.length, true); dv.setUint16(28, 0, true);
+    lokal.set(name, 30);
+    teile.push(lokal, data);
+
+    const z = new Uint8Array(46 + name.length);
+    const zv = new DataView(z.buffer);
+    zv.setUint32(0, 0x02014b50, true); zv.setUint16(4, 20, true); zv.setUint16(6, 20, true);
+    zv.setUint16(8, 0x0800, true); zv.setUint16(10, 0, true);
+    zv.setUint16(12, t, true); zv.setUint16(14, fd, true);
+    zv.setUint32(16, crc, true); zv.setUint32(20, data.length, true); zv.setUint32(24, data.length, true);
+    zv.setUint16(28, name.length, true); zv.setUint32(42, offset, true);
+    z.set(name, 46);
+    zentral.push(z);
+    offset += lokal.length + data.length;
+  });
+  const zLen = zentral.reduce((s,z)=>s+z.length,0);
+  const ende = new Uint8Array(22); const ev = new DataView(ende.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, dateien.length, true); ev.setUint16(10, dateien.length, true);
+  ev.setUint32(12, zLen, true); ev.setUint32(16, offset, true);
+  return new Blob([...teile, ...zentral, ende], {type:'application/zip'});
+}
+function b64ToU8(b64){
+  const bin = atob(b64.indexOf(',')>=0 ? b64.slice(b64.indexOf(',')+1) : b64);
+  const u8 = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+  return u8;
+}
+function blobToDataUrl(blob){
+  return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(blob); });
+}
+function dateiEndung(name, mime){
+  const m = /\.[a-z0-9]{1,5}$/i.exec(name||''); if(m) return m[0];
+  if(/pdf/.test(mime||'')) return '.pdf';
+  if(/png/.test(mime||'')) return '.png';
+  return '.jpg';
+}
+function saubererName(s){ return String(s||'').replace(/[^\wäöüÄÖÜß .-]+/g,'_').slice(0,60); }
+</script>
+<script>
+/* =========================================================================
+   OBERFLÄCHE: Übersicht, Kassenbuch, Auftritte, Belege
+   ========================================================================= */
+function renderSeite(id){
+  renderBackupBanner();
+  if(id==='start')  renderStart();
+  if(id==='kasse')  renderKassenbuch();
+  if(id==='gigs')   renderGigs();
+  if(id==='belege') renderBelege();
+  if(id==='steuer') renderSteuer();
+  if(id==='einst')  renderEinstellungen();
+}
+function renderAlles(){
+  ['jahr-label','jahr-label-2','jahr-label-3','jahr-label-4'].forEach(i=>{ if($(i)) $(i).textContent=jahr; });
+  $('hd-band').textContent = D.einstellungen.bandName || 'Bandkasse';
+  renderSeite(aktuelleSeite);
+}
+
+/** Kassen-/Kontobestand kumuliert bis einschließlich Jahr j. */
+function bestand(bisJahr){
+  let bar=0, bank=0, privat=0;
+  D.buchungen.forEach(b=>{
+    if(b.storniert) return;
+    if(bisJahr!=null && jahrVon(b.datum)>bisJahr) return;
+    const v = (b.typ==='ein'?1:-1)*(Number(b.brutto)||0);
+    if(b.zahl==='bar') bar+=v; else if(b.zahl==='bank') bank+=v; else privat+=v;
+  });
+  return {bar:r2(bar), bank:r2(bank), privat:r2(privat), gesamt:r2(bar+bank)};
+}
+const belegeVon = bid => D.belege.filter(x=>x.buchungId===bid);
+
+/* ------------------------------------------------------------- Übersicht */
+function renderStart(){
+  const a = auswertung(jahr), bst = bestand(jahr);
+  const offeneGagen = D.gigs.filter(g => jahrVon(g.datum)===jahr && g.status!=='abgesagt'
+      && (Number(g.gage)||0) > 0 && gigBilanz(g).einnahmen <= 0);
+  const offenSumme = offeneGagen.reduce((s,g)=>s+(Number(g.gage)||0),0);
+
+  $('start-kpis').innerHTML = `
+    <div class="kpi big" style="grid-column:1/-1">
+      <div class="kpi-l">Ergebnis ${jahr}</div>
+      <div class="kpi-n ${a.gewinn>=0?'pos':'neg'}">${euro(a.gewinn)}</div>
+      <div class="kpi-s">${a.gewinn>=0?'Gewinn':'Verlust'} nach Einnahmen-Überschuss-Rechnung · ${a.anzahl} Buchung${a.anzahl===1?'':'en'}</div>
+    </div>
+    <div class="kpi"><div class="kpi-l">Betriebseinnahmen</div><div class="kpi-n pos">${euro(a.einnahmen)}</div></div>
+    <div class="kpi"><div class="kpi-l">Betriebsausgaben</div><div class="kpi-n neg">${euro(a.ausgaben)}</div></div>
+    <div class="kpi"><div class="kpi-l">Bestand Kasse + Konto</div><div class="kpi-n">${euro(bst.gesamt)}</div>
+      <div class="kpi-s">bar ${euro(bst.bar)} · Konto ${euro(bst.bank)}</div></div>
+    <div class="kpi"><div class="kpi-l">Offene Gagen</div><div class="kpi-n ${offenSumme>0?'neg':''}">${euro(offenSumme)}</div>
+      <div class="kpi-s">${offeneGagen.length} Auftritt${offeneGagen.length===1?'':'e'} ohne Zahlungseingang</div></div>
+    ${bst.privat<0?`<div class="kpi"><div class="kpi-l">Privat ausgelegt</div><div class="kpi-n neg">${euro(-bst.privat)}</div>
+      <div class="kpi-s">noch nicht an die Musiker erstattet</div></div>`:''}
+  `;
+  $('start-hinweise').innerHTML = hinweiseHtml(a);
+
+  // Auftritte: kommende zuerst, sonst die letzten
+  const heuteIso = heute();
+  const kommend = D.gigs.filter(g=>g.datum>=heuteIso && g.status!=='abgesagt').sort((x,y)=>x.datum.localeCompare(y.datum)).slice(0,3);
+  const letzte  = D.gigs.filter(g=>g.datum<heuteIso).sort((x,y)=>y.datum.localeCompare(x.datum)).slice(0,3);
+  const liste = kommend.concat(letzte);
+  $('start-gigs').innerHTML = liste.length ? liste.map(g=>gigRow(g,true)).join('')
+    : `<div class="empty"><span class="em">🎤</span>Noch keine Auftritte erfasst.<br>
+       <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="openGig()">Ersten Auftritt anlegen</button></div>`;
+
+  const letzteB = D.buchungen.slice().sort((x,y)=>(y.datum+y.id).localeCompare(x.datum+x.id)).slice(0,6);
+  $('start-buchungen').innerHTML = letzteB.length ? letzteB.map(buchungRow).join('')
+    : `<div class="empty"><span class="em">📒</span>Noch keine Buchungen.<br>
+       <button class="btn btn-success btn-sm" style="margin-top:10px" onclick="openBuchung(null,'ein')">Erste Einnahme buchen</button></div>`;
+}
+
+/** Warnungen und Steuer-Hinweise für das aktuelle Jahr. */
+function hinweiseHtml(a){
+  const h = [];
+  if(!D.buchungen.length && !D.gigs.length){
+    return `<div class="note"><b>Willkommen!</b> So kommst du in fünf Minuten los:<br>
+      1. Unter <b>⚙️ Einstellungen</b> Bandname, Rechtsform, Umsatzsteuer-Status und die Mitglieder eintragen.<br>
+      2. Unter <b>🎤 Auftritte</b> einen Auftritt anlegen – Gage, Kilometer und Ausgaben lassen sich von dort direkt verbuchen.<br>
+      3. Belege einfach abfotografieren und der Buchung anhängen.<br>
+      4. Unter <b>📊 Steuer &amp; EÜR</b> steht am Jahresende alles fertig für die Erklärung – als Ausdruck, CSV oder Paket fürs Steuerbüro.<br><br>
+      <b>Denk an Backups:</b> Die Daten liegen nur in diesem Browser.</div>`;
+  }
+  const vorjahr = auswertung(jahr-1);
+  if(istKlein()){
+    if(vorjahr.gesamtumsatz > 25000)
+      h.push(['bad', `<b>Kleinunternehmer-Grenze überschritten:</b> Der Umsatz ${jahr-1} lag bei ${euro(vorjahr.gesamtumsatz)}.
+        Ab einem Vorjahresumsatz über 25.000 € entfällt die Kleinunternehmerregelung – ab ${jahr} musst du Umsatzsteuer ausweisen und abführen. Bitte mit dem Steuerbüro klären.`]);
+    else if(a.gesamtumsatz > 100000)
+      h.push(['bad', `<b>Umsatzgrenze im laufenden Jahr überschritten:</b> ${euro(a.gesamtumsatz)}. Ab dem Überschreiten der 100.000 € gilt die Kleinunternehmerregelung sofort nicht mehr.`]);
+    else if(vorjahr.gesamtumsatz > 20000 || a.gesamtumsatz > 20000)
+      h.push(['warn', `Umsatz ${jahr}: ${euro(a.gesamtumsatz)} (Vorjahr ${euro(vorjahr.gesamtumsatz)}). Bei über 25.000 € Vorjahresumsatz endet die Kleinunternehmerregelung.`]);
+  }
+  const ohneBeleg = aktiveBuchungen(jahr).filter(b => (Number(b.brutto)||0) >= 250 && belegeVon(b.id).length===0);
+  if(ohneBeleg.length)
+    h.push(['warn', `<b>${ohneBeleg.length} Buchung${ohneBeleg.length===1?'':'en'} über 250 € ohne Beleg.</b> Ohne Beleg keine Buchung – bitte Rechnung oder Eigenbeleg nachreichen.`]);
+  const lose = D.belege.filter(x=>!x.buchungId);
+  if(lose.length)
+    h.push(['warn', `<b>${lose.length} Beleg${lose.length===1?'':'e'} ohne Buchung.</b> <a href="#" onclick="showPage('belege');document.getElementById('beleg-filter').value='offen';renderBelege();return false">Jetzt zuordnen →</a>`]);
+  const gwg = aktiveBuchungen(jahr).filter(b=>b.kat==='equipment' && rechne(b).netto > 800);
+  if(gwg.length)
+    h.push(['warn', `<b>${gwg.length}× Equipment über 800 € netto.</b> Solche Anschaffungen sind in der Regel über die Nutzungsdauer abzuschreiben statt sofort abzuziehen – prüfe die Kategorie „Abschreibung (AfA)“.`]);
+  if(!h.length && a.anzahl)
+    h.push(['ok', `Keine offenen Punkte für ${jahr}. 👍`]);
+  return h.map(([art,txt]) => `<div class="note ${art==='bad'?'bad':art==='warn'?'warn':''}">${txt}</div>`).join('');
+}
+
+/* ------------------------------------------------------------ Kassenbuch */
+function buchungRow(b){
+  const r = rechne(b), k = katById(b.kat)||{};
+  const bel = belegeVon(b.id).length;
+  const gig = b.gigId ? D.gigs.find(g=>g.id===b.gigId) : null;
+  const zahlLabel = {bar:'Bar', bank:'Konto', privat:'privat ausgelegt'}[b.zahl] || 'Bar';
+  return `<div class="row" onclick="openBuchung('${b.id}')" style="cursor:pointer">
+    <div class="row-main">
+      <div class="row-t ${b.storniert?'strike':''}">${esc(b.text||'(ohne Beschreibung)')}</div>
+      <div class="row-s">
+        <span>${dt(b.datum)}</span>
+        <span class="chip">${esc(k.name||'—')}</span>
+        <span class="chip">${zahlLabel}</span>
+        ${gig?`<span class="chip b">🎤 ${esc(gig.titel||dt(gig.datum))}</span>`:''}
+        ${bel?`<span class="chip g">🧾 ${bel}</span>`:''}
+        ${b.storniert?`<span class="chip r">storniert</span>`:''}
+        ${k.neutral?`<span class="chip y">nicht erfolgswirksam</span>`:''}
+      </div>
+    </div>
+    <div class="row-r">
+      <span class="amt ${b.typ==='ein'?'pos':'neg'} ${b.storniert?'strike':''}">${b.typ==='ein'?'+':'−'} ${euro(r.brutto)}</span>
+    </div>
+  </div>`;
+}
+function fuelleKatFilter(){
+  const sel = $('kb-filter-kat'); if(!sel) return;
+  const val = sel.value;
+  sel.innerHTML = '<option value="">alle Kategorien</option>' +
+    KATEGORIEN.filter(k=>!(k.nurRegel && istKlein()))
+      .map(k=>`<option value="${k.id}">${k.art==='ein'?'⊕':'⊖'} ${esc(k.name)}</option>`).join('');
+  sel.value = val;
+}
+function renderKassenbuch(){
+  fuelleKatFilter();
+  const a = auswertung(jahr), bst = bestand(jahr);
+  $('kb-jahr-chip').textContent = istGesperrt(jahr) ? '🔒 festgeschrieben' : jahr;
+  $('kb-kpis').innerHTML = `
+    <div class="kpi"><div class="kpi-l">Einnahmen ${jahr}</div><div class="kpi-n pos">${euro(a.einnahmen)}</div></div>
+    <div class="kpi"><div class="kpi-l">Ausgaben ${jahr}</div><div class="kpi-n neg">${euro(a.ausgaben)}</div></div>
+    <div class="kpi"><div class="kpi-l">Ergebnis</div><div class="kpi-n ${a.gewinn>=0?'pos':'neg'}">${euro(a.gewinn)}</div></div>
+    <div class="kpi"><div class="kpi-l">Bestand Ende ${jahr}</div><div class="kpi-n">${euro(bst.gesamt)}</div>
+      <div class="kpi-s">bar ${euro(bst.bar)} · Konto ${euro(bst.bank)}</div></div>`;
+
+  const q   = ($('kb-search').value||'').toLowerCase().trim();
+  const fA  = $('kb-filter-art').value, fK = $('kb-filter-kat').value, fZ = $('kb-filter-zahl').value;
+  let liste = D.buchungen.filter(b => jahrVon(b.datum)===jahr);
+  if(fA) liste = liste.filter(b=>b.typ===fA);
+  if(fK) liste = liste.filter(b=>b.kat===fK);
+  if(fZ) liste = liste.filter(b=>(b.zahl||'bar')===fZ);
+  if(q)  liste = liste.filter(b => (b.text||'').toLowerCase().includes(q)
+        || (b.notiz||'').toLowerCase().includes(q)
+        || katName(b.kat).toLowerCase().includes(q)
+        || String(b.nr||'').includes(q)
+        || num2(b.brutto).includes(q));
+  liste.sort((x,y)=>(y.datum+String(y.nr||'')).localeCompare(x.datum+String(x.nr||'')));
+
+  $('kb-list').innerHTML = liste.length ? liste.map(buchungRow).join('')
+    : `<div class="empty"><span class="em">📒</span>Keine Buchungen für diese Auswahl.</div>`;
+}
+
+/* --------------------------------------------------------- Buchungsdialog */
+let mbId = null, mbBelege = [];
+function openBuchung(id, typ, vorlage){
+  const b = id ? D.buchungen.find(x=>x.id===id) : null;
+  if(b && istGesperrt(jahrVon(b.datum))){
+    toast('Jahr ist festgeschrieben – nur ansehen möglich');
+  }
+  mbId = id || null;
+  mbBelege = b ? belegeVon(b.id).map(x=>x.id) : (vorlage && vorlage.belege || []);
+  const v = vorlage || {};
+  $('mb-title').textContent = b ? 'Buchung bearbeiten' : (typ==='ein'?'Neue Einnahme':'Neue Ausgabe');
+  $('mb-datum').value = b ? b.datum : (v.datum || heute());
+  $('mb-typ').value   = b ? b.typ   : (v.typ || typ || 'aus');
+  $('mb-text').value  = b ? (b.text||'')  : (v.text||'');
+  $('mb-brutto').value= b ? b.brutto : (v.brutto!=null ? r2(v.brutto) : '');
+  $('mb-zahl').value  = b ? (b.zahl||'bar') : (v.zahl||'bar');
+  $('mb-notiz').value = b ? (b.notiz||'')  : (v.notiz||'');
+  mbTypChanged(b ? b.kat : (v.kat||null));
+  $('mb-ust').value   = String(b ? (b.ust!=null?b.ust:19) : (v.ust!=null?v.ust:(katById($('mb-kat').value)||{}).ust||0));
+  fuelleGigSelect(b ? b.gigId : v.gigId);
+  $('mb-storno').style.display = (b && !b.storniert && !istGesperrt(jahrVon(b.datum))) ? 'inline-flex' : 'none';
+  $('mb-meta').innerHTML = b ? `Beleg-Nr. <b>${esc(b.nr||'—')}</b> · angelegt ${new Date(b.erstellt||Date.now()).toLocaleString('de-DE')}
+      ${b.geaendert?` · zuletzt geändert ${new Date(b.geaendert).toLocaleString('de-DE')}`:''}
+      ${b.storniert?`<br><span class="chip r">storniert</span> ${esc(b.stornoGrund||'')}`:''}` : '';
+  mbKatChanged(); mbRechne(); mbRenderBelege();
+  openModal('m-buchung');
+  setTimeout(()=>{ if(!b) $('mb-text').focus(); }, 150);
+}
+function mbTypChanged(vorauswahl){
+  const typ = $('mb-typ').value;
+  const sel = $('mb-kat');
+  const alt = vorauswahl || sel.value;
+  sel.innerHTML = KATEGORIEN.filter(k=>k.art===typ && !(k.nurRegel && istKlein()))
+    .map(k=>`<option value="${k.id}">${esc(k.name)}</option>`).join('');
+  if(alt && KATEGORIEN.some(k=>k.id===alt && k.art===typ)) sel.value = alt;
+  mbKatChanged();
+}
+function mbKatChanged(){
+  const k = katById($('mb-kat').value) || {};
+  $('mb-kat-hint').textContent = k.hinweis || '';
+  if(!mbId && k.ust!=null && document.activeElement && document.activeElement.id==='mb-kat')
+    $('mb-ust').value = String(k.ust);
+  $('mb-ust-wrap').style.display = istKlein() ? 'none' : 'flex';
+  mbRechne();
+}
+function mbRechne(){
+  const brutto = Number($('mb-brutto').value)||0;
+  const satz = istKlein() ? 0 : (Number($('mb-ust').value)||0);
+  const netto = satz ? brutto/(1+satz/100) : brutto;
+  const k = katById($('mb-kat').value) || {};
+  const quote = k.quote==null?1:k.quote;
+  let txt;
+  if(istKlein()){
+    txt = `Betrag: <b>${euro(brutto)}</b> · Kleinunternehmer – ohne Umsatzsteuerausweis.`;
+  }else{
+    txt = `Netto <b>${euro(netto)}</b> + USt (${satz} %) <b>${euro(brutto-netto)}</b> = brutto <b>${euro(brutto)}</b>`;
+  }
+  if(quote<1) txt += `<br>Davon abziehbar: <b>${euro(netto*quote)}</b> (${Math.round(quote*100)} %)`
+    + (istKlein()?'':` – die Vorsteuer bleibt zu 100 % abziehbar.`);
+  if(k.neutral) txt += `<br><b>Nicht erfolgswirksam:</b> wirkt sich nicht auf den Gewinn aus.`;
+  $('mb-rechnung').innerHTML = txt;
+  // Warnungen
+  const w = [];
+  if(k.id==='equipment' && netto>800)
+    w.push('Über 800 € netto: in der Regel keine Sofortabschreibung, sondern AfA über die Nutzungsdauer.');
+  if(k.id==='bewirtung' && !($('mb-notiz').value||'').trim())
+    w.push('Bei Bewirtung müssen Anlass und Teilnehmer dokumentiert werden – bitte in die Notiz schreiben.');
+  if(brutto>=250 && !mbBelege.length)
+    w.push('Ab 250 € braucht es einen Beleg mit vollständigen Rechnungsangaben.');
+  $('mb-warn').innerHTML = w.length ? `<div class="note warn">${w.map(esc).join('<br>')}</div>` : '';
+}
+function fuelleGigSelect(sel){
+  const s = $('mb-gig');
+  const gigs = D.gigs.slice().sort((a,b)=>b.datum.localeCompare(a.datum)).slice(0,80);
+  s.innerHTML = '<option value="">– kein Auftritt –</option>' +
+    gigs.map(g=>`<option value="${g.id}">${dt(g.datum)} · ${esc(g.titel||g.ort||'Auftritt')}</option>`).join('');
+  if(sel) s.value = sel;
+}
+function naechsteNr(){
+  const j = jahrVon($('mb-datum').value) || jahr;
+  const n = D.buchungen.filter(b=>jahrVon(b.datum)===j).length + 1;
+  return j + '-' + String(n).padStart(4,'0');
+}
+async function saveBuchung(){
+  const datum = $('mb-datum').value;
+  const text  = $('mb-text').value.trim();
+  const brutto= r2($('mb-brutto').value);
+  if(!datum){ toast('Bitte ein Datum angeben','bad'); return; }
+  if(!text){ toast('Bitte eine Beschreibung angeben','bad'); return; }
+  if(!(brutto>0)){ toast('Bitte einen Betrag größer 0 angeben','bad'); return; }
+  const j = jahrVon(datum);
+  if(istGesperrt(j)){ toast(`${j} ist festgeschrieben – Buchung nicht möglich`,'bad'); return; }
+
+  const alt = mbId ? D.buchungen.find(x=>x.id===mbId) : null;
+  if(alt && istGesperrt(jahrVon(alt.datum))){ toast('Festgeschriebenes Jahr – keine Änderung möglich','bad'); return; }
+
+  const neu = {
+    id: alt ? alt.id : uid(),
+    nr: alt ? alt.nr : naechsteNr(),
+    datum, typ:$('mb-typ').value, kat:$('mb-kat').value, text,
+    brutto, ust: istKlein() ? 0 : (Number($('mb-ust').value)||0),
+    zahl: $('mb-zahl').value, gigId: $('mb-gig').value || null,
+    notiz: $('mb-notiz').value.trim(),
+    storniert: alt ? !!alt.storniert : false,
+    stornoGrund: alt ? alt.stornoGrund : null,
+    erstellt: alt ? alt.erstellt : new Date().toISOString(),
+    geaendert: alt ? new Date().toISOString() : null
+  };
+  if(alt){
+    const felder = ['datum','typ','kat','text','brutto','ust','zahl','notiz'];
+    const diff = felder.filter(f=>String(alt[f]??'')!==String(neu[f]??''))
+      .map(f=>`${f}: ${alt[f]??'—'} → ${neu[f]??'—'}`);
+    if(diff.length) protokoll('Buchung geändert', neu.nr, diff.join(' | '));
+    Object.assign(alt, neu);
+  }else{
+    D.buchungen.push(neu);
+    protokoll('Buchung angelegt', neu.nr, `${neu.typ==='ein'?'Einnahme':'Ausgabe'} ${num2(neu.brutto)} € – ${neu.text}`);
+  }
+  // Belege verknüpfen
+  D.belege.forEach(x=>{ if(x.buchungId===neu.id && mbBelege.indexOf(x.id)<0) x.buchungId=null; });
+  mbBelege.forEach(bid=>{ const x=D.belege.find(y=>y.id===bid); if(x) x.buchungId=neu.id; });
+  save(true);
+  closeModal('m-buchung');
+  toast(alt ? 'Buchung gespeichert' : 'Buchung angelegt','good');
+  renderAlles();
+}
+async function stornoBuchung(){
+  const b = D.buchungen.find(x=>x.id===mbId); if(!b) return;
+  const grund = await confirmDialog('Buchung stornieren',
+    `Buchungen werden nicht gelöscht, sondern storniert – so bleibt die Buchführung nachvollziehbar.<br><br>
+     <b>${esc(b.text)}</b> · ${euro(b.brutto)}`, 'Stornieren', true);
+  if(!grund) return;
+  b.storniert = true; b.stornoGrund = grund; b.stornoTs = new Date().toISOString();
+  protokoll('Buchung storniert', b.nr, grund);
+  save(true); closeModal('m-buchung'); toast('Buchung storniert'); renderAlles();
+}
+async function mbBelegeAnhaengen(files){
+  const ids = await belegeSpeichern(files);
+  mbBelege = mbBelege.concat(ids);
+  mbRenderBelege(); mbRechne();
+}
+function mbRenderBelege(){
+  const box = $('mb-belege');
+  if(!mbBelege.length){ box.innerHTML = `<div class="hint">Noch kein Beleg angehängt.</div>`; return; }
+  box.innerHTML = mbBelege.map(id=>{
+    const m = D.belege.find(x=>x.id===id); if(!m) return '';
+    return belegKachel(m, `<button class="btn btn-gray btn-sm" style="position:absolute;top:4px;right:4px;padding:2px 7px"
+      onclick="event.stopPropagation();mbBelegEntfernen('${id}')">×</button>`);
+  }).join('');
+  mbBelege.forEach(id=>belegBildLaden(id));
+}
+function mbBelegEntfernen(id){
+  mbBelege = mbBelege.filter(x=>x!==id);
+  mbRenderBelege(); mbRechne();
+}
+
+/* -------------------------------------------------------------- Auftritte */
+function gigBilanz(g){
+  let ein=0, aus=0;
+  D.buchungen.forEach(b=>{
+    if(b.storniert || b.gigId!==g.id) return;
+    const r = rechne(b);
+    if(b.typ==='ein') ein += r.brutto; else aus += r.brutto;
+  });
+  return {einnahmen:r2(ein), ausgaben:r2(aus), ergebnis:r2(ein-aus)};
+}
+const STATUS_CHIP = {angefragt:['y','angefragt'], bestaetigt:['b','bestätigt'], gespielt:['g','gespielt'], abgesagt:['r','abgesagt']};
+function gigRow(g, kompakt){
+  const bil = gigBilanz(g);
+  const [cls,label] = STATUS_CHIP[g.status] || ['','—'];
+  const offen = (Number(g.gage)||0)>0 && bil.einnahmen<=0 && g.status!=='abgesagt';
+  return `<div class="row" onclick="openGig('${g.id}')" style="cursor:pointer">
+    <div class="row-main">
+      <div class="row-t">${esc(g.titel||'Auftritt')}${g.ort?` <span style="font-weight:500;color:var(--muted)">· ${esc(g.ort)}</span>`:''}</div>
+      <div class="row-s">
+        <span>${dtLang(g.datum)}</span>
+        <span class="chip ${cls}">${label}</span>
+        ${offen?`<span class="chip y">Gage offen</span>`:''}
+        ${!kompakt&&g.km?`<span class="chip">${g.km} km</span>`:''}
+      </div>
+    </div>
+    <div class="row-r">
+      <div style="text-align:right">
+        <div class="amt ${bil.ergebnis>=0?'pos':'neg'}">${euro(bil.ergebnis||g.gage||0)}</div>
+        <div class="row-s" style="justify-content:flex-end">${bil.einnahmen?`${euro(bil.einnahmen)} ein · ${euro(bil.ausgaben)} aus`:`geplant ${euro(g.gage||0)}`}</div>
+      </div>
+    </div>
+  </div>`;
+}
+function setGigFilter(f){
+  gigFilter = f;
+  document.querySelectorAll('#gig-filter .stab').forEach(b=>b.classList.toggle('active', b.dataset.f===f));
+  renderGigs();
+}
+function renderGigs(){
+  const alle = D.gigs.filter(g=>jahrVon(g.datum)===jahr);
+  const gespielt = alle.filter(g=>g.status==='gespielt');
+  const summe = alle.reduce((s,g)=>{ const b=gigBilanz(g); return s+b.ergebnis; },0);
+  const gagen = alle.reduce((s,g)=>s+gigBilanz(g).einnahmen,0);
+  const km = alle.reduce((s,g)=>s+(Number(g.km)||0),0);
+  $('gig-kpis').innerHTML = `
+    <div class="kpi"><div class="kpi-l">Auftritte ${jahr}</div><div class="kpi-n">${alle.length}</div>
+      <div class="kpi-s">${gespielt.length} gespielt</div></div>
+    <div class="kpi"><div class="kpi-l">Gagen (vereinnahmt)</div><div class="kpi-n pos">${euro(gagen)}</div></div>
+    <div class="kpi"><div class="kpi-l">Ergebnis Auftritte</div><div class="kpi-n ${summe>=0?'pos':'neg'}">${euro(summe)}</div></div>
+    <div class="kpi"><div class="kpi-l">Gefahrene Kilometer</div><div class="kpi-n">${km.toLocaleString('de-DE')}</div>
+      <div class="kpi-s">≈ ${euro(km*(Number(D.einstellungen.kmSatz)||0.3))} Fahrtkosten</div></div>`;
+
+  let liste = alle.slice();
+  if(gigFilter==='offen')    liste = liste.filter(g=>(Number(g.gage)||0)>0 && gigBilanz(g).einnahmen<=0 && g.status!=='abgesagt');
+  if(gigFilter==='geplant')  liste = liste.filter(g=>g.status==='angefragt'||g.status==='bestaetigt');
+  if(gigFilter==='gespielt') liste = liste.filter(g=>g.status==='gespielt');
+  liste.sort((a,b)=>b.datum.localeCompare(a.datum));
+  $('gig-list').innerHTML = liste.length ? liste.map(g=>gigRow(g)).join('')
+    : `<div class="empty"><span class="em">🎤</span>Keine Auftritte in dieser Auswahl.</div>`;
+}
+
+let mgId = null, mgMitwirkende = [];
+function openGig(id){
+  const g = id ? D.gigs.find(x=>x.id===id) : null;
+  mgId = id || null;
+  mgMitwirkende = g ? (g.mitwirkende||[]).slice() : (D.einstellungen.mitglieder||[]).map(m=>m.id);
+  $('mg-title').textContent = g ? 'Auftritt bearbeiten' : 'Neuer Auftritt';
+  $('mg-datum').value  = g ? g.datum : heute();
+  $('mg-status').value = g ? g.status : 'angefragt';
+  $('mg-titel').value  = g ? (g.titel||'') : '';
+  $('mg-ort').value    = g ? (g.ort||'') : '';
+  $('mg-veranst').value= g ? (g.veranstalter||'') : '';
+  $('mg-gage').value   = g ? (g.gage||'') : '';
+  $('mg-km').value     = g ? (g.km||'') : '';
+  $('mg-stunden').value= g ? (g.stunden||'') : '';
+  $('mg-notiz').value  = g ? (g.notiz||'') : '';
+  $('mg-del').style.display = g ? 'inline-flex' : 'none';
+  mgRenderMitwirkende();
+  mgRenderBilanz(g);
+  openModal('m-gig');
+  setTimeout(()=>{ if(!g) $('mg-titel').focus(); }, 150);
+}
+function mgRenderMitwirkende(){
+  const ms = D.einstellungen.mitglieder || [];
+  $('mg-mitwirkende').innerHTML = ms.length
+    ? ms.map(m=>`<button class="stab ${mgMitwirkende.includes(m.id)?'active':''}"
+        onclick="mgToggleMitwirkend('${m.id}')">${esc(m.name)}</button>`).join('')
+    : `<span class="hint">Noch keine Mitglieder angelegt – unter ⚙️ Einstellungen ergänzen.</span>`;
+}
+function mgToggleMitwirkend(id){
+  mgMitwirkende = mgMitwirkende.includes(id) ? mgMitwirkende.filter(x=>x!==id) : mgMitwirkende.concat(id);
+  mgRenderMitwirkende();
+}
+function mgRenderBilanz(g){
+  const box = $('mg-bilanz');
+  if(!g){ box.innerHTML = `<div class="note">Nach dem Speichern kannst du hier Gage, Fahrtkosten und Ausgaben direkt verbuchen.</div>`; return; }
+  const bil = gigBilanz(g);
+  const bs = D.buchungen.filter(b=>b.gigId===g.id && !b.storniert)
+    .sort((a,b)=>a.datum.localeCompare(b.datum));
+  const kmSatz = Number(D.einstellungen.kmSatz)||0.30;
+  const anzahl = Math.max(1, (g.mitwirkende||[]).length);
+  const vp = (Number(g.stunden)||0) >= 8 ? (Number(D.einstellungen.verpflegung8)||14) * anzahl : 0;
+  box.innerHTML = `
+    <div class="divider"></div>
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-l">Einnahmen</div><div class="kpi-n pos">${euro(bil.einnahmen)}</div></div>
+      <div class="kpi"><div class="kpi-l">Ausgaben</div><div class="kpi-n neg">${euro(bil.ausgaben)}</div></div>
+      <div class="kpi"><div class="kpi-l">Ergebnis</div><div class="kpi-n ${bil.ergebnis>=0?'pos':'neg'}">${euro(bil.ergebnis)}</div></div>
+    </div>
+    <div class="btn-row" style="margin-top:10px">
+      ${bil.einnahmen<=0 && (Number(g.gage)||0)>0 ? `<button class="btn btn-success btn-sm" onclick="gigGageBuchen('${g.id}')">💶 Gage ${euro(g.gage)} verbuchen</button>`:''}
+      ${(Number(g.km)||0)>0 ? `<button class="btn btn-gray btn-sm" onclick="gigFahrtBuchen('${g.id}')">🚗 Fahrtkosten ${euro((Number(g.km)||0)*kmSatz)} buchen</button>`:''}
+      ${vp>0 ? `<button class="btn btn-gray btn-sm" onclick="gigVerpflegungBuchen('${g.id}')">🍽️ Verpflegung ${euro(vp)} buchen</button>`:''}
+      <button class="btn btn-gray btn-sm" onclick="gigAusgabeBuchen('${g.id}')">➖ Ausgabe zu diesem Auftritt</button>
+    </div>
+    ${bs.length ? `<div style="margin-top:10px">${bs.map(buchungRow).join('')}</div>` : ''}
+    ${(g.mitwirkende||[]).length && bil.ergebnis!==0 ? `
+      <div class="note" style="margin-top:10px"><b>Aufteilung auf die Mitwirkenden:</b><br>
+      ${verteileBetrag(bil.ergebnis, g.mitwirkende).map(v=>`${esc(v.name)}: <b>${euro(v.betrag)}</b>`).join(' · ')}</div>` : ''}`;
+}
+/** Verteilt einen Betrag nach den hinterlegten Anteilen (sonst gleichmäßig), Restcent auf den ersten. */
+function verteileBetrag(betrag, mitgliedIds){
+  const ms = (D.einstellungen.mitglieder||[]).filter(m=>!mitgliedIds || mitgliedIds.includes(m.id));
+  if(!ms.length) return [];
+  const summeAnteile = ms.reduce((s,m)=>s+(Number(m.anteil)||0),0);
+  const werte = ms.map(m=>{
+    const anteil = summeAnteile>0 ? (Number(m.anteil)||0)/summeAnteile : 1/ms.length;
+    return {id:m.id, name:m.name, anteil, betrag:r2(betrag*anteil)};
+  });
+  const diff = r2(betrag - werte.reduce((s,w)=>s+w.betrag,0));
+  if(diff && werte.length) werte[0].betrag = r2(werte[0].betrag + diff);
+  return werte;
+}
+function saveGig(){
+  const datum = $('mg-datum').value, titel = $('mg-titel').value.trim();
+  if(!datum){ toast('Bitte ein Datum angeben','bad'); return; }
+  if(!titel){ toast('Bitte eine Bezeichnung angeben','bad'); return; }
+  const g = mgId ? D.gigs.find(x=>x.id===mgId) : {id:uid()};
+  Object.assign(g, {
+    datum, titel, status:$('mg-status').value, ort:$('mg-ort').value.trim(),
+    veranstalter:$('mg-veranst').value.trim(), gage:r2($('mg-gage').value),
+    km:Number($('mg-km').value)||0, stunden:Number($('mg-stunden').value)||0,
+    mitwirkende:mgMitwirkende.slice(), notiz:$('mg-notiz').value.trim()
+  });
+  if(!mgId){ D.gigs.push(g); protokoll('Auftritt angelegt', g.titel, dt(g.datum)); }
+  else protokoll('Auftritt geändert', g.titel, dt(g.datum));
+  mgId = g.id;
+  save(true); toast('Auftritt gespeichert','good');
+  mgRenderBilanz(g); renderAlles();
+}
+async function deleteGig(){
+  const g = D.gigs.find(x=>x.id===mgId); if(!g) return;
+  const verknuepft = D.buchungen.filter(b=>b.gigId===g.id && !b.storniert).length;
+  const ok = await confirmDialog('Auftritt löschen',
+    `<b>${esc(g.titel)}</b> vom ${dt(g.datum)} löschen?` +
+    (verknuepft?`<br><br>${verknuepft} Buchung${verknuepft===1?'':'en'} bleiben erhalten und verlieren nur die Zuordnung.`:''),
+    'Löschen');
+  if(!ok) return;
+  D.buchungen.forEach(b=>{ if(b.gigId===g.id) b.gigId=null; });
+  D.gigs = D.gigs.filter(x=>x.id!==g.id);
+  protokoll('Auftritt gelöscht', g.titel, dt(g.datum));
+  save(true); closeModal('m-gig'); toast('Auftritt gelöscht'); renderAlles();
+}
+function gigGageBuchen(id){
+  const g = D.gigs.find(x=>x.id===id); if(!g) return;
+  closeModal('m-gig');
+  openBuchung(null,'ein',{datum:g.datum, kat:'gage', text:`Gage ${g.titel||''}${g.ort?' · '+g.ort:''}`.trim(),
+    brutto:g.gage, gigId:g.id, ust:(D.einstellungen.ustSatz!=null?D.einstellungen.ustSatz:19), zahl:'bar'});
+}
+function gigFahrtBuchen(id){
+  const g = D.gigs.find(x=>x.id===id); if(!g) return;
+  const satz = Number(D.einstellungen.kmSatz)||0.30;
+  closeModal('m-gig');
+  openBuchung(null,'aus',{datum:g.datum, kat:'fahrt', ust:0, zahl:'privat',
+    text:`Fahrtkosten ${g.titel||'Auftritt'}`, brutto:r2((Number(g.km)||0)*satz), gigId:g.id,
+    notiz:`Eigenbeleg: ${g.km} km à ${num2(satz)} € · Ziel: ${g.ort||'—'} · Anlass: Auftritt ${g.titel||''}`});
+}
+function gigVerpflegungBuchen(id){
+  const g = D.gigs.find(x=>x.id===id); if(!g) return;
+  const anzahl = Math.max(1,(g.mitwirkende||[]).length);
+  const pauschale = Number(D.einstellungen.verpflegung8)||14;
+  closeModal('m-gig');
+  openBuchung(null,'aus',{datum:g.datum, kat:'verpflegung', ust:0, zahl:'privat',
+    text:`Verpflegungsmehraufwand ${g.titel||'Auftritt'}`, brutto:r2(anzahl*pauschale), gigId:g.id,
+    notiz:`${anzahl} Person(en) × ${num2(pauschale)} € · Abwesenheit ${g.stunden||'?'} h · ${g.ort||''}`});
+}
+function gigAusgabeBuchen(id){
+  const g = D.gigs.find(x=>x.id===id); if(!g) return;
+  closeModal('m-gig');
+  openBuchung(null,'aus',{datum:g.datum, gigId:g.id, text:`${g.titel||'Auftritt'} – `});
+}
+
+/* ----------------------------------------------------------------- Belege */
+const _belegUrls = new Map();
+async function belegUrl(id){
+  if(_belegUrls.has(id)) return _belegUrls.get(id);
+  const blob = await idbGet('files', id);
+  if(!blob) return null;
+  const url = URL.createObjectURL(blob);
+  _belegUrls.set(id, url);
+  return url;
+}
+async function belegeSpeichern(files){
+  const ids = [];
+  for(const f of Array.from(files||[])){
+    if(f.size > 12*1024*1024){ toast(`${f.name} ist größer als 12 MB und wurde übersprungen`,'bad'); continue; }
+    const id = uid();
+    try{ await idbPut('files', id, f); }
+    catch(e){ toast('Beleg konnte nicht gespeichert werden','bad'); continue; }
+    D.belege.push({id, name:f.name||('Beleg'+dateiEndung('', f.type)), mime:f.type||'application/octet-stream',
+      size:f.size, hochgeladen:new Date().toISOString(), datum:heute(), buchungId:null});
+    ids.push(id);
+  }
+  if(ids.length){ save(true); protokoll('Beleg hinzugefügt', ids.length+' Datei(en)', ''); }
+  return ids;
+}
+async function belegeHinzufuegen(files){
+  const ids = await belegeSpeichern(files);
+  $('beleg-file').value = '';
+  if(ids.length){ toast(`${ids.length} Beleg(e) gespeichert`,'good'); renderBelege(); }
+}
+function belegKachel(m, extra){
+  const istBild = /^image\//.test(m.mime||'');
+  const b = m.buchungId ? D.buchungen.find(x=>x.id===m.buchungId) : null;
+  return `<div class="beleg ${m.buchungId?'':'unlinked'}" onclick="belegOeffnen('${m.id}')" style="position:relative">
+    ${istBild ? `<img id="thumb-${m.id}" alt="${esc(m.name)}">` : `<div class="pdf">📄</div>`}
+    <div class="cap">${esc(m.name).slice(0,40)}<br>${b?`<span style="color:var(--pos)">${esc((b.text||'').slice(0,22))}</span>`:'<span style="color:var(--warn)">ohne Buchung</span>'}</div>
+    ${extra||''}
+  </div>`;
+}
+function belegBildLaden(id){
+  const el = $('thumb-'+id); if(!el || el.src) return;
+  belegUrl(id).then(u=>{ if(u && $('thumb-'+id)) $('thumb-'+id).src = u; });
+}
+function renderBelege(){
+  const f = $('beleg-filter').value;
+  let liste = D.belege.slice().sort((a,b)=>(b.hochgeladen||'').localeCompare(a.hochgeladen||''));
+  if(f==='offen') liste = liste.filter(x=>!x.buchungId);
+  if(f==='jahr')  liste = liste.filter(x=>{
+    const b = x.buchungId ? D.buchungen.find(y=>y.id===x.buchungId) : null;
+    return jahrVon(b ? b.datum : x.datum)===jahr;
+  });
+  const gesamt = D.belege.reduce((s,x)=>s+(Number(x.size)||0),0);
+  const lose = D.belege.filter(x=>!x.buchungId).length;
+  $('beleg-kpis').innerHTML = `
+    <div class="kpi"><div class="kpi-l">Belege gesamt</div><div class="kpi-n">${D.belege.length}</div></div>
+    <div class="kpi"><div class="kpi-l">Ohne Buchung</div><div class="kpi-n ${lose?'neg':''}">${lose}</div></div>
+    <div class="kpi"><div class="kpi-l">Speicher</div><div class="kpi-n">${(gesamt/1048576).toFixed(1)} MB</div></div>`;
+  $('beleg-list').innerHTML = liste.length
+    ? `<div class="beleg-grid">${liste.map(m=>belegKachel(m)).join('')}</div>`
+    : `<div class="empty"><span class="em">🧾</span>Keine Belege in dieser Auswahl.</div>`;
+  liste.forEach(m=>belegBildLaden(m.id));
+}
+async function belegOeffnen(id){
+  const m = D.belege.find(x=>x.id===id); if(!m) return;
+  const url = await belegUrl(id);
+  const b = m.buchungId ? D.buchungen.find(x=>x.id===m.buchungId) : null;
+  $('mv-title').textContent = m.name || 'Beleg';
+  $('mv-body').innerHTML = `
+    ${/^image\//.test(m.mime) ? `<img src="${url}" style="width:100%;border-radius:var(--radius-sm);margin-bottom:12px">`
+      : `<div class="note" style="margin-bottom:12px">📄 PDF – <a href="${url}" target="_blank" rel="noopener">in neuem Tab öffnen</a></div>`}
+    <div class="hint" style="margin-bottom:10px">${(m.size/1024).toFixed(0)} kB · hochgeladen ${new Date(m.hochgeladen||Date.now()).toLocaleString('de-DE')}</div>
+    <div class="f" style="margin-bottom:10px">
+      <label>Zugeordnete Buchung</label>
+      <select class="fl-input" id="mv-zuordnung" onchange="belegZuordnen('${id}',this.value)">
+        <option value="">– keine –</option>
+        ${D.buchungen.slice().sort((x,y)=>y.datum.localeCompare(x.datum)).slice(0,200)
+          .map(x=>`<option value="${x.id}" ${b&&b.id===x.id?'selected':''}>${dt(x.datum)} · ${esc((x.text||'').slice(0,32))} · ${num2(x.brutto)} €</option>`).join('')}
+      </select>
+    </div>
+    <div class="btn-row">
+      <a class="btn btn-gray btn-sm" href="${url}" download="${esc(m.name)}">⬇️ Herunterladen</a>
+      ${b?`<button class="btn btn-gray btn-sm" onclick="closeModal('m-beleg');openBuchung('${b.id}')">📒 Zur Buchung</button>`:
+          `<button class="btn btn-primary btn-sm" onclick="belegZuBuchung('${id}')">➕ Buchung dazu anlegen</button>`}
+      <button class="btn btn-danger btn-sm" style="margin-left:auto" onclick="belegLoeschen('${id}')">Löschen</button>
+    </div>`;
+  openModal('m-beleg');
+}
+function belegZuordnen(id, buchungId){
+  const m = D.belege.find(x=>x.id===id); if(!m) return;
+  m.buchungId = buchungId || null;
+  save(true); toast(buchungId?'Beleg zugeordnet':'Zuordnung entfernt','good'); renderBelege();
+}
+function belegZuBuchung(id){
+  closeModal('m-beleg');
+  openBuchung(null,'aus',{belege:[id]});
+}
+async function belegLoeschen(id){
+  const m = D.belege.find(x=>x.id===id); if(!m) return;
+  const ok = await confirmDialog('Beleg löschen',
+    `<b>${esc(m.name)}</b> endgültig löschen? Belege sind Teil der Buchführung – im Zweifel behalten.`, 'Löschen');
+  if(!ok) return;
+  await idbDel('files', id).catch(()=>{});
+  if(_belegUrls.has(id)){ URL.revokeObjectURL(_belegUrls.get(id)); _belegUrls.delete(id); }
+  D.belege = D.belege.filter(x=>x.id!==id);
+  protokoll('Beleg gelöscht', m.name, '');
+  save(true); closeModal('m-beleg'); toast('Beleg gelöscht'); renderBelege();
+}
+</script>
+<script>
+/* =========================================================================
+   STEUER-AUSWERTUNG (EÜR), EXPORTE, EINSTELLUNGEN
+   ========================================================================= */
+const GRUPPEN_EIN = ['e_umsatz','e_frei','e_ust','e_neutral'];
+const GRUPPEN_AUS = ['a_waren','a_fremd','a_raum','a_afa','a_reise','a_werbung','a_beschr','a_uebrig','a_ust','a_neutral'];
+
+function euerZeilen(a, art){
+  const gruppen = art==='ein' ? GRUPPEN_EIN : GRUPPEN_AUS;
+  const zeilen = [];
+  gruppen.forEach(gr => {
+    const kats = KATEGORIEN.filter(k=>k.gruppe===gr && a.kategorien[k.id]);
+    if(!kats.length) return;
+    const g = a.gruppen[gr] || {netto:0,ust:0,brutto:0,abziehbar:0};
+    zeilen.push({typ:'gruppe', name:GRUPPEN[gr], netto:g.netto, ust:g.ust, brutto:g.brutto,
+                 abziehbar:g.abziehbar, neutral:/neutral/.test(gr)});
+    kats.forEach(k=>{
+      const e = a.kategorien[k.id];
+      zeilen.push({typ:'kat', name:k.name, anzahl:e.anzahl, netto:e.netto, ust:e.ust,
+                   brutto:e.brutto, abziehbar:e.abziehbar, quote:k.quote==null?1:k.quote, neutral:!!k.neutral});
+    });
+  });
+  return zeilen;
+}
+function euerTabelle(a, art){
+  const zeilen = euerZeilen(a, art);
+  if(!zeilen.length) return `<tr><td colspan="5" style="color:var(--muted);padding:16px 8px">Keine Buchungen in ${a.jahr}.</td></tr>`;
+  const kopf = `<tr><th>Position</th><th class="r s-hide">Anz.</th><th class="r">${istKlein()?'Betrag':'Netto'}</th>
+    ${istKlein()?'':'<th class="r">USt</th>'}<th class="r">wirkt in EÜR</th></tr>`;
+  const body = zeilen.map(z => z.typ==='gruppe'
+    ? `<tr class="grp"><td colspan="${istKlein()?4:5}">${esc(z.name)}</td></tr>`
+    : `<tr><td>${esc(z.name)}${z.quote<1?` <span class="chip y">${Math.round(z.quote*100)} %</span>`:''}</td>
+        <td class="r s-hide">${z.anzahl}</td><td class="r">${num2(z.netto)}</td>
+        ${istKlein()?'':`<td class="r">${num2(z.ust)}</td>`}
+        <td class="r">${z.neutral?'<span style="color:var(--muted)">—</span>':num2(z.abziehbar)}</td></tr>`).join('');
+  const summe = art==='ein'
+    ? [`Betriebseinnahmen gesamt${istKlein()?'':' (netto + vereinnahmte USt)'}`, a.einnahmen]
+    : [`Betriebsausgaben gesamt${istKlein()?'':' (netto + gezahlte Vorsteuer)'}`, a.ausgaben];
+  return kopf + body +
+    `<tr class="sum"><td colspan="${istKlein()?3:4}">${summe[0]}</td><td class="r">${num2(summe[1])}</td></tr>`;
+}
+
+function renderSteuer(){
+  const a = auswertung(jahr);
+  const gesperrt = istGesperrt(jahr);
+  $('st-kpis').innerHTML = `
+    <div class="kpi big" style="grid-column:1/-1">
+      <div class="kpi-l">${a.gewinn>=0?'Gewinn':'Verlust'} ${jahr} ${gesperrt?'🔒':''}</div>
+      <div class="kpi-n ${a.gewinn>=0?'pos':'neg'}">${euro(a.gewinn)}</div>
+      <div class="kpi-s">Einnahmen-Überschuss-Rechnung nach § 4 Abs. 3 EStG</div>
+    </div>
+    <div class="kpi"><div class="kpi-l">Betriebseinnahmen</div><div class="kpi-n pos">${euro(a.einnahmen)}</div></div>
+    <div class="kpi"><div class="kpi-l">Betriebsausgaben</div><div class="kpi-n neg">${euro(a.ausgaben)}</div></div>
+    <div class="kpi"><div class="kpi-l">Gesamtumsatz${istKlein()?' (§ 19 UStG)':' (brutto)'}</div>
+      <div class="kpi-n">${euro(a.gesamtumsatz)}</div></div>
+    ${istKlein()?'':`<div class="kpi"><div class="kpi-l">Umsatzsteuer-Zahllast</div>
+      <div class="kpi-n ${a.ustZahllast>0?'neg':'pos'}">${euro(a.ustZahllast)}</div>
+      <div class="kpi-s">${a.ustZahllast>0?'an das Finanzamt':'Erstattungsanspruch'}</div></div>`}`;
+
+  $('st-ein').innerHTML = euerTabelle(a,'ein');
+  $('st-aus').innerHTML = euerTabelle(a,'aus');
+
+  // ---------- Umsatzsteuer ----------
+  if(istKlein()){
+    $('st-ust').innerHTML = `<div class="note">
+      Du nutzt die <b>Kleinunternehmerregelung (§ 19 UStG)</b>: keine Umsatzsteuer auf Rechnungen,
+      dafür auch kein Vorsteuerabzug. Alle Beträge in dieser Auswertung sind Bruttobeträge.<br><br>
+      Gesamtumsatz ${jahr}: <b>${euro(a.gesamtumsatz)}</b> · Vorjahr: <b>${euro(auswertung(jahr-1).gesamtumsatz)}</b><br>
+      <span class="hint">Auf Rechnungen gehört ein Hinweis wie „Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.“</span></div>`;
+  }else{
+    const rows = [0,1,2,3].map(i=>`<tr><td>Q${i+1}</td><td class="r">${num2(a.quartale[i])}</td>
+      <td class="r">${num2(a.quartaleVor[i])}</td>
+      <td class="r"><b>${num2(a.quartale[i]-a.quartaleVor[i])}</b></td></tr>`).join('');
+    $('st-ust').innerHTML = `
+      <div class="tw"><table class="t">
+        <tr><th>Zeitraum</th><th class="r">Vereinnahmte USt</th><th class="r">Vorsteuer</th><th class="r">Zahllast</th></tr>
+        ${rows}
+        <tr class="sum"><td>Jahr ${jahr}</td><td class="r">${num2(a.ustEinnahmen)}</td>
+          <td class="r">${num2(a.vorsteuer)}</td><td class="r">${num2(a.ustZahllast)}</td></tr>
+      </table></div>
+      <div class="note" style="margin-top:10px">Für die Umsatzsteuer-Voranmeldung ist die <b>Ist-Versteuerung</b> unterstellt
+      (maßgeblich ist der Zahlungszeitpunkt). Bei Soll-Versteuerung zählt stattdessen das Rechnungsdatum.</div>`;
+  }
+
+  // ---------- Gewinnverteilung ----------
+  const ms = D.einstellungen.mitglieder || [];
+  const rf = D.einstellungen.rechtsform;
+  if(!ms.length){
+    $('st-verteilung').innerHTML = `<div class="note">Lege unter ⚙️ Einstellungen die Bandmitglieder an,
+      dann wird der Gewinn hier automatisch aufgeteilt.</div>`;
+  }else{
+    const teile = verteileBetrag(a.gewinn, null);
+    $('st-verteilung').innerHTML = `
+      <div class="tw"><table class="t">
+        <tr><th>Mitglied</th><th class="r">Anteil</th><th class="r">Gewinnanteil ${jahr}</th></tr>
+        ${teile.map(t=>`<tr><td>${esc(t.name)}</td><td class="r">${(t.anteil*100).toFixed(1)} %</td>
+          <td class="r ${t.betrag>=0?'pos':'neg'}"><b>${num2(t.betrag)}</b></td></tr>`).join('')}
+        <tr class="sum"><td>Summe</td><td class="r">100,0 %</td><td class="r">${num2(a.gewinn)}</td></tr>
+      </table></div>
+      ${rf==='gbr' ? `<div class="note" style="margin-top:10px">
+        Als <b>GbR</b> gebt ihr eine <b>Erklärung zur gesonderten und einheitlichen Feststellung</b> ab.
+        Der Gewinn wird dort auf die Gesellschafter verteilt; jede*r versteuert den eigenen Anteil in der
+        persönlichen Einkommensteuererklärung (Anlage G bzw. S).</div>` : ''}
+      ${rf==='einzel' ? `<div class="note" style="margin-top:10px">Als Einzelunternehmen/Freiberufler geht der
+        Gewinn in die <b>Anlage S bzw. G</b> deiner Einkommensteuererklärung, die EÜR als <b>Anlage EÜR</b>.</div>`:''}
+      ${rf==='hobby' ? `<div class="note warn" style="margin-top:10px">Eingestellt als <b>Liebhaberei</b>:
+        Ohne Gewinnerzielungsabsicht sind Einnahmen nicht steuerbar, Verluste aber auch nicht abziehbar.
+        Bei dauerhaft positiven Ergebnissen prüft das Finanzamt das erfahrungsgemäß.</div>`:''}`;
+  }
+
+  // ---------- Reisekosten & Sonderfälle ----------
+  const bs = aktiveBuchungen(jahr);
+  const kmGig = D.gigs.filter(g=>jahrVon(g.datum)===jahr).reduce((s,g)=>s+(Number(g.km)||0),0);
+  const fahrt = bs.filter(b=>b.kat==='fahrt').reduce((s,b)=>s+rechne(b).brutto,0);
+  const vpf   = bs.filter(b=>b.kat==='verpflegung').reduce((s,b)=>s+rechne(b).brutto,0);
+  const uebn  = bs.filter(b=>b.kat==='uebernachtung').reduce((s,b)=>s+rechne(b).netto,0);
+  const bew   = bs.filter(b=>b.kat==='bewirtung');
+  const bewN  = bew.reduce((s,b)=>s+rechne(b).netto,0);
+  const gwg   = bs.filter(b=>b.kat==='equipment' && rechne(b).netto>800);
+  const privatOffen = bestand(jahr).privat;
+  $('st-sonder').innerHTML = `
+    <div class="kpis" style="margin-bottom:12px">
+      <div class="kpi"><div class="kpi-l">Kilometer laut Auftritten</div><div class="kpi-n">${kmGig.toLocaleString('de-DE')}</div>
+        <div class="kpi-s">gebuchte Fahrtkosten ${euro(fahrt)}</div></div>
+      <div class="kpi"><div class="kpi-l">Verpflegungspauschalen</div><div class="kpi-n">${euro(vpf)}</div></div>
+      <div class="kpi"><div class="kpi-l">Übernachtungen</div><div class="kpi-n">${euro(uebn)}</div></div>
+    </div>
+    ${bew.length?`<div class="note warn"><b>Bewirtung:</b> ${euro(bewN)} netto erfasst – davon sind
+      <b>${euro(bewN*0.7)}</b> Betriebsausgabe, ${euro(bewN*0.3)} sind nicht abziehbar.
+      ${istKlein()?'':'Die Vorsteuer bleibt in voller Höhe abziehbar.'}
+      Anlass und Teilnehmer müssen auf dem Beleg stehen.</div>`:''}
+    ${gwg.length?`<div class="note warn"><b>Anschaffungen über 800 € netto (${gwg.length}):</b>
+      ${gwg.map(b=>esc(b.text)+' · '+euro(rechne(b).netto)).join('<br>')}<br>
+      Diese Wirtschaftsgüter werden normalerweise über die Nutzungsdauer abgeschrieben
+      (Gitarre/Verstärker z. B. 5–7 Jahre) statt sofort in voller Höhe abgezogen.</div>`:''}
+    ${privatOffen<0?`<div class="note"><b>Von Mitgliedern privat verauslagt:</b> ${euro(-privatOffen)}.
+      Diese Beträge sind bereits als Betriebsausgabe erfasst. Wenn ihr sie aus der Bandkasse erstattet,
+      bucht das als <i>Privatentnahme</i> – sonst zählt der Aufwand doppelt.</div>`:''}
+    ${!bew.length&&!gwg.length&&privatOffen>=0?`<div class="sec-hint">Keine Sonderfälle für ${jahr}.</div>`:''}`;
+
+  // ---------- Prüfliste ----------
+  const belegPflicht = bs.filter(b=>b.brutto>=250 && belegeVon(b.id).length===0);
+  const ohneAllg = bs.filter(b=>belegeVon(b.id).length===0);
+  const lose = D.belege.filter(x=>!x.buchungId);
+  const gigOhne = D.gigs.filter(g=>jahrVon(g.datum)===jahr && g.status==='gespielt' && gigBilanz(g).einnahmen<=0 && (Number(g.gage)||0)>0);
+  const tage = D.einstellungen.letztesBackup
+    ? Math.floor((Date.now()-new Date(D.einstellungen.letztesBackup))/86400000) : null;
+  const punkte = [
+    [!belegPflicht.length, `Alle Buchungen ab 250 € haben einen Beleg`, `${belegPflicht.length} Buchung(en) ab 250 € ohne Beleg`],
+    [!ohneAllg.length, `Jede Buchung hat einen Beleg`, `${ohneAllg.length} Buchung(en) ohne Beleg – für kleine Beträge genügt ein Eigenbeleg`],
+    [!lose.length, `Alle Belege sind einer Buchung zugeordnet`, `${lose.length} Beleg(e) noch ohne Buchung`],
+    [!gigOhne.length, `Alle gespielten Auftritte sind abgerechnet`, `${gigOhne.length} gespielte(r) Auftritt(e) ohne verbuchte Gage`],
+    [tage!=null && tage<=30, `Backup ist aktuell`, tage==null?`Noch nie ein Backup gespeichert`:`Letztes Backup vor ${tage} Tagen`],
+    [gesperrt, `${jahr} ist festgeschrieben`, `${jahr} ist noch nicht festgeschrieben – nach Abgabe der Erklärung sinnvoll`]
+  ];
+  $('st-check').innerHTML = punkte.map(([ok,gut,schlecht]) =>
+    `<div class="row"><div class="row-main"><div class="row-t" style="font-weight:600">
+      ${ok?'✅':'⚠️'} ${esc(ok?gut:schlecht)}</div></div></div>`).join('');
+}
+
+/* --------------------------------------------------------------- Exporte */
+function kassenbuchZeilen(j){
+  const kopf = ['Beleg-Nr','Datum','Art','Kategorie','EÜR-Position','Beschreibung','Notiz',
+                'Brutto','USt-Satz %','USt','Netto','wirkt in EÜR','Zahlungsart','Auftritt','Belege','Status'];
+  const rows = D.buchungen.filter(b=>j==null||jahrVon(b.datum)===j)
+    .sort((a,b)=>(a.datum+String(a.nr||'')).localeCompare(b.datum+String(b.nr||'')))
+    .map(b=>{
+      const r = rechne(b), k = katById(b.kat)||{};
+      const g = b.gigId ? D.gigs.find(x=>x.id===b.gigId) : null;
+      return [b.nr||'', dt(b.datum), b.typ==='ein'?'Einnahme':'Ausgabe', k.name||'', GRUPPEN[r.gruppe]||'',
+        b.text||'', b.notiz||'', r.brutto, r.satz, r.ust, r.netto, r.neutral?0:r.abziehbar,
+        {bar:'Bar',bank:'Bank',privat:'privat verauslagt'}[b.zahl||'bar'],
+        g?`${dt(g.datum)} ${g.titel||''}`:'', belegeVon(b.id).map(x=>x.name).join(', '),
+        b.storniert?('storniert: '+(b.stornoGrund||'')):'gebucht'];
+    });
+  return [kopf].concat(rows);
+}
+function exportKassenbuchCSV(){
+  downloadText(csv(kassenbuchZeilen(jahr)), `Kassenbuch_${jahr}.csv`);
+  toast('Kassenbuch exportiert','good');
+}
+function gigZeilen(j){
+  const kopf = ['Datum','Bezeichnung','Ort','Veranstalter','Status','Vereinbarte Gage','Vereinnahmt',
+                'Ausgaben','Ergebnis','Kilometer','Stunden','Mitwirkende','Notiz'];
+  const rows = D.gigs.filter(g=>j==null||jahrVon(g.datum)===j)
+    .sort((a,b)=>a.datum.localeCompare(b.datum))
+    .map(g=>{
+      const b = gigBilanz(g);
+      const namen = (g.mitwirkende||[]).map(id=>((D.einstellungen.mitglieder||[]).find(m=>m.id===id)||{}).name).filter(Boolean).join(', ');
+      return [dt(g.datum), g.titel||'', g.ort||'', g.veranstalter||'', g.status||'',
+              r2(g.gage), b.einnahmen, b.ausgaben, b.ergebnis, g.km||0, g.stunden||0, namen, g.notiz||''];
+    });
+  return [kopf].concat(rows);
+}
+function exportGigsCSV(){
+  downloadText(csv(gigZeilen(jahr)), `Auftritte_${jahr}.csv`);
+  toast('Auftritte exportiert','good');
+}
+function euerCsvZeilen(j){
+  const a = auswertung(j);
+  const z = [['Einnahmenüberschussrechnung', D.einstellungen.bandName||'', 'Jahr', j],
+             ['Steuernummer', D.einstellungen.steuernummer||'', 'Finanzamt', D.einstellungen.finanzamt||''],
+             ['Besteuerung', istKlein()?'Kleinunternehmer § 19 UStG':'Regelbesteuerung','',''],
+             [], ['Position','Anzahl',istKlein()?'Betrag':'Netto', istKlein()?'':'USt','wirkt in EÜR']];
+  ['ein','aus'].forEach(art=>{
+    z.push([]); z.push([art==='ein'?'BETRIEBSEINNAHMEN':'BETRIEBSAUSGABEN','','','','']);
+    euerZeilen(a,art).forEach(r=>{
+      z.push(r.typ==='gruppe' ? [r.name.toUpperCase(),'','','','']
+        : [r.name, r.anzahl, r2(r.netto), istKlein()?'':r2(r.ust), r.neutral?0:r2(r.abziehbar)]);
+    });
+    z.push([art==='ein'?'Summe Betriebseinnahmen':'Summe Betriebsausgaben','','','', art==='ein'?a.einnahmen:a.ausgaben]);
+  });
+  z.push([]); z.push([a.gewinn>=0?'GEWINN':'VERLUST','','','', a.gewinn]);
+  if(!istKlein()){
+    z.push([]); z.push(['Vereinnahmte Umsatzsteuer','','','', a.ustEinnahmen]);
+    z.push(['Gezahlte Vorsteuer','','','', a.vorsteuer]);
+    z.push(['Zahllast','','','', a.ustZahllast]);
+  }
+  const teile = verteileBetrag(a.gewinn, null);
+  if(teile.length){
+    z.push([]); z.push(['GEWINNVERTEILUNG','','','','']);
+    teile.forEach(t=>z.push([t.name, (t.anteil*100).toFixed(1)+' %','','', t.betrag]));
+  }
+  return z;
+}
+function exportEuerCSV(){
+  downloadText(csv(euerCsvZeilen(jahr)), `EUER_${jahr}.csv`);
+  toast('EÜR-Summen exportiert','good');
+}
+function exportProtokollCSV(){
+  const z = [['Zeitpunkt','Aktion','Beleg/Objekt','Details']].concat(
+    D.protokoll.map(p=>[new Date(p.ts).toLocaleString('de-DE'), p.aktion, p.ref||'', p.details||'']));
+  downloadText(csv(z), `Aenderungsprotokoll_${new Date().toISOString().slice(0,10)}.csv`);
+}
+
+/* --------------------------------------------------------- Druck / Bericht */
+function berichtHtml(j){
+  const a = auswertung(j), e = D.einstellungen;
+  const kopf = `
+    <div style="margin-bottom:16px">
+      <h2 style="font-size:15pt;margin-bottom:4px">${esc(e.bandName||'Band')}</h2>
+      <div style="font-size:10pt">Einnahmen-Überschuss-Rechnung ${j} · § 4 Abs. 3 EStG</div>
+      <div style="font-size:9pt;color:#555">
+        ${e.steuernummer?'Steuernummer '+esc(e.steuernummer)+' · ':''}${e.finanzamt?'Finanzamt '+esc(e.finanzamt)+' · ':''}
+        ${istKlein()?'Kleinunternehmer § 19 UStG':'Regelbesteuerung'} ·
+        erstellt am ${new Date().toLocaleDateString('de-DE')}
+      </div>
+    </div>`;
+  const tab = art => `<table class="t" style="width:100%;margin-bottom:14px">${euerTabelle(a,art)}</table>`;
+  const teile = verteileBetrag(a.gewinn, null);
+  return kopf +
+    `<h3 style="font-size:12pt;margin:12px 0 6px">Betriebseinnahmen</h3>${tab('ein')}` +
+    `<h3 style="font-size:12pt;margin:12px 0 6px">Betriebsausgaben</h3>${tab('aus')}` +
+    `<table class="t" style="width:100%;margin-bottom:14px">
+      <tr class="sum"><td>Betriebseinnahmen</td><td class="r">${num2(a.einnahmen)} €</td></tr>
+      <tr class="sum"><td>./. Betriebsausgaben</td><td class="r">${num2(a.ausgaben)} €</td></tr>
+      <tr class="sum"><td><b>${a.gewinn>=0?'Gewinn':'Verlust'} ${j}</b></td><td class="r"><b>${num2(a.gewinn)} €</b></td></tr>
+    </table>` +
+    (istKlein()?'':`<h3 style="font-size:12pt;margin:12px 0 6px">Umsatzsteuer</h3>
+      <table class="t" style="width:100%;margin-bottom:14px">
+        <tr><td>Vereinnahmte Umsatzsteuer</td><td class="r">${num2(a.ustEinnahmen)} €</td></tr>
+        <tr><td>Gezahlte Vorsteuer</td><td class="r">${num2(a.vorsteuer)} €</td></tr>
+        <tr class="sum"><td>Zahllast</td><td class="r">${num2(a.ustZahllast)} €</td></tr>
+      </table>`) +
+    (teile.length?`<h3 style="font-size:12pt;margin:12px 0 6px">Gewinnverteilung</h3>
+      <table class="t" style="width:100%;margin-bottom:14px">
+        ${teile.map(t=>`<tr><td>${esc(t.name)}</td><td class="r">${(t.anteil*100).toFixed(1)} %</td>
+          <td class="r">${num2(t.betrag)} €</td></tr>`).join('')}
+      </table>`:'') +
+    `<div style="font-size:8.5pt;color:#555;margin-top:18px">
+      Erstellt mit Bandkasse ${APP_VERSION}. Ohne Gewähr – keine steuerliche Beratung.
+      Belege werden gesondert aufbewahrt.</div>`;
+}
+function kassenberichtHtml(j){
+  const zeilen = kassenbuchZeilen(j).slice(1);
+  let saldo = 0;
+  const körper = zeilen.map(z=>{
+    const istEin = z[2]==='Einnahme';
+    const betrag = Number(z[7])||0;
+    if(!/storniert/.test(z[15])) saldo += istEin ? betrag : -betrag;
+    return `<tr><td>${esc(z[0])}</td><td>${esc(z[1])}</td><td>${esc(z[5])}</td><td>${esc(z[3])}</td>
+      <td class="r">${istEin?num2(betrag):''}</td><td class="r">${istEin?'':num2(betrag)}</td>
+      <td class="r">${num2(saldo)}</td></tr>`;
+  }).join('');
+  return `<h3 style="font-size:12pt;margin:12px 0 6px">Kassenbuch / Journal ${j} – ${esc(D.einstellungen.bandName||'Band')}</h3>
+    <table class="t" style="width:100%">
+      <tr><th>Beleg</th><th>Datum</th><th>Vorgang</th><th>Kategorie</th>
+          <th class="r">Einnahme</th><th class="r">Ausgabe</th><th class="r">Saldo</th></tr>
+      ${körper || '<tr><td colspan="7">Keine Buchungen.</td></tr>'}
+    </table>`;
+}
+function drucke(html){
+  $('print-area').innerHTML = html;
+  setTimeout(()=>window.print(), 60);
+}
+const druckeEUER = () => drucke(berichtHtml(jahr) + `<div class="pb"></div>` + kassenberichtHtml(jahr));
+const druckeKassenbuch = () => drucke(kassenberichtHtml(jahr));
+
+/* ------------------------------------------------------- Belege & Pakete */
+async function belegDateien(nurJahr){
+  const out = [];
+  for(const m of D.belege){
+    const b = m.buchungId ? D.buchungen.find(x=>x.id===m.buchungId) : null;
+    if(nurJahr!=null && jahrVon(b ? b.datum : m.datum) !== nurJahr) continue;
+    const blob = await idbGet('files', m.id).catch(()=>null);
+    if(!blob) continue;
+    const buf = new Uint8Array(await blob.arrayBuffer());
+    const ohneEndung = String(m.name||'Beleg').replace(/\.[a-z0-9]{1,5}$/i,'');
+    const praefix = b ? `${b.nr||dt(b.datum)}_${saubererName(b.text)}` : `ohne-Buchung_${saubererName(ohneEndung)}`;
+    out.push({name:`Belege/${saubererName(praefix)}${dateiEndung(m.name, m.mime)}`, data:buf, datum:new Date(m.hochgeladen||Date.now())});
+  }
+  return out;
+}
+async function exportBelegeZip(){
+  if(!D.belege.length){ toast('Keine Belege vorhanden','bad'); return; }
+  toast('Belege werden gepackt …');
+  const dateien = await belegDateien(null);
+  download(zip(dateien), `Belege_${D.einstellungen.bandName||'Band'}.zip`.replace(/\s+/g,'_'));
+  toast(`${dateien.length} Beleg(e) exportiert`,'good');
+}
+async function exportSteuerpaket(){
+  toast('Steuerberater-Paket wird erstellt …');
+  const enc = new TextEncoder();
+  const dateien = [
+    {name:`Kassenbuch_${jahr}.csv`,   data:enc.encode(csv(kassenbuchZeilen(jahr)))},
+    {name:`EUER_${jahr}.csv`,         data:enc.encode(csv(euerCsvZeilen(jahr)))},
+    {name:`Auftritte_${jahr}.csv`,    data:enc.encode(csv(gigZeilen(jahr)))},
+    {name:`Aenderungsprotokoll.csv`,  data:enc.encode(csv([['Zeitpunkt','Aktion','Objekt','Details']]
+        .concat(D.protokoll.filter(p=>true).map(p=>[new Date(p.ts).toLocaleString('de-DE'),p.aktion,p.ref||'',p.details||'']))))},
+    {name:`EUER_${jahr}.html`, data:enc.encode(
+      `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>EÜR ${jahr}</title>
+       <style>body{font-family:sans-serif;max-width:900px;margin:24px auto;padding:0 16px;color:#111}
+       table.t{border-collapse:collapse;width:100%;font-size:13px}
+       table.t th{text-align:left;border-bottom:1px solid #000;padding:6px}
+       table.t td{border-bottom:1px solid #ddd;padding:6px}
+       table.t td.r,table.t th.r{text-align:right}
+       tr.grp td{background:#f3f5f8;font-weight:700;text-transform:uppercase;font-size:11px}
+       tr.sum td{font-weight:700;background:#f3f5f8}</style></head><body>`
+      + berichtHtml(jahr) + kassenberichtHtml(jahr) + `</body></html>`)}
+  ];
+  const belege = await belegDateien(jahr);
+  download(zip(dateien.concat(belege)),
+    `Steuerpaket_${jahr}_${saubererName(D.einstellungen.bandName||'Band').replace(/\s+/g,'_')}.zip`);
+  toast(`Paket mit ${dateien.length + belege.length} Dateien erstellt`,'good');
+}
+
+/* -------------------------------------------------------------- Sicherung */
+async function exportBackup(){
+  toast('Backup wird erstellt …');
+  const belege = [];
+  for(const m of D.belege){
+    const blob = await idbGet('files', m.id).catch(()=>null);
+    if(!blob) continue;
+    belege.push({meta:m, data:await blobToDataUrl(blob)});
+  }
+  const paket = {app:'bandkasse', version:DATA_VERSION, erstellt:new Date().toISOString(), daten:D, dateien:belege};
+  D.einstellungen.letztesBackup = new Date().toISOString();
+  save(true);
+  download(new Blob([JSON.stringify(paket)], {type:'application/json'}),
+    `Bandkasse-Backup_${new Date().toISOString().slice(0,10)}.json`);
+  toast('Backup gespeichert – bitte zusätzlich extern ablegen','good');
+  renderAlles();
+}
+async function importBackup(file){
+  if(!file) return;
+  $('restore-file').value = '';
+  let paket;
+  try{ paket = JSON.parse(await file.text()); }
+  catch(e){ toast('Datei konnte nicht gelesen werden','bad'); return; }
+  if(!paket || paket.app!=='bandkasse' || !paket.daten){ toast('Das ist kein Bandkasse-Backup','bad'); return; }
+  const anz = (paket.daten.buchungen||[]).length;
+  const ok = await confirmDialog('Backup einspielen',
+    `Das Backup vom <b>${new Date(paket.erstellt).toLocaleString('de-DE')}</b> enthält
+     <b>${anz} Buchungen</b> und <b>${(paket.dateien||[]).length} Belege</b>.<br><br>
+     <b>Alle aktuellen Daten in diesem Browser werden ersetzt.</b>`, 'Einspielen');
+  if(!ok) return;
+  for(const f of (paket.dateien||[])){
+    try{
+      const u8 = b64ToU8(f.data);
+      await idbPut('files', f.meta.id, new Blob([u8], {type:f.meta.mime||'application/octet-stream'}));
+    }catch(e){ console.warn('Beleg konnte nicht wiederhergestellt werden', e); }
+  }
+  D = Object.assign(leereDaten(), paket.daten);
+  D.einstellungen = Object.assign(leereDaten().einstellungen, paket.daten.einstellungen||{});
+  _belegUrls.forEach(u=>URL.revokeObjectURL(u)); _belegUrls.clear();
+  protokoll('Backup eingespielt', file.name, `${anz} Buchungen`);
+  save(true);
+  toast('Backup eingespielt','good');
+  setTheme(D.einstellungen.theme || 'light');
+  renderAlles();
+}
+function renderBackupBanner(){
+  const el = $('backup-banner'); if(!el) return;
+  const lb = D.einstellungen.letztesBackup;
+  const tage = lb ? Math.floor((Date.now()-new Date(lb))/86400000) : null;
+  const relevant = D.buchungen.length > 0;
+  if(!relevant || (tage!=null && tage<=30)){ el.innerHTML=''; return; }
+  el.innerHTML = `<div class="note warn" style="margin-bottom:14px">
+    <b>${tage==null?'Noch kein Backup gespeichert.':'Letztes Backup vor '+tage+' Tagen.'}</b>
+    Deine Buchhaltung liegt nur in diesem Browser.
+    <button class="btn btn-primary btn-sm" style="margin-left:8px" onclick="exportBackup()">Jetzt sichern</button></div>`;
+}
+
+/* ---------------------------------------------------------- Einstellungen */
+function renderEinstellungen(){
+  const e = D.einstellungen;
+  $('s-band').value = e.bandName||'';
+  $('s-rechtsform').value = e.rechtsform||'gbr';
+  $('s-stnr').value = e.steuernummer||'';
+  $('s-fa').value = e.finanzamt||'';
+  $('s-klein').value = e.kleinunternehmer ? '1' : '0';
+  $('s-ustsatz').value = String(e.ustSatz!=null?e.ustSatz:19);
+  $('s-km').value = e.kmSatz!=null?e.kmSatz:0.30;
+  $('s-vmehr').value = e.verpflegung8!=null?e.verpflegung8:14;
+  $('app-version').textContent = APP_VERSION;
+
+  const lb = e.letztesBackup;
+  const tage = lb ? Math.floor((Date.now()-new Date(lb))/86400000) : null;
+  $('backup-status').innerHTML = `<div class="note ${tage==null||tage>30?'warn':''}">
+    ${lb?`Letztes Backup: <b>${new Date(lb).toLocaleString('de-DE')}</b> (vor ${tage} Tag${tage===1?'':'en'})`
+        :'<b>Noch kein Backup gespeichert.</b>'}<br>
+    ${D.buchungen.length} Buchungen · ${D.gigs.length} Auftritte · ${D.belege.length} Belege
+    ${_idbOk?'':'<br><b>Achtung:</b> Die Datenbank des Browsers ist nicht verfügbar – Daten liegen nur als Notkopie vor.'}</div>`;
+
+  const ms = e.mitglieder||[];
+  const summe = ms.reduce((s,m)=>s+(Number(m.anteil)||0),0);
+  $('mitglied-list').innerHTML = ms.length ? ms.map(m=>`
+    <div class="row" onclick="openMitglied('${m.id}')" style="cursor:pointer">
+      <div class="row-main"><div class="row-t">${esc(m.name)}</div>
+        <div class="row-s">${m.instrument?`<span class="chip">${esc(m.instrument)}</span>`:''}
+          <span class="chip b">${Number(m.anteil)||0} %</span></div></div>
+      <div class="row-r"><span class="chip">bearbeiten</span></div>
+    </div>`).join('') + (summe && Math.abs(summe-100)>0.05
+      ? `<div class="note warn" style="margin-top:10px">Die Anteile ergeben ${num2(summe)} % statt 100 %.
+         Bei ungleicher Verteilung sollte die Summe 100 % sein.</div>` : '')
+    : `<div class="empty"><span class="em">👥</span>Noch keine Mitglieder angelegt.</div>`;
+
+  const jahre = [...new Set(D.buchungen.map(b=>jahrVon(b.datum)).filter(Boolean))].sort((a,b)=>b-a);
+  $('jahresabschluss').innerHTML = jahre.length ? jahre.map(j=>{
+    const g = istGesperrt(j), a = auswertung(j);
+    return `<div class="row"><div class="row-main">
+        <div class="row-t">${j} ${g?'🔒':''}</div>
+        <div class="row-s"><span>${a.anzahl} Buchungen</span>
+          <span class="chip ${a.gewinn>=0?'g':'r'}">${euro(a.gewinn)}</span></div></div>
+      <div class="row-r"><button class="btn ${g?'btn-gray':'btn-ghost'} btn-sm"
+        onclick="toggleFestschreibung(${j})">${g?'Freigeben':'Festschreiben'}</button></div></div>`;
+  }).join('') : `<div class="sec-hint">Noch keine Buchungen vorhanden.</div>`;
+
+  $('protokoll-list').innerHTML = D.protokoll.length
+    ? D.protokoll.slice(0,40).map(p=>`<div class="row"><div class="row-main">
+        <div class="row-t" style="font-size:.84rem">${esc(p.aktion)}${p.ref?` · <span style="color:var(--muted)">${esc(p.ref)}</span>`:''}</div>
+        <div class="row-s">${new Date(p.ts).toLocaleString('de-DE')}${p.details?' · '+esc(p.details):''}</div>
+      </div></div>`).join('')
+    : `<div class="sec-hint">Noch keine Einträge.</div>`;
+}
+function saveEinstellungen(){
+  const e = D.einstellungen;
+  e.bandName = $('s-band').value;
+  e.rechtsform = $('s-rechtsform').value;
+  e.steuernummer = $('s-stnr').value;
+  e.finanzamt = $('s-fa').value;
+  e.kleinunternehmer = $('s-klein').value === '1';
+  e.ustSatz = Number($('s-ustsatz').value)||0;
+  e.kmSatz = Number($('s-km').value)||0.30;
+  e.verpflegung8 = Number($('s-vmehr').value)||14;
+  $('hd-band').textContent = e.bandName || 'Bandkasse';
+  save();
+}
+let mmId = null;
+function openMitglied(id){
+  const m = id ? (D.einstellungen.mitglieder||[]).find(x=>x.id===id) : null;
+  mmId = id || null;
+  $('mm-title').textContent = m ? 'Mitglied bearbeiten' : 'Neues Mitglied';
+  $('mm-name').value = m ? m.name : '';
+  $('mm-anteil').value = m ? (m.anteil||'') : '';
+  $('mm-instr').value = m ? (m.instrument||'') : '';
+  $('mm-stnr').value = m ? (m.steuernummer||'') : '';
+  $('mm-del').style.display = m ? 'inline-flex' : 'none';
+  openModal('m-mitglied');
+  setTimeout(()=>$('mm-name').focus(),150);
+}
+function saveMitglied(){
+  const name = $('mm-name').value.trim();
+  if(!name){ toast('Bitte einen Namen angeben','bad'); return; }
+  if(!D.einstellungen.mitglieder) D.einstellungen.mitglieder = [];
+  const m = mmId ? D.einstellungen.mitglieder.find(x=>x.id===mmId) : {id:uid()};
+  Object.assign(m, {name, anteil:Number($('mm-anteil').value)||0,
+    instrument:$('mm-instr').value.trim(), steuernummer:$('mm-stnr').value.trim()});
+  if(!mmId) D.einstellungen.mitglieder.push(m);
+  save(true); closeModal('m-mitglied'); toast('Mitglied gespeichert','good'); renderEinstellungen();
+}
+async function deleteMitglied(){
+  const m = (D.einstellungen.mitglieder||[]).find(x=>x.id===mmId); if(!m) return;
+  const ok = await confirmDialog('Mitglied löschen', `<b>${esc(m.name)}</b> aus der Band entfernen?`, 'Löschen');
+  if(!ok) return;
+  D.einstellungen.mitglieder = D.einstellungen.mitglieder.filter(x=>x.id!==mmId);
+  D.gigs.forEach(g=>{ if(g.mitwirkende) g.mitwirkende = g.mitwirkende.filter(x=>x!==mmId); });
+  save(true); closeModal('m-mitglied'); toast('Mitglied entfernt'); renderEinstellungen();
+}
+async function toggleFestschreibung(j){
+  const liste = D.einstellungen.festgeschrieben || (D.einstellungen.festgeschrieben=[]);
+  if(liste.includes(j)){
+    const ok = await confirmDialog('Festschreibung aufheben',
+      `Die Festschreibung für <b>${j}</b> aufheben? Nachträgliche Änderungen an einem abgeschlossenen Jahr
+       schwächen die Nachvollziehbarkeit der Buchführung.`, 'Aufheben');
+    if(!ok) return;
+    D.einstellungen.festgeschrieben = liste.filter(x=>x!==j);
+    protokoll('Festschreibung aufgehoben', String(j), '');
+  }else{
+    const a = auswertung(j);
+    const ok = await confirmDialog('Jahr festschreiben',
+      `<b>${j}</b> mit einem Ergebnis von <b>${euro(a.gewinn)}</b> festschreiben?<br><br>
+       Danach sind keine Änderungen mehr möglich. Korrekturen laufen als Stornobuchung im laufenden Jahr.`,
+      'Festschreiben');
+    if(!ok) return;
+    liste.push(j);
+    protokoll('Jahr festgeschrieben', String(j), `Ergebnis ${num2(a.gewinn)} €`);
+  }
+  save(true); renderAlles();
+}
+async function alleDatenLoeschen(){
+  const ok = await confirmDialog('Wirklich alles löschen?',
+    `Alle <b>${D.buchungen.length} Buchungen</b>, <b>${D.gigs.length} Auftritte</b> und
+     <b>${D.belege.length} Belege</b> werden unwiderruflich gelöscht.<br><br>
+     Erstelle vorher ein Backup, falls du die Daten noch brauchst.`, 'Endgültig löschen');
+  if(!ok) return;
+  const zweite = await confirmDialog('Letzte Sicherheitsabfrage',
+    'Tippe <b>LÖSCHEN</b> ein, um zu bestätigen.', 'Löschen', true);
+  if(String(zweite).trim().toUpperCase() !== 'LÖSCHEN'){ toast('Abgebrochen'); return; }
+  for(const m of D.belege){ await idbDel('files', m.id).catch(()=>{}); }
+  _belegUrls.forEach(u=>URL.revokeObjectURL(u)); _belegUrls.clear();
+  D = leereDaten();
+  save(true);
+  try{ localStorage.removeItem('bandkasse-notkopie'); }catch(e){}
+  toast('Alle Daten gelöscht');
+  showPage('start');
+}
+
+/* -------------------------------------------------------------- Start-up */
+async function init(){
+  await load();
+  setTheme(D.einstellungen.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  const jahre = D.buchungen.map(b=>jahrVon(b.datum)).filter(Boolean);
+  if(jahre.length && !jahre.includes(jahr)) jahr = Math.max(...jahre);
+  renderAlles();
+  showPage('start');
+
+  // Belege per Drag & Drop
+  const drop = $('beleg-drop');
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e=>{ if(e.dataTransfer && e.dataTransfer.files.length) belegeHinzufuegen(e.dataTransfer.files); });
+
+  document.addEventListener('keydown', e=>{
+    if(e.key==='Escape') document.querySelectorAll('.modal.open').forEach(m=>closeModal(m.id));
+  });
+  window.addEventListener('beforeunload', ()=>save(true));
+
+  if('serviceWorker' in navigator)
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+init();
+</script>
+</body>
+</html>
