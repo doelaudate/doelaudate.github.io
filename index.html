@@ -3458,7 +3458,7 @@ function renderMitglieder(){
         ${m.adresse||m.plz?`<div class="mitglied-detail">📍 ${esc(m.adresse||'')} ${esc(m.plz||'')}</div>`:''}
         ${m.geburtstag?`<div class="mitglied-detail">🎂 ${esc(m.geburtstag)}</div>`:''}
       </div>
-      ${uiEdit('mitglieder')?`<div style="display:flex;flex-direction:column;gap:4px"><button class="btn btn-gray btn-sm" onclick="openEditMitglied('${m.nr||m.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="deleteMitglied('${m.nr||m.id}')">✕</button></div>`:''}
+      ${(uiEdit('mitglieder')||(currentUserProfile&&currentUserProfile.isAdmin&&m.username))?`<div style="display:flex;flex-direction:column;gap:4px">${uiEdit('mitglieder')?`<button class="btn btn-gray btn-sm" onclick="openEditMitglied('${m.nr||m.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="deleteMitglied('${m.nr||m.id}')">✕</button>`:''}${(currentUserProfile&&currentUserProfile.isAdmin&&m.username)?`<button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" title="Passwort auf Benutzername zurücksetzen" onclick="adminResetPassword('${esc(m.username)}')">🔑</button>`:''}</div>`:''}
     </div>`;
   }).join('');
 }
@@ -3924,6 +3924,27 @@ async function showResetPw() {
     // Neutrale Meldung, um die Existenz eines Kontos nicht zu verraten
     showOk();
   }
+}
+
+// Admin: Passwort eines Mitglieds serverseitig auf dessen Benutzernamen zurücksetzen
+async function adminResetPassword(username){
+  if(!(currentUserProfile && currentUserProfile.isAdmin)){ showToast('Nur Admins dürfen das','err'); return; }
+  if(!username){ showToast('Kein Benutzername hinterlegt','err'); return; }
+  if(!confirm('Passwort von „'+username+'" auf den Benutzernamen zurücksetzen?\n\nDas Mitglied meldet sich danach mit\n  Benutzername: '+username+'\n  Passwort: '+username+'\nan und kann es in den Einstellungen ändern.')) return;
+  try{
+    const u=window._fbAuth&&window._fbAuth.currentUser;
+    if(!u){ showToast('Bitte neu anmelden','err'); return; }
+    const idToken=await u.getIdToken();
+    const r=await fetch(window.USERNAME_AUTH_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'adminreset', idToken, target:username})});
+    if(r.ok){
+      showToast('Passwort zurückgesetzt','ok');
+      alert('✅ Passwort von „'+username+'" wurde zurückgesetzt.\n\nNeues Passwort = Benutzername:\n  '+username+'\n\nBitte dem Mitglied mitteilen. Es kann das Passwort danach in den Einstellungen selbst ändern.');
+    } else if(r.status===403){ showToast('Keine Admin-Berechtigung','err'); }
+    else if(r.status===404){ showToast('Kein Konto für dieses Mitglied vorhanden','err'); }
+    else if(r.status===401){ showToast('Sitzung abgelaufen – bitte neu anmelden','err'); }
+    else if(r.status===400){ const j=await r.json().catch(()=>({})); showToast(j.error==='short'?'Benutzername zu kurz (min. 6 Zeichen)':'Ungültige Anfrage','err'); }
+    else { showToast('Zurücksetzen fehlgeschlagen','err'); }
+  }catch(e){ showToast('Netzwerkfehler beim Zurücksetzen','err'); }
 }
 
 function showUserMenu() {
