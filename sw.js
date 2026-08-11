@@ -1,4 +1,4 @@
-const CACHE = 'chor-doelau-v3';
+const CACHE = 'chor-doelau-v4';
 const OFFLINE_FILES = ['/', '/index.html'];
 
 self.addEventListener('install', e => {
