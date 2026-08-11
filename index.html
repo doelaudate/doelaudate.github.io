@@ -1505,6 +1505,11 @@ async function dbFetch(url, opts){
   }catch(e){}
   return fetch(url, opts);
 }
+// Kompakte DB-Schreibhelfer (path OHNE führendes DB und OHNE .json). Erben Auth aus dbFetch.
+const _J={'Content-Type':'application/json'};
+function dbPut(path, val){ return dbFetch(DB+'/'+path+'.json',{method:'PUT',headers:_J,body:JSON.stringify(val)}); }
+function dbPatch(path, obj){ return dbFetch(DB+'/'+path+'.json',{method:'PATCH',headers:_J,body:JSON.stringify(obj)}); }
+function dbDel(path){ return dbFetch(DB+'/'+path+'.json',{method:'DELETE'}); }
 
 // ===== BEDIENUNG: Schriftgröße, Suche, Ladeanzeige =====
 function applyFontSize(){
@@ -5054,7 +5059,7 @@ async function saveMeineKontaktdaten(){
   Object.assign(mitglieder[i], upd);
   try{
     // Nur die eigenen Kontaktfelder gezielt schreiben (kein Überschreiben fremder Einträge)
-    await dbFetch(DB+'/mitglieder/'+i+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(upd)});
+    await dbPatch('mitglieder/'+i, upd);
     if(res){res.style.color='#27ae60';res.textContent='✅ Gespeichert – danke fürs Aktuell-Halten!';}
     showToast('Kontaktdaten gespeichert','ok');
     setTimeout(()=>{if(res)res.textContent='';},3000);
@@ -5303,7 +5308,7 @@ async function addPinnwand(){
   const id=uid();
   const entry={text, autor:getUserVoteName()||'Chorleitung', ts:Date.now()};
   pinnwand[id]=entry; ta.value='';
-  await dbFetch(DB+'/pinnwand/'+id+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(entry)}).catch(e=>console.warn(e));
+  await dbPut('pinnwand/'+id, entry).catch(e=>console.warn(e));
   renderPinnwand();
   showToast('Ankündigung angepinnt','ok');
 }
@@ -5311,7 +5316,7 @@ async function deletePinnwand(id){
   if(!canPin()) return;
   if(!confirm('Diese Ankündigung löschen?')) return;
   delete pinnwand[id];
-  await dbFetch(DB+'/pinnwand/'+id+'.json',{method:'DELETE'}).catch(e=>console.warn(e));
+  await dbDel('pinnwand/'+id).catch(e=>console.warn(e));
   renderPinnwand();
 }
 async function markPinnwandRead(id){
@@ -5321,7 +5326,7 @@ async function markPinnwandRead(id){
   if(!pinnwand[id].gelesen) pinnwand[id].gelesen={};
   if(pinnwand[id].gelesen[myk]) return;
   pinnwand[id].gelesen[myk]=nm;
-  await dbFetch(DB+'/pinnwand/'+id+'/gelesen/'+encodeURIComponent(myk)+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(nm)}).catch(e=>console.warn(e));
+  await dbPut('pinnwand/'+id+'/gelesen/'+encodeURIComponent(myk), nm).catch(e=>console.warn(e));
 }
 
 // ===== FAHRGEMEINSCHAFTEN (pro Termin) =====
@@ -5343,7 +5348,7 @@ async function toggleFahrtenAktiv(id){
   const t=termine.find(x=>x.id===id); if(!t) return;
   const idx=termine.indexOf(t);
   t.fahrten=!t.fahrten;
-  await dbFetch(DB+'/termine/'+idx+'/fahrten.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(!!t.fahrten)}).catch(e=>console.warn(e));
+  await dbPut('termine/'+idx+'/fahrten', !!t.fahrten).catch(e=>console.warn(e));
   renderTermine();
 }
 function fahrtenHtml(t){
@@ -5382,14 +5387,14 @@ async function addFahrt(terminId, typ){
   const entry={typ, plaetze, ort, name:getUserVoteName()||'?', ts:Date.now()};
   if(!fahrten[terminId]) fahrten[terminId]={};
   fahrten[terminId][myk]=entry;
-  await dbFetch(DB+'/fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(myk)+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(entry)}).catch(e=>console.warn(e));
+  await dbPut('fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(myk), entry).catch(e=>console.warn(e));
   renderTermine();
   showToast(typ==='biete'?'Mitfahrt angeboten':'Als Mitfahrer eingetragen','ok');
 }
 async function removeFahrt(terminId){
   const myk=myKey(); if(!myk) return;
   if(fahrten[terminId]) delete fahrten[terminId][myk];
-  await dbFetch(DB+'/fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(myk)+'.json',{method:'DELETE'}).catch(e=>console.warn(e));
+  await dbDel('fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(myk)).catch(e=>console.warn(e));
   renderTermine();
 }
 
@@ -5417,7 +5422,7 @@ async function createTerminfindung(){
   const id=uid();
   const entry={titel, autor:getUserVoteName()||'—', ts:Date.now(), optionen:opts, stimmen:{}};
   terminfindungen[id]=entry;
-  await dbFetch(DB+'/terminfindungen/'+id+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(entry)}).catch(e=>console.warn(e));
+  await dbPut('terminfindungen/'+id, entry).catch(e=>console.warn(e));
   resetTfForm();
   const r=document.getElementById('tf-create-result'); if(r){ r.style.color='#27ae60'; r.textContent='✅ Terminfindung erstellt.'; setTimeout(()=>{r.textContent='';},3000); }
   renderTerminfindung();
@@ -5431,21 +5436,21 @@ async function tfVote(id, optIdx, val){
   if(!p.stimmen[myk].v) p.stimmen[myk].v={};
   if(p.stimmen[myk].v[optIdx]===val) delete p.stimmen[myk].v[optIdx];
   else p.stimmen[myk].v[optIdx]=val;
-  await dbFetch(DB+'/terminfindungen/'+id+'/stimmen/'+encodeURIComponent(myk)+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(p.stimmen[myk])}).catch(e=>console.warn(e));
+  await dbPut('terminfindungen/'+id+'/stimmen/'+encodeURIComponent(myk), p.stimmen[myk]).catch(e=>console.warn(e));
   renderTerminfindung();
 }
 async function tfToggleClose(id){
   if(!canUseEditMode()) return;
   const p=terminfindungen[id]; if(!p) return;
   p.geschlossen=!p.geschlossen;
-  await dbFetch(DB+'/terminfindungen/'+id+'/geschlossen.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(!!p.geschlossen)}).catch(e=>console.warn(e));
+  await dbPut('terminfindungen/'+id+'/geschlossen', !!p.geschlossen).catch(e=>console.warn(e));
   renderTerminfindung();
 }
 async function tfDelete(id){
   if(!canUseEditMode()) return;
   if(!confirm('Diese Terminfindung löschen?')) return;
   delete terminfindungen[id];
-  await dbFetch(DB+'/terminfindungen/'+id+'.json',{method:'DELETE'}).catch(e=>console.warn(e));
+  await dbDel('terminfindungen/'+id).catch(e=>console.warn(e));
   renderTerminfindung();
 }
 function renderTerminfindung(){
