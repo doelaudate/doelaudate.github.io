@@ -49,12 +49,15 @@ async function sendToSubs(subList, pl){
   return sent;
 }
 
-async function sendOnce(){
+async function sendOnce(onlyStale){
   const queue = await jget('/pushqueue');
   if (!queue) return;
   const subs = (await jget('/pushsubs')) || {};
   const allSubs = Object.entries(subs);
+  const now = Date.now();
   for (const [qkey, item] of Object.entries(queue)){
+    // Frische Einträge erledigt die Sofort-Push-Cloud-Function; hier nur liegengebliebene (>90s) nachholen
+    if (onlyStale && item && item.ts && (now - item.ts) < 90000) continue;
     let target = allSubs;
     if (item && item.adminsOnly) target = allSubs.filter(([uid])=>adminUids.has(uid));
     const sent = await sendToSubs(target, payload(item&&item.title, item&&item.body));
@@ -92,15 +95,8 @@ async function sendReminders(){
 (async () => {
   await botLogin();
   await loadAdmins();
-  console.log('Sender gestartet, läuft ~10 Min …');
+  // Einmal-Lauf: Erinnerungen + komplette Warteschlange abarbeiten, dann Ende (kein 10-Min-Dauerlauf → keine „cancelled"-Mails).
   try { await sendReminders(); } catch (e) { console.error('Reminder-Fehler:', e.message); }
-  const endAt = Date.now() + 10 * 60 * 1000;
-  let n = 0;
-  while (Date.now() < endAt) {
-    try { await sendOnce(); } catch (e) { console.error('Fehler:', e.message); }
-    n++;
-    if (n % 30 === 0) { await botLogin(); await loadAdmins(); }
-    await new Promise(r => setTimeout(r, 15000));
-  }
-  console.log('Lauf beendet.');
+  try { await sendOnce(); } catch (e) { console.error('Queue-Fehler:', e.message); }
+  console.log('Cron-Lauf fertig.');
 })();
