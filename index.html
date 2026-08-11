@@ -586,6 +586,15 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
         <input class="fl-input" type="date" id="probe-wdh-bis">
       </div>
     </div>
+    <div style="margin-bottom:10px;border:1px dashed #d7dee7;border-radius:9px;padding:10px 12px;background:#fafbfd">
+      <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:6px;color:#444">📚 Mehrere Termine als Stapel (optional)</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input class="fl-input" type="date" id="probe-add-date" style="flex:1;min-width:150px;margin-bottom:0">
+        <button class="btn btn-gray btn-sm" type="button" onclick="addBatchDate()">＋ Termin hinzufügen</button>
+      </div>
+      <div id="probe-batch-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
+      <div style="font-size:.72rem;color:#999;margin-top:5px">Alle gesammelten Termine werden mit denselben Liedern/Notizen als geplante Proben angelegt.</div>
+    </div>
     <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:5px;color:#444">Lieder</label>
     <div id="probe-song-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
     <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:4px;color:#444">Notizen</label>
@@ -2291,10 +2300,24 @@ function renderSongPicker(){
 function getCheckedSongs(){const el=document.getElementById('probe-song-picker');if(!el)return[];return[...el.querySelectorAll('input:checked')].map(x=>x.value);}
 function clearSongPicker(){const el=document.getElementById('probe-song-picker');if(!el)return;el.querySelectorAll('input').forEach(x=>{x.checked=false;x.parentElement.style.background='#f0f4f8';x.parentElement.style.borderColor='transparent';});}
 
-// PROBEN
+// PROBEN – Stapel-Termine (Mehrfachauswahl)
+let _batchProbeDates=[];
+function addBatchDate(){
+  const el=document.getElementById('probe-add-date'); const d=el&&el.value;
+  if(!d) return;
+  if(!_batchProbeDates.includes(d)) _batchProbeDates.push(d);
+  _batchProbeDates.sort();
+  if(el) el.value='';
+  renderBatchDates();
+}
+function removeBatchDate(d){ _batchProbeDates=_batchProbeDates.filter(x=>x!==d); renderBatchDates(); }
+function renderBatchDates(){
+  const box=document.getElementById('probe-batch-list'); if(!box) return;
+  box.innerHTML=_batchProbeDates.map(d=>`<span style="background:#eef3fa;color:#1b3a6b;border-radius:14px;padding:3px 10px;font-size:.8rem;display:inline-flex;align-items:center;gap:6px">${fmt(d)}<span style="cursor:pointer;color:#e74c3c;font-weight:700" onclick="removeBatchDate('${d}')">✕</span></span>`).join('');
+}
 async function saveProbe(){
   const datum=document.getElementById('probe-datum').value;
-  if(!datum){alert('Bitte Datum eingeben.');return;}
+  if(!datum && !_batchProbeDates.length){alert('Bitte ein Datum wählen (oben oder im Stapel).');return;}
   let art=document.getElementById('probe-art').value;
   const songIds=getCheckedSongs();
   const notiz=document.getElementById('probe-notiz').value.trim();
@@ -2303,6 +2326,7 @@ async function saveProbe(){
     art='geplant';
   }
   if(art==='vergangen'){
+    if(!datum){alert('Für eine durchgeführte Probe bitte oben ein Datum wählen.');return;}
     if(!songIds.length){alert('Bitte mindestens ein Lied auswählen.');return;}
     if(!D.proben) D.proben=[];
     D.proben.push({id:uid(),datum,songIds,notiz});
@@ -2311,8 +2335,8 @@ async function saveProbe(){
     // Wiederkehrende Proben generieren
     const wdh=document.getElementById('probe-wdh').value;
     const bis=document.getElementById('probe-wdh-bis').value;
-    const daten=[datum];
-    if(wdh && bis && bis>=datum){
+    const daten=datum?[datum]:[];
+    if(datum && wdh && bis && bis>=datum){
       let d=new Date(datum+'T12:00:00'); const end=new Date(bis+'T12:00:00'); let guard=0;
       while(guard++<260){
         if(wdh==='month'){ d.setMonth(d.getMonth()+1); } else { d.setDate(d.getDate()+parseInt(wdh)); }
@@ -2320,17 +2344,20 @@ async function saveProbe(){
         daten.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
       }
     }
-    daten.forEach(dt=>probenplan.push({id:uid(),datum:dt,songIds,notiz}));
+    // Stapel-Termine dazu, doppelte entfernen, chronologisch
+    const alleDaten=[...new Set([...daten, ..._batchProbeDates])].sort();
+    alleDaten.forEach(dt=>probenplan.push({id:uid(),datum:dt,songIds,notiz}));
     await dbFetch(DB+'/probenplan.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(probenplan)});
     document.getElementById('probe-wdh').value=''; document.getElementById('probe-wdh-bis').value='';
-    if(daten.length===1) notifyPush('probe','🎹 Neue Probe geplant', fmt(datum));
-    else notifyPush('probe','🎹 '+daten.length+' Proben geplant', fmt(daten[0])+' bis '+fmt(daten[daten.length-1]));
+    _batchProbeDates=[]; renderBatchDates(); const _pad=document.getElementById('probe-add-date'); if(_pad) _pad.value='';
+    if(alleDaten.length===1) notifyPush('probe','🎹 Neue Probe geplant', fmt(alleDaten[0]));
+    else notifyPush('probe','🎹 '+alleDaten.length+' Proben geplant', fmt(alleDaten[0])+' bis '+fmt(alleDaten[alleDaten.length-1]));
   }
   document.getElementById('probe-datum').value='';
   document.getElementById('probe-notiz').value='';
   clearSongPicker();
   renderProben(); renderLieder();
-  alert('✅ Gespeichert!');
+  showToast('Probe(n) gespeichert','ok');
 }
 
 async function deleteProbe(id,geplant=false){
@@ -3552,14 +3579,51 @@ async function toggleReaktion(key,emo){
   }
   renderKommentare();
 }
+function _kDatum(k){ const d=new Date(k.datum); return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}); }
+function _kommentarHtml(k, isReply){
+  const del = (uiEdit('kommentare')&&k._key) ? `<button class="btn btn-danger btn-sm del-btn" onclick="deleteKommentar('${k._key}')">✕</button>` : '';
+  const reply = (!isReply && k._key) ? `<div style="margin-top:6px">
+      <button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96;font-size:.72rem;padding:3px 9px" onclick="toggleReplyBox('${k._key}')">↩ Antworten</button>
+      <div id="replybox-${k._key}" style="display:none;margin-top:6px">
+        <textarea id="reply-text-${k._key}" placeholder="Antwort schreiben…" style="min-height:44px"></textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:4px"><button class="btn btn-primary btn-sm" onclick="submitReply('${k._key}')">Senden</button></div>
+      </div></div>` : '';
+  return `<div class="kommentar" style="${isReply?'margin-left:22px;border-left-color:#b7c4d6;background:#f7f9fc':''}">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span class="k-name">${isReply?'↳ ':'👤 '}${esc(prettyName(k.name))}</span><span class="k-meta">${_kDatum(k)}</span></div>
+    ${k.lied?`<div class="k-lied">🎵 ${esc(k.lied)}</div>`:''}
+    <div class="k-text">${esc(k.text)}</div>
+    ${reaktionHtml(k)}${reply}${del}
+  </div>`;
+}
 function renderKommentare(){
   const el=document.getElementById('kommentare-list');if(!el)return;
   if(!kommentare.length){el.innerHTML='<div class="empty">Noch keine Kommentare.</div>';return;}
-  el.innerHTML=kommentare.map(k=>{
-    const d=new Date(k.datum);
-    const ds=d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-    return`<div class="kommentar"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span class="k-name">👤 ${esc(prettyName(k.name))}</span><span class="k-meta">${ds}</span></div>${k.lied?`<div class="k-lied">🎵 ${esc(k.lied)}</div>`:''}<div class="k-text">${esc(k.text)}</div>${reaktionHtml(k)}${uiEdit('kommentare')&&k._key?`<button class="btn btn-danger btn-sm del-btn" onclick="deleteKommentar('${k._key}')">✕</button>`:''}</div>`;
+  // Antworten nach Eltern-Kommentar gruppieren; Top-Level neueste zuerst, Antworten chronologisch darunter
+  const byParent={};
+  kommentare.forEach(k=>{ if(k.antwortAuf){ (byParent[k.antwortAuf]=byParent[k.antwortAuf]||[]).push(k); } });
+  const tops=kommentare.filter(k=>!k.antwortAuf);
+  el.innerHTML=tops.map(k=>{
+    const replies=(byParent[k._key]||[]).slice().sort((a,b)=>String(a.datum).localeCompare(String(b.datum)));
+    return _kommentarHtml(k,false)+replies.map(r=>_kommentarHtml(r,true)).join('');
   }).join('');
+}
+function toggleReplyBox(key){
+  const b=document.getElementById('replybox-'+key); if(!b) return;
+  b.style.display = b.style.display==='none' ? 'block' : 'none';
+  if(b.style.display==='block'){ const t=document.getElementById('reply-text-'+key); if(t) t.focus(); }
+}
+async function submitReply(parentKey){
+  const ta=document.getElementById('reply-text-'+parentKey); if(!ta) return;
+  const text=ta.value.trim(); if(!text){ ta.focus(); return; }
+  const name=getUserVoteName() || (document.getElementById('k-name')?.value.trim()) || '';
+  if(!name){ alert('Bitte oben zuerst deinen Namen eintragen.'); return; }
+  ta.disabled=true;
+  try{
+    await dbFetch(DB+'/kommentare.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,text,lied:'',datum:new Date().toISOString(),antwortAuf:parentKey})});
+    await loadKommentare();
+    try{ notifyPush('kommentar','💬 Antwort von '+name, text); }catch(e){}
+    showToast('Antwort gesendet','ok');
+  }catch(e){ alert('Fehler: '+e.message); ta.disabled=false; }
 }
 async function submitKommentar(){
   const name=document.getElementById('k-name').value.trim();
@@ -4182,8 +4246,18 @@ window.addEventListener('beforeinstallprompt', e => {
   if(w) w.style.display = 'block';
 });
 function installPWA(){
-  if(_pwaPrompt){_pwaPrompt.prompt();_pwaPrompt.userChoice.then(()=>{_pwaPrompt=null;const w=document.getElementById('pwa-install-wrap');if(w)w.style.display='none';});}
-  else alert('Öffne diese Seite in Chrome/Safari und nutze "Zum Startbildschirm hinzufügen".');
+  if(_pwaPrompt){_pwaPrompt.prompt();_pwaPrompt.userChoice.then(()=>{_pwaPrompt=null;const w=document.getElementById('pwa-install-wrap');if(w)w.style.display='none';});return;}
+  // Kein automatisches Angebot (iOS/älteres Android/anderer Browser) → passende Anleitung
+  const ua=navigator.userAgent||'';
+  let msg;
+  if(/iPhone|iPad|iPod/i.test(ua)){
+    msg='So fügst du die App hinzu (iPhone/iPad):\n\n1) Diese Seite in Safari öffnen\n2) unten auf das Teilen-Symbol (Rechteck mit Pfeil ↑) tippen\n3) „Zum Home-Bildschirm" wählen';
+  } else if(/Android/i.test(ua)){
+    msg='So fügst du die App hinzu (Android):\n\n1) Diese Seite in Google Chrome öffnen\n2) oben rechts auf das Menü (⋮) tippen\n3) „Zum Startbildschirm hinzufügen" bzw. „App installieren" wählen\n\nTipp: Falls es fehlt, bitte Chrome im Play Store aktualisieren.';
+  } else {
+    msg='So fügst du die App hinzu:\n\nÖffne diese Seite in Chrome oder Safari und wähle im Menü „Zum Startbildschirm hinzufügen" bzw. „App installieren".';
+  }
+  alert(msg);
 }
 
 // ===== AUTO-LOGOUT =====
@@ -5563,8 +5637,27 @@ window.addEventListener('offline',updateOfflineBar);
 updateOfflineBar();
 </script>
 <script>
+function showUpdateBanner(){
+  if(document.getElementById('update-banner')) return;
+  var b=document.createElement('div');
+  b.id='update-banner';
+  b.style.cssText='position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 76px);z-index:1300;max-width:440px;margin:0 auto;background:#1d4e96;color:#fff;border-radius:12px;padding:12px 16px;box-shadow:0 10px 30px rgba(0,0,0,.28);display:flex;align-items:center;gap:12px;font-size:.88rem';
+  b.innerHTML='<span style="flex:1">🔄 Neue Version verfügbar</span><button style="background:#fff;color:#1d4e96;border:none;border-radius:8px;padding:7px 14px;font-weight:700;cursor:pointer;font-family:inherit" onclick="location.reload()">Aktualisieren</button>';
+  document.body.appendChild(b);
+}
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/sw.js').then(()=>console.log('SW registered')).catch(e=>console.warn('SW error',e));
+  navigator.serviceWorker.register('/sw.js').then(function(reg){
+    console.log('SW registered');
+    try{ reg.update(); }catch(e){}
+    // beim Zurückkehren in die App auf neue Version prüfen
+    document.addEventListener('visibilitychange',function(){ if(!document.hidden){ try{ reg.update(); }catch(e){} } });
+    reg.addEventListener('updatefound',function(){
+      var nw=reg.installing; if(!nw) return;
+      nw.addEventListener('statechange',function(){
+        if(nw.state==='installed' && navigator.serviceWorker.controller){ showUpdateBanner(); }
+      });
+    });
+  }).catch(function(e){ console.warn('SW error',e); });
 }
 </script>
 </body>
