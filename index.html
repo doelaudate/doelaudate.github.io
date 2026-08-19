@@ -413,6 +413,23 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
 </script>
 <body>
 
+<!-- Alt-Browser-Weiche: prüft moderne JS-Syntax (ES2020). Muss ES5 bleiben, damit sie überall läuft. -->
+<script>
+(function(){
+  var ok=true;
+  try{ new Function('var o={};return o?.x ?? 1'); }catch(e){ ok=false; }
+  if(!ok){
+    var show=function(){
+      var m=document.createElement('div');
+      m.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:#1b3a6b;color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;padding:28px;font-family:Arial,sans-serif';
+      m.innerHTML='<div style="max-width:340px"><div style="font-size:2.4rem;margin-bottom:12px">🔄</div><div style="font-size:1.15rem;font-weight:700;margin-bottom:10px">Bitte Browser aktualisieren</div><div style="font-size:.92rem;line-height:1.5;opacity:.92">Diese App benötigt einen aktuellen Browser. Bitte öffne sie in <b>Google Chrome</b> und aktualisiere Chrome bei Bedarf im Play Store.</div></div>';
+      document.body.appendChild(m);
+    };
+    if(document.body){ show(); } else { document.addEventListener('DOMContentLoaded', show); }
+  }
+})();
+</script>
+
 <div id="toast-wrap"></div>
 
 <!-- LADEANZEIGE -->
