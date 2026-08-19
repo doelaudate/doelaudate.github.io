@@ -1173,6 +1173,10 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     </div>
     <div id="abw-result" style="font-size:.82rem;min-height:16px;margin-bottom:6px"></div>
     <div id="abw-list"></div>
+    <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
+      <div style="font-size:.85rem;font-weight:700;color:var(--navy);margin-bottom:8px">📅 Urlaubskalender – wer ist wann weg</div>
+      <div id="urlaub-alle"></div>
+    </div>
     <div class="modal-actions"><button class="btn btn-gray" onclick="closeModal()">Schließen</button></div>
   </div>
 </div>
@@ -1546,6 +1550,7 @@ function showPageByName(id){
 function openAbwesenheit(){
   const res=document.getElementById('abw-result'); if(res) res.textContent='';
   renderAbwesenheit();
+  renderUrlaubskalender();
   document.getElementById('modal-abwesenheit').classList.add('open');
 }
 // Abmelde-Chooser: nächste Probe ODER Urlaub/längere Abwesenheit
@@ -2457,6 +2462,23 @@ function absentNamesForDate(datum){
   Object.values(abwesenheiten||{}).forEach(rec=>{ if(rec && rec.name && absenceCovers(rec,datum)) names.push(rec.name); });
   return names;
 }
+// Urlaubskalender: alle Abwesenheiten (laufend + kommend), nach Startdatum
+function renderUrlaubskalender(){
+  const el=document.getElementById('urlaub-alle'); if(!el) return;
+  const today=localToday();
+  const rows=[];
+  Object.values(abwesenheiten||{}).forEach(rec=>{
+    if(!rec) return;
+    const nm=prettyName(rec.name)||rec.name||'—';
+    _periodsOf(rec).forEach(p=>{ if(p&&p.von&&p.bis && p.bis>=today) rows.push({nm, von:p.von, bis:p.bis, aktiv:(today>=p.von&&today<=p.bis)}); });
+  });
+  rows.sort((a,b)=>a.von.localeCompare(b.von));
+  if(!rows.length){ el.innerHTML='<div style="font-size:.82rem;color:#aaa">Aktuell keine eingetragenen Abwesenheiten.</div>'; return; }
+  el.innerHTML=rows.map(r=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #f2f2f2;font-size:.85rem">
+    <span>🏖️ <strong>${esc(r.nm)}</strong>${r.aktiv?' <span style="color:#e67e22;font-weight:600;font-size:.74rem">· gerade weg</span>':''}</span>
+    <span style="color:#777;white-space:nowrap">${fmt(r.von)} – ${fmt(r.bis)}</span>
+  </div>`).join('');
+}
 function buildProbeAttendance(p){
   const st=(probenstatus && probenstatus[p.id])||{};
   const nein=Object.values(st).filter(e=>e&&e.status==='nein').map(e=>e.name);
@@ -2527,7 +2549,7 @@ async function setProbeStatus(probeId, status){
     await dbFetch(DB+'/probenstatus/'+probeId+'/'+uid+'.json',{method:'DELETE'});
   } else {
     await dbFetch(DB+'/probenstatus/'+probeId+'/'+uid+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,status})});
-    if(status==='nein'){ const dt=probeDatumById(probeId); notifyAdminAbsage('❌ Absage Probe', name+' hat sich für die Probe'+(dt?' am '+fmt(dt):'')+' abgemeldet.'); }
+    if(status==='nein'){ const dt=probeDatumById(probeId); notifyAdminAbsage('❌ Absage Probe', (prettyName(name)||name)+' hat sich für die Probe'+(dt?' am '+fmt(dt):'')+' abgemeldet.'); }
   }
   await loadProbenstatus();
 }
@@ -3202,7 +3224,7 @@ async function abstimmen(id,antwort){
   // Nur die EIGENE Stimme schreiben — kein Ganz-Array-PUT mehr, sonst löschen sich gleichzeitige Stimmen gegenseitig
   ops.push(dbFetch(base+encodeURIComponent(name)+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(antwort)}));
   await Promise.all(ops).catch(e=>console.warn(e));
-  if(antwort==='nein'){ notifyAdminAbsage('❌ Absage Termin', name+' kommt nicht zu „'+(t.titel||'Termin')+'" am '+fmt(t.datum)+'.'); }
+  if(antwort==='nein'){ notifyAdminAbsage('❌ Absage Termin', (prettyName(name)||name)+' kommt nicht zu „'+(t.titel||'Termin')+'" am '+fmt(t.datum)+'.'); }
   // Update just this vote row for instant feedback
   const vrow=document.getElementById('vrow-'+id);
   if(vrow) vrow.innerHTML=buildVoteRow(t);
@@ -3621,7 +3643,7 @@ async function submitReply(parentKey){
   try{
     await dbFetch(DB+'/kommentare.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,text,lied:'',datum:new Date().toISOString(),antwortAuf:parentKey})});
     await loadKommentare();
-    try{ notifyPush('kommentar','💬 Antwort von '+name, text); }catch(e){}
+    try{ notifyPush('kommentar','💬 Antwort von '+(prettyName(name)||name), text); }catch(e){}
     showToast('Antwort gesendet','ok');
   }catch(e){ alert('Fehler: '+e.message); ta.disabled=false; }
 }
@@ -3632,7 +3654,7 @@ async function submitKommentar(){
   if(!name){alert('Bitte deinen Namen eingeben.');return;}
   if(!text){alert('Bitte einen Kommentar schreiben.');return;}
   const btn=document.getElementById('k-btn');btn.textContent='⏳';btn.disabled=true;
-  try{await dbFetch(DB+'/kommentare.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,text,lied:lied||'',datum:new Date().toISOString()})});document.getElementById('k-text').value='';document.getElementById('k-lied').value='';await loadKommentare();notifyPush('kommentar','💬 Neuer Kommentar von '+name,(lied?'['+lied+'] ':'')+text);btn.textContent='✅ Gesendet!';setTimeout(()=>{btn.textContent='💬 Abschicken';btn.disabled=false;},2000);}
+  try{await dbFetch(DB+'/kommentare.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,text,lied:lied||'',datum:new Date().toISOString()})});document.getElementById('k-text').value='';document.getElementById('k-lied').value='';await loadKommentare();notifyPush('kommentar','💬 Neuer Kommentar von '+(prettyName(name)||name),(lied?'['+lied+'] ':'')+text);btn.textContent='✅ Gesendet!';setTimeout(()=>{btn.textContent='💬 Abschicken';btn.disabled=false;},2000);}
   catch(e){alert('Fehler: '+e.message);btn.textContent='💬 Abschicken';btn.disabled=false;}
 }
 
