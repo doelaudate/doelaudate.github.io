@@ -1,5 +1,5 @@
-const CACHE = 'chor-doelau-v4';
-const OFFLINE_FILES = ['/', '/index.html'];
+const CACHE = 'chor-doelau-v5';
+const OFFLINE_FILES = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(OFFLINE_FILES)));
@@ -14,9 +14,23 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Network first, fall back to cache
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  let url;
+  try { url = new URL(req.url); } catch (_) { return; }
+  // Nur eigene Domain aus dem Cache bedienen; Firebase/Identity/API immer direkt aus dem Netz.
+  if (url.origin !== self.location.origin) return;
+  // Stale-while-revalidate: sofort aus dem Cache (schnell), im Hintergrund frische Version holen.
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
+    caches.open(CACHE).then(cache =>
+      cache.match(req).then(cached => {
+        const network = fetch(req).then(res => {
+          if (res && res.status === 200 && res.type === 'basic') cache.put(req, res.clone());
+          return res;
+        }).catch(() => cached);
+        return cached || network;
+      })
+    )
   );
 });
 
