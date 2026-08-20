@@ -95,7 +95,8 @@ async function sendReminders(){
 (async () => {
   await botLogin();
   await loadAdmins();
-  // Einmal-Lauf: Erinnerungen + komplette Warteschlange abarbeiten, dann Ende (kein 10-Min-Dauerlauf → keine „cancelled"-Mails).
+  // Sofort-Versand macht die HTTP-Funktion 'pushNow' (Client-Aufruf). Die Warteschlange ist nur
+  // Fallback, falls der Direkt-Aufruf scheitert; dieser Cron-Lauf holt solche Einträge nach.
   try { await sendReminders(); } catch (e) { console.error('Reminder-Fehler:', e.message); }
   try { await sendOnce(); } catch (e) { console.error('Queue-Fehler:', e.message); }
   console.log('Cron-Lauf fertig.');
