@@ -407,6 +407,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   window._fbSendVerification = (user) => user.sendEmailVerification();
   // Server-Endpoint für Benutzername-Login/Reset (E-Mail bleibt serverseitig)
   window.USERNAME_AUTH_URL = 'https://europe-west1-chor-doelau.cloudfunctions.net/usernameAuth';
+  window.PUSH_NOW_URL = 'https://europe-west1-chor-doelau.cloudfunctions.net/pushNow';
   _auth.onAuthStateChanged((user) => {
     if(window.onAuthChange) window.onAuthChange(user);
   });
@@ -5351,8 +5352,8 @@ async function sendTestPush(){
   const r=document.getElementById('push-settings-result');
   r.style.color='#2563b5'; r.textContent='⏳ Test wird verschickt…';
   try{
-    await dbFetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'Chor Dölau', body:'🔔 Test-Benachrichtigung', ts:Date.now()})});
-    r.style.color='#27ae60'; r.textContent='✅ Test gesendet – kommt in 1–5 Min. auf abonnierten Geräten an.';
+    await pushSend('Chor Dölau','🔔 Test-Benachrichtigung', false);
+    r.style.color='#27ae60'; r.textContent='✅ Test gesendet – kommt gleich auf abonnierten Geräten an.';
     setTimeout(()=>{if(r)r.textContent='';},7000);
   }catch(e){ r.style.color='#e74c3c'; r.textContent='❌ Fehler'; }
 }
@@ -5370,7 +5371,7 @@ async function sendBroadcast(){
   r.style.color='#2563b5'; r.textContent='⏳ wird gesendet…';
   try{
     const bTitel=titel||'📢 Chor Dölau';
-    await dbFetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:bTitel, body:text, ts:Date.now()})});
+    await pushSend(bTitel, text, false);
     logNotification(bTitel, text);
     titelEl.value=''; textEl.value='';
     r.style.color='#27ae60'; r.textContent='✅ Gesendet – kommt gleich bei allen an.';
@@ -5378,17 +5379,32 @@ async function sendBroadcast(){
   }catch(e){ r.style.color='#e74c3c'; r.textContent='❌ Fehler beim Senden.'; }
 }
 // Legt eine Nachricht in die Warteschlange; ein automatischer Job verschickt sie.
+// Sofort-Versand über die Cloud-Function pushNow; bei Fehler zurück in die Warteschlange (Cron holt es nach)
+async function pushSend(title, body, adminsOnly){
+  try{
+    const u = window._fbAuth && window._fbAuth.currentUser;
+    if(u){
+      const idToken = await u.getIdToken();
+      const r = await fetch(window.PUSH_NOW_URL, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken, title, body, adminsOnly:!!adminsOnly})});
+      if(r.ok) return true;
+    }
+  }catch(e){ console.warn('pushNow fehlgeschlagen, nutze Warteschlange', e); }
+  // Fallback: Warteschlange
+  try{
+    const payload = adminsOnly ? {title, body, adminsOnly:true, ts:Date.now()} : {title, body, ts:Date.now()};
+    await dbFetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  }catch(e){ console.warn('Push-Fallback fehlgeschlagen', e); }
+  return false;
+}
 async function notifyPush(eventKey, title, body){
   logNotification(title, body);           // immer im Glocken-Verlauf anzeigen
   if(!pushSettings || !pushSettings[eventKey]) return;   // Push nur wenn aktiviert
-  try{ await dbFetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title, body, ts:Date.now()})}); }
-  catch(e){ console.warn('Push-Queue fehlgeschlagen', e); }
+  await pushSend(title, body, false);
 }
 // Nur an die Chorleitung (Admins) – z. B. wenn sich jemand abmeldet
 async function notifyAdminAbsage(title, body){
   if(pushSettings && pushSettings.absage===false) return; // Standard: an
-  try{ await dbFetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title, body, adminsOnly:true, ts:Date.now()})}); }
-  catch(e){ console.warn('Absage-Push fehlgeschlagen', e); }
+  await pushSend(title, body, true);
 }
 
 // Zeigt beim Öffnen der App eine lokale Benachrichtigung (nur wenn erlaubt, 1x pro Sitzung)
