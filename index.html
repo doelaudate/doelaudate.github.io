@@ -662,7 +662,10 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     <div style="margin-bottom:12px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap">
         <span class="card-title" style="margin-bottom:0">📆 Termine</span>
-        <button onclick="exportAlleTermineICS()" style="padding:5px 13px;background:transparent;border:1.5px solid #8e44ad;color:#8e44ad;border-radius:6px;font-size:.82rem;font-weight:500;cursor:pointer;white-space:nowrap">📥 Alle als .ics</button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button onclick="openICSAbo()" style="padding:5px 13px;background:#8e44ad;border:1.5px solid #8e44ad;color:#fff;border-radius:6px;font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap">🔄 Kalender abonnieren</button>
+          <button onclick="exportAlleTermineICS()" style="padding:5px 13px;background:transparent;border:1.5px solid #8e44ad;color:#8e44ad;border-radius:6px;font-size:.82rem;font-weight:500;cursor:pointer;white-space:nowrap">📥 Einmalig als .ics</button>
+        </div>
       </div>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
         <button id="t-btn-anstehend" class="stab active" onclick="setTerminTab('anstehend')">📌 Anstehend</button>
@@ -1231,6 +1234,25 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-ics-abo">
+  <div class="modal">
+    <h3>🔄 Kalender abonnieren</h3>
+    <div style="font-size:.83rem;color:#666;margin-bottom:12px">Einmal einrichten – danach erscheinen alle Termine &amp; Proben automatisch in deinem Handy-Kalender, inklusive künftiger Änderungen.</div>
+    <input class="fl-input" type="text" id="ics-abo-link" readonly onclick="this.select()" style="font-size:.78rem">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <button class="btn btn-primary btn-sm" onclick="copyICSLink()">📋 Link kopieren</button>
+      <button class="btn btn-sm" style="background:#8e44ad;color:#fff" onclick="openICSWebcal()">📅 Direkt zum Kalender hinzufügen</button>
+    </div>
+    <div id="ics-abo-result" style="font-size:.82rem;min-height:16px;margin-bottom:10px"></div>
+    <div style="font-size:.78rem;color:#888;line-height:1.5;border-top:1px solid var(--line);padding-top:10px">
+      <strong>iPhone/iPad:</strong> „Direkt zum Kalender hinzufügen" antippen, oder Link kopieren → Einstellungen → Kalender → Accounts → Account hinzufügen → Andere → Kalenderabo hinzufügen.<br>
+      <strong>Android:</strong> Link kopieren → in Google Kalender (Web) unter „Weitere Kalender → Per URL" einfügen.<br>
+      <strong>Computer (Outlook/Google/Apple Kalender):</strong> Link kopieren → „Kalender abonnieren" / „Aus dem Internet".
+    </div>
+    <div class="modal-actions"><button class="btn btn-gray" onclick="closeModal()">Schließen</button></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-search">
   <div class="modal">
     <h3>🔍 Suche</h3>
@@ -1685,7 +1707,7 @@ const INIT_MITGLIEDER=[]; // Mitgliederdaten liegen in der Datenbank (login-gesc
 const INIT_TERMINE=[];
 
 let D=null, termine=[], kommentare=[], probenplan=[], mitglieder=[], liedwuensche=[], plakate=[], probenstatus={}, benachrichtigungen=[], anwesenheit={}, anwWork=null, userprofilesCache={}, abwesenheiten={};
-let pinnwand={}, fahrten={}, terminfindungen={};
+let pinnwand={}, fahrten={}, terminfindungen={}, aufgaben={};
 let adminMode = sessionStorage.getItem('chor_admin')==='1';
 let editMode = sessionStorage.getItem('chor_editmode')==='1';
 // Sichtbarkeit von Admin-Bearbeitungs-Elementen: nur wenn Bearbeiten-Modus AN und Berechtigung vorhanden
@@ -3219,6 +3241,7 @@ function terminHtml(t,past=false){
     ${infoOnly&&t.beschreibung?`<div style="font-size:.85rem;color:#555;margin:2px 0 4px">${esc(t.beschreibung)}</div>`:''}
     ${setlisteHtml(t)}
     ${!past?fahrtenBlock(t):''}
+    ${!past?aufgabenBlock(t):''}
     ${showRueck?rueckmeldungenHtml(t, bd):''}
     <details class="t-coll"><summary>ℹ️ Details${t.beschreibung?' & Beschreibung':''}</summary><div>
       ${t.beschreibung?`<div style="font-size:.84rem;color:#555;margin-bottom:8px">${esc(t.beschreibung)}</div>`:''}
@@ -4375,37 +4398,43 @@ function saveAutoLogout(){
 }
 
 // ===== ICS KALENDER-EXPORT =====
-function toICSDate(dateStr, timeStr){
-  // dateStr: "2026-06-15", timeStr: "15:00" or ""
+// Robust gegen alle in der DB vorkommenden Freitext-Formate ("19", "19:00", "19.30", "19 Uhr" …)
+function parseUhrzeitClient(s){
+  if(!s) return null;
+  const m=String(s).match(/(\d{1,2})(?:[:.](\d{2}))?/);
+  if(!m) return null;
+  const h=parseInt(m[1],10);
+  if(isNaN(h)||h>23) return null;
+  return {h, min:m[2]?parseInt(m[2],10):0};
+}
+function toICSDate(dateStr, zeit){
+  // dateStr: "2026-06-15", zeit: {h,min} oder null -> nur Datum
   const d = dateStr.replace(/-/g,'');
-  if(timeStr){
-    const t = timeStr.replace(':','')+'00';
-    return d+'T'+t;
-  }
+  if(zeit) return d+'T'+String(zeit.h).padStart(2,'0')+String(zeit.min).padStart(2,'0')+'00';
   return d;
 }
 function terminToVEVENT(t){
   const uid = t.id+'@chor-doelau';
   const now = new Date().toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
-  const isAllDay = !t.uhrzeit;
+  const zeit = parseUhrzeitClient(t.uhrzeit);
+  const isAllDay = !zeit;
   let dtStart, dtEnd;
   if(isAllDay){
-    dtStart = 'DTSTART;VALUE=DATE:'+toICSDate(t.datum,'');
+    dtStart = 'DTSTART;VALUE=DATE:'+toICSDate(t.datum,null);
     const endDate = t.datum_ende || t.datum;
     // ICS all-day end = day after last day
     const ed = new Date(endDate+'T00:00:00');
     ed.setDate(ed.getDate()+1);
     dtEnd = 'DTEND;VALUE=DATE:'+ed.toISOString().split('T')[0].replace(/-/g,'');
   } else {
-    dtStart = 'DTSTART:'+toICSDate(t.datum, t.uhrzeit);
-    // Default duration 2h if no end time
-    const [h,m] = t.uhrzeit.split(':').map(Number);
-    const sd = new Date(t.datum+'T'+t.uhrzeit+':00');
+    dtStart = 'DTSTART:'+toICSDate(t.datum, zeit);
+    // Standarddauer 2h (kein Ende hinterlegt); über Date-Komponenten berechnet (keine String-Parse-Fallstricke,
+    // und sd trägt sein EIGENES Datum -> auch korrekt, falls das Ende über Mitternacht rutscht)
+    const [y,mo,da] = t.datum.split('-').map(Number);
+    const sd = new Date(y, mo-1, da, zeit.h, zeit.min, 0);
     sd.setHours(sd.getHours()+2);
-    const endT = sd.getHours().toString().padStart(2,'0')+sd.getMinutes().toString().padStart(2,'0')+'00';
-    dtEnd = 'DTEND:'+toICSDate(t.datum,'')+t.datum.replace(/-/g,'')+endT;
-    // Fix: rebuild properly
-    dtEnd = 'DTEND:'+toICSDate(t.datum, sd.getHours().toString().padStart(2,'0')+':'+sd.getMinutes().toString().padStart(2,'0'));
+    const endDatum = sd.getFullYear()+'-'+String(sd.getMonth()+1).padStart(2,'0')+'-'+String(sd.getDate()).padStart(2,'0');
+    dtEnd = 'DTEND:'+toICSDate(endDatum, {h:sd.getHours(), min:sd.getMinutes()});
   }
   const typLabels = {konzert:'🎵 Konzert',fest:'🎪 Fest',chorlager:'🏕️ Chorlager',gottesdienst:'⛪ Gottesdienst',probe:'🎹 Probe',sonstiges:'📌 Sonstiges'};
   const summary = (typLabels[t.typ]||'') + ' – ' + t.titel + ' (Chor Dölau)';
@@ -4451,6 +4480,26 @@ function exportAlleTermineICS(){
   const upcoming = termine.filter(t=>t.datum>=today).sort((a,b)=>a.datum.localeCompare(b.datum));
   const evts = (upcoming.length ? upcoming : termine).map(terminToVEVENT);
   downloadICS(buildICS(evts), 'chor-doelau-termine-'+today+'.ics');
+}
+// Kalender-Abo: eine feste Adresse mit Geheimnis im Link (Kalender-Apps können sich nicht einloggen)
+const ICS_FEED_URL = 'https://europe-west1-chor-doelau.cloudfunctions.net/icsFeed?key=bcf9a94bd6969beebfc1b015fe6f3d2b64add20383d415e8';
+function openICSAbo(){
+  const inp=document.getElementById('ics-abo-link'); if(inp) inp.value=ICS_FEED_URL;
+  const r=document.getElementById('ics-abo-result'); if(r) r.textContent='';
+  document.getElementById('modal-ics-abo').classList.add('open');
+}
+async function copyICSLink(){
+  const r=document.getElementById('ics-abo-result');
+  try{
+    await navigator.clipboard.writeText(ICS_FEED_URL);
+    if(r){ r.style.color='#27ae60'; r.textContent='✅ Link kopiert – jetzt in der Kalender-App einfügen.'; }
+  }catch(e){
+    const inp=document.getElementById('ics-abo-link'); if(inp){ inp.select(); inp.setSelectionRange(0,999); }
+    if(r){ r.style.color='#e67e22'; r.textContent='ℹ️ Bitte den markierten Link manuell kopieren.'; }
+  }
+}
+function openICSWebcal(){
+  window.location.href = ICS_FEED_URL.replace(/^https:/,'webcal:');
 }
 
 // ===== LIEDWÜNSCHE =====
@@ -5578,6 +5627,92 @@ async function removeFahrt(terminId){
   renderTermine();
 }
 
+// ===== AUFGABEN / DIENSTE (pro Termin) =====
+async function loadAufgaben(){
+  try{ const r=await dbFetch(DB+'/aufgaben.json'); if(r.ok){ aufgaben=(await r.json())||{}; } }catch(e){ console.warn('loadAufgaben',e); }
+}
+const AUFGABEN_VORSCHLAEGE=['🎂 Kuchen/Snacks','🪑 Auf-/Abbau','🎼 Noten mitbringen','🚗 Technik transportieren','📷 Fotos machen','🧃 Getränke'];
+// Pro Termin: Aufgaben an/aus (nur Bearbeiter schalten; standardmäßig aus)
+function aufgabenBlock(t){
+  const on = t.aufgaben===true;
+  const canEdit = uiEdit('termine');
+  if(on){
+    const off = canEdit ? `<div style="text-align:right;margin-top:2px"><button class="btn btn-sm" style="background:transparent;color:#e74c3c;font-size:.7rem;padding:1px 6px" onclick="toggleAufgabenAktiv('${esc(t.id)}')">📋 Aufgaben deaktivieren</button></div>` : '';
+    return aufgabenHtml(t)+off;
+  }
+  return canEdit ? `<button class="btn btn-sm" style="background:#eef7f0;color:#1a7a40;font-size:.72rem;margin:3px 0" onclick="toggleAufgabenAktiv('${esc(t.id)}')">📋 Aufgaben/Dienste aktivieren</button>` : '';
+}
+async function toggleAufgabenAktiv(id){
+  if(!uiEdit('termine')){ alert('Nur im Bearbeiten-Modus.'); return; }
+  const t=termine.find(x=>x.id===id); if(!t) return;
+  const idx=termine.indexOf(t);
+  t.aufgaben=!t.aufgaben;
+  await dbPut('termine/'+idx+'/aufgaben', !!t.aufgaben).catch(e=>console.warn(e));
+  renderTermine();
+}
+function aufgabenHtml(t){
+  const a=(aufgaben&&aufgaben[t.id])||{};
+  const tasks=Object.entries(a).map(([k,v])=>Object.assign({_key:k},v||{})).filter(x=>x&&x.text).sort((x,y)=>(x.ts||0)-(y.ts||0));
+  const canEdit=uiEdit('termine');
+  const myk=myKey();
+  const rows=tasks.map(task=>{
+    const mine = myk && task.vonKey===myk;
+    const claimBtn = (typeof currentUser!=='undefined'&&currentUser)
+      ? (task.vonKey
+          ? (mine ? `<button class="btn btn-sm" style="background:#fdecea;color:#922b21;font-size:.72rem;padding:2px 8px" onclick="unclaimAufgabe('${esc(t.id)}','${task._key}')">Doch nicht</button>` : '')
+          : `<button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96;font-size:.72rem;padding:2px 8px" onclick="claimAufgabe('${esc(t.id)}','${task._key}')">Ich übernehme das</button>`)
+      : '';
+    const del = canEdit ? `<button class="btn btn-danger btn-sm" style="opacity:1;position:static;padding:2px 7px" onclick="deleteAufgabe('${esc(t.id)}','${task._key}')">✕</button>` : '';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f2f2f2;font-size:.85rem">
+      <span style="flex:1">${esc(task.text)}${task.vonKey?` <span style="color:#1a7a40;font-weight:600">· ${esc(prettyName(task.von)||task.von)}</span>`:' <span style="color:#bbb">· noch offen</span>'}</span>
+      ${claimBtn}${del}
+    </div>`;
+  }).join('');
+  const addForm = canEdit ? `<div style="margin-top:8px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${AUFGABEN_VORSCHLAEGE.map(v=>`<button class="btn btn-gray btn-sm" style="font-size:.7rem" onclick="addAufgabe('${esc(t.id)}','${esc(v)}')">${esc(v)}</button>`).join('')}</div>
+      <div style="display:flex;gap:6px">
+        <input class="fl-input" type="text" id="aufg-neu-${esc(t.id)}" placeholder="Eigene Aufgabe…" style="margin-bottom:0;flex:1">
+        <button class="btn btn-sm" style="background:#27ae60;color:#fff" onclick="addAufgabeCustom('${esc(t.id)}')">＋</button>
+      </div>
+    </div>` : '';
+  return `<details class="t-coll"><summary>📋 Aufgaben/Dienste${tasks.length?` · ${tasks.length}`:''}</summary><div>${rows||'<div style="font-size:.8rem;color:#aaa">Noch keine Aufgaben.</div>'}${addForm}</div></details>`;
+}
+async function addAufgabe(terminId, text){
+  if(!uiEdit('termine')) return;
+  const id=uid();
+  const entry={text, ersteller:getUserVoteName()||'—', ts:Date.now()};
+  if(!aufgaben[terminId]) aufgaben[terminId]={};
+  aufgaben[terminId][id]=entry;
+  await dbPut('aufgaben/'+encodeURIComponent(terminId)+'/'+id, entry).catch(e=>console.warn(e));
+  renderTermine();
+}
+function addAufgabeCustom(terminId){
+  const inp=document.getElementById('aufg-neu-'+terminId); if(!inp) return;
+  const text=inp.value.trim(); if(!text) return;
+  inp.value='';
+  addAufgabe(terminId, text);
+}
+async function claimAufgabe(terminId, taskId){
+  const myk=myKey(); if(!myk){ alert('Bitte zuerst anmelden.'); return; }
+  const t=aufgaben[terminId] && aufgaben[terminId][taskId]; if(!t || t.vonKey) return;
+  t.von=getUserVoteName()||'?'; t.vonKey=myk;
+  await dbPatch('aufgaben/'+encodeURIComponent(terminId)+'/'+taskId, {von:t.von, vonKey:myk}).catch(e=>console.warn(e));
+  renderTermine();
+  showToast('Aufgabe übernommen','ok');
+}
+async function unclaimAufgabe(terminId, taskId){
+  const myk=myKey(); const t=aufgaben[terminId] && aufgaben[terminId][taskId]; if(!t || t.vonKey!==myk) return;
+  t.von=null; t.vonKey=null;
+  await dbPatch('aufgaben/'+encodeURIComponent(terminId)+'/'+taskId, {von:null, vonKey:null}).catch(e=>console.warn(e));
+  renderTermine();
+}
+async function deleteAufgabe(terminId, taskId){
+  if(!uiEdit('termine')) return;
+  if(aufgaben[terminId]) delete aufgaben[terminId][taskId];
+  await dbDel('aufgaben/'+encodeURIComponent(terminId)+'/'+taskId).catch(e=>console.warn(e));
+  renderTermine();
+}
+
 // ===== TERMINFINDUNG (Doodle-Stil) =====
 async function loadTerminfindungen(){
   try{ const r=await dbFetch(DB+'/terminfindungen.json'); if(r.ok){ terminfindungen=(await r.json())||{}; } }catch(e){ console.warn('loadTerminfindungen',e); }
@@ -5709,6 +5844,7 @@ async function loadAll(){
     loadKasse(),
     loadPinnwand(),
     loadFahrten(),
+    loadAufgaben(),
     loadTerminfindungen(),
     loadUserProfiles().then(p=>{ userprofilesCache=p||{}; }).catch(()=>{})
   ]);
