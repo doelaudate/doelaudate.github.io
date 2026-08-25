@@ -619,6 +619,10 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
         <input class="fl-input" type="date" id="probe-wdh-bis">
       </div>
     </div>
+    <div style="margin-bottom:10px">
+      <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:3px;color:#444">📍 Abweichender Ort (optional)</label>
+      <input class="fl-input" type="text" id="probe-ort" placeholder="z.B. Gemeindehaus – nur ausfüllen, falls nicht die übliche Chorprobe">
+    </div>
     <div style="margin-bottom:10px;border:1px dashed #d7dee7;border-radius:9px;padding:10px 12px;background:#fafbfd">
       <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:6px;color:#444">📚 Mehrere Termine als Stapel (optional)</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1410,6 +1414,8 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     <div id="pe-song-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
     <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:4px;color:#444">Notizen</label>
     <textarea id="pe-notiz" placeholder="z.B. Sopran bei Takt 12 nochmal üben…" style="min-height:55px"></textarea>
+    <label style="display:block;font-size:.8rem;font-weight:600;margin:8px 0 4px;color:#444">📍 Abweichender Ort (optional)</label>
+    <input class="fl-input" type="text" id="pe-ort" placeholder="z.B. Gemeindehaus – nur ausfüllen, falls nicht die übliche Chorprobe">
     <div class="modal-actions">
       <button class="btn btn-gray" onclick="closeModal()">Abbrechen</button>
       <button class="btn btn-success" onclick="saveProbeEdit()">💾 Speichern</button>
@@ -1645,7 +1651,7 @@ function openAbmelden(){
     const selfUrlaub=myAbsent(nextProbe.datum);
     h+=`<div style="border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px">
       <div style="font-weight:700;color:var(--navy)">🎹 Nächste Probe</div>
-      <div style="font-size:.85rem;color:#666;margin:2px 0 10px">${fmt(nextProbe.datum)}${nextProbe.notiz?' · '+esc(nextProbe.notiz):''}</div>`;
+      <div style="font-size:.85rem;color:#666;margin:2px 0 10px">${fmt(nextProbe.datum)}${nextProbe.ort?' · <span style="color:#c0620f;font-weight:600">📍 '+esc(nextProbe.ort)+'</span>':''}${nextProbe.notiz?' · '+esc(nextProbe.notiz):''}</div>`;
     if(selfUrlaub) h+=`<div style="font-size:.82rem;color:#8a6d3b">🏖️ Du bist in diesem Zeitraum bereits als abwesend eingetragen.</div>`;
     else if(selfNein) h+=`<div style="font-size:.84rem;color:#922b21;font-weight:600;margin-bottom:8px">❌ Du bist für diese Probe abgemeldet.</div><button class="btn btn-sm" style="background:#d5f5e3;color:#1a7a40" onclick="abmeldenProbeToggle('${nextProbe.id}')">↩ Doch dabei</button>`;
     else h+=`<button class="btn" style="background:#fdecea;color:#922b21" onclick="abmeldenProbeToggle('${nextProbe.id}')">❌ Für diese Probe abmelden</button>`;
@@ -1894,6 +1900,7 @@ function renderStart(){
   if(nextProbe){
     const songs=(nextProbe.songIds||[]).map(id=>findSongById(id)).filter(Boolean).map(s=>s.name);
     html+=`<div style="font-size:1.05rem;font-weight:700;margin-top:8px">${fmt(nextProbe.datum)}</div>`;
+    if(nextProbe.ort) html+=`<div style="font-size:.85rem;color:#c0620f;font-weight:600;margin-top:3px">📍 ${esc(nextProbe.ort)}</div>`;
     if(songs.length) html+=`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">${songs.map(n=>`<span style="background:#eef3fa;color:#1b3a6b;border-radius:14px;padding:3px 10px;font-size:.78rem">${esc(n)}</span>`).join('')}</div>`;
     if(nextProbe.notiz) html+=`<div style="font-size:.82rem;color:#777;margin-top:7px">📝 ${esc(nextProbe.notiz)}</div>`;
     html+=buildProbeAttendance(nextProbe);
@@ -2404,6 +2411,7 @@ async function saveProbe(){
   let art=document.getElementById('probe-art').value;
   const songIds=getCheckedSongs();
   const notiz=document.getElementById('probe-notiz').value.trim();
+  const ort=document.getElementById('probe-ort').value.trim();
   // Ein zukünftiges Datum kann keine bereits durchgeführte Probe sein → automatisch als geplant speichern
   if(art==='vergangen' && datum>localToday()){
     art='geplant';
@@ -2412,7 +2420,7 @@ async function saveProbe(){
     if(!datum){alert('Für eine durchgeführte Probe bitte oben ein Datum wählen.');return;}
     if(!songIds.length){alert('Bitte mindestens ein Lied auswählen.');return;}
     if(!D.proben) D.proben=[];
-    D.proben.push({id:uid(),datum,songIds,notiz});
+    D.proben.push({id:uid(),datum,songIds,notiz,ort});
     await dbFetch(DB+'/chorproben.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seasons:D.seasons,proben:D.proben})});
   } else {
     // Wiederkehrende Proben generieren
@@ -2429,15 +2437,16 @@ async function saveProbe(){
     }
     // Stapel-Termine dazu, doppelte entfernen, chronologisch
     const alleDaten=[...new Set([...daten, ..._batchProbeDates])].sort();
-    alleDaten.forEach(dt=>probenplan.push({id:uid(),datum:dt,songIds,notiz}));
+    alleDaten.forEach(dt=>probenplan.push({id:uid(),datum:dt,songIds,notiz,ort}));
     await dbFetch(DB+'/probenplan.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(probenplan)});
     document.getElementById('probe-wdh').value=''; document.getElementById('probe-wdh-bis').value='';
     _batchProbeDates=[]; renderBatchDates(); const _pad=document.getElementById('probe-add-date'); if(_pad) _pad.value='';
-    if(alleDaten.length===1) notifyPush('probe','🎹 Neue Probe geplant', fmt(alleDaten[0]));
-    else notifyPush('probe','🎹 '+alleDaten.length+' Proben geplant', fmt(alleDaten[0])+' bis '+fmt(alleDaten[alleDaten.length-1]));
+    if(alleDaten.length===1) notifyPush('probe','🎹 Neue Probe geplant', fmt(alleDaten[0])+(ort?' · 📍 '+ort:''));
+    else notifyPush('probe','🎹 '+alleDaten.length+' Proben geplant', fmt(alleDaten[0])+' bis '+fmt(alleDaten[alleDaten.length-1])+(ort?' · 📍 '+ort:''));
   }
   document.getElementById('probe-datum').value='';
   document.getElementById('probe-notiz').value='';
+  document.getElementById('probe-ort').value='';
   clearSongPicker();
   renderProben(); renderLieder();
   showToast('Probe(n) gespeichert','ok');
@@ -2482,6 +2491,7 @@ function editProbe(id, geplant){
   document.getElementById('pe-geplant').value=geplant?'1':'';
   document.getElementById('pe-datum').value=p.datum||'';
   document.getElementById('pe-notiz').value=p.notiz||'';
+  document.getElementById('pe-ort').value=p.ort||'';
   buildSongPickerInto(document.getElementById('pe-song-picker'), p.songIds||[]);
   document.getElementById('modal-probe-edit').classList.add('open');
 }
@@ -2493,11 +2503,12 @@ async function saveProbeEdit(){
   if(!datum){ alert('Bitte Datum eingeben.'); return; }
   const songIds=[...document.querySelectorAll('#pe-song-picker input:checked')].map(x=>x.value);
   const notiz=document.getElementById('pe-notiz').value.trim();
+  const ort=document.getElementById('pe-ort').value.trim();
   if(!geplant && !songIds.length){ alert('Bitte mindestens ein Lied auswählen.'); return; }
   const arr = geplant ? probenplan : (D.proben=D.proben||[]);
   const p = arr.find(x=>x.id===id);
   if(!p){ alert('Probe nicht gefunden.'); return; }
-  p.datum=datum; p.songIds=songIds; p.notiz=notiz;
+  p.datum=datum; p.songIds=songIds; p.notiz=notiz; p.ort=ort;
   if(geplant){
     await dbFetch(DB+'/probenplan.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(probenplan)}).catch(e=>console.warn(e));
   } else {
@@ -3128,7 +3139,7 @@ function renderProben(){
     else planEl.innerHTML=upcoming.map(p=>{
       const songs=(p.songIds||[]).map(id=>{const s=allS.find(x=>x.id===id);return s?s.name:'?'}).join(', ');
       const isGeplant=p._src==='plan';
-      return`<div class="plan-item"><div style="font-weight:600;color:#1e8449;margin-bottom:2px">🎹 ${fmt(p.datum)}</div>${songs?`<div style="font-size:.8rem;color:#555">🎵 ${esc(songs)}</div>`:''}${p.notiz?`<div style="font-size:.8rem;color:#888;font-style:italic">💬 ${esc(p.notiz)}</div>`:''}${buildProbeAttendance(p)}${uiEdit('proben')?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editProbe('${p.id}',${isGeplant})">✏️ Bearbeiten</button><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',${isGeplant})">🗑️ Löschen</button></div>`:''}</div>`;
+      return`<div class="plan-item"><div style="font-weight:600;color:#1e8449;margin-bottom:2px">🎹 ${fmt(p.datum)}</div>${p.ort?`<div style="font-size:.8rem;color:#c0620f;font-weight:600">📍 ${esc(p.ort)}</div>`:''}${songs?`<div style="font-size:.8rem;color:#555">🎵 ${esc(songs)}</div>`:''}${p.notiz?`<div style="font-size:.8rem;color:#888;font-style:italic">💬 ${esc(p.notiz)}</div>`:''}${buildProbeAttendance(p)}${uiEdit('proben')?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editProbe('${p.id}',${isGeplant})">✏️ Bearbeiten</button><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',${isGeplant})">🗑️ Löschen</button></div>`:''}</div>`;
     }).join('');
   }
 
@@ -3144,6 +3155,7 @@ function renderProben(){
           return`<div class="probe-item" style="border-left-color:#f39c12;background:#fffbf0;opacity:.8">
             <div style="font-size:.72rem;font-weight:700;color:#f39c12;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Geplant (nicht erfasst)</div>
             <div class="probe-date">📋 ${fmt(p.datum)}</div>
+            ${p.ort?`<div style="font-size:.8rem;color:#c0620f;font-weight:600">📍 ${esc(p.ort)}</div>`:''}
             ${names?`<div class="probe-songs">🎵 ${esc(names)}</div>`:''}
             ${p.notiz?`<div class="probe-notes">💬 ${esc(p.notiz)}</div>`:''}
             ${uiEdit('proben')?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editProbe('${p.id}',true)">✏️ Bearbeiten</button><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',true)">🗑️ Löschen</button></div>`:''}
@@ -3153,6 +3165,7 @@ function renderProben(){
         const hwHtml=Object.entries(hw).filter(([,v])=>v).map(([g,t])=>`<div style="font-size:.76rem;margin-top:2px"><strong>${esc(g)}:</strong> ${esc(t)}</div>`).join('');
         return`<div class="probe-item">
           <div class="probe-date">📅 ${fmt(p.datum)}</div>
+          ${p.ort?`<div style="font-size:.8rem;color:#c0620f;font-weight:600">📍 ${esc(p.ort)}</div>`:''}
           <div class="probe-songs">🎵 ${esc(names)}</div>
           ${p.notiz?`<div class="probe-notes">💬 ${esc(p.notiz)}</div>`:''}
           ${hwHtml?`<div style="background:#fff8e7;border-radius:5px;padding:6px 8px;margin-top:6px;font-size:.78rem;color:#7d6608"><strong>📝 Hausaufgaben:</strong>${hwHtml}</div>`:''}
