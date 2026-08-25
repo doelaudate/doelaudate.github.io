@@ -385,7 +385,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 <script>
-  firebase.initializeApp({
+  const FIREBASE_CFG = {
     apiKey: "AIzaSyDtiIn1UzexFOmjBgr12SAerbjw_n8_pLo",
     authDomain: "chor-doelau.firebaseapp.com",
     databaseURL: "https://chor-doelau-default-rtdb.europe-west1.firebasedatabase.app",
@@ -393,7 +393,8 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     storageBucket: "chor-doelau.firebasestorage.app",
     messagingSenderId: "101731142906",
     appId: "1:101731142906:web:ab0956daba734143f5cd43"
-  });
+  };
+  firebase.initializeApp(FIREBASE_CFG);
   const _auth = firebase.auth();
   window._fbStorage = firebase.storage();
   // Map to window globals used by the app
@@ -405,6 +406,20 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   window._fbUpdatePassword = (user, pw) => user.updatePassword(pw);
   window._fbResetPassword = (auth, email) => auth.sendPasswordResetEmail(email);
   window._fbSendVerification = (user) => user.sendEmailVerification();
+  // Zweite, komplett unabhängige Firebase-App NUR zum Anlegen fremder Konten durch den Admin.
+  // createUserWithEmailAndPassword meldet in der Auth-Instanz, in der es läuft, IMMER automatisch
+  // als neuer Nutzer an — auf der Haupt-App würde das den Admin aus seiner eigenen Sitzung werfen.
+  // Auf dieser separaten App-Instanz betrifft das niemanden; die Admin-Sitzung bleibt unberührt.
+  window._fbCreateUserIsolated = async (email, pw) => {
+    const secondaryApp = firebase.initializeApp(FIREBASE_CFG, 'admin-create-'+Date.now());
+    try {
+      const cred = await secondaryApp.auth().createUserWithEmailAndPassword(email, pw);
+      return cred.user.uid;
+    } finally {
+      try{ await secondaryApp.auth().signOut(); }catch(_){}
+      try{ await secondaryApp.delete(); }catch(_){}
+    }
+  };
   // Server-Endpoint für Benutzername-Login/Reset (E-Mail bleibt serverseitig)
   window.USERNAME_AUTH_URL = 'https://europe-west1-chor-doelau.cloudfunctions.net/usernameAuth';
   window.PUSH_NOW_URL = 'https://europe-west1-chor-doelau.cloudfunctions.net/pushNow';
@@ -742,6 +757,11 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
       <input class="fl-input" type="text" id="m-adresse" placeholder="Adresse">
       <input class="fl-input" type="text" id="m-plz" placeholder="PLZ">
     </div>
+    <div class="form-row" style="align-items:center">
+      <input class="fl-input" type="text" id="m-username" placeholder="Benutzername (für Login)" style="margin-bottom:0">
+      <button class="btn btn-gray btn-sm" type="button" style="white-space:nowrap" onclick="fillUsernameSuggestion('m')">🎲 Vorschlag</button>
+    </div>
+    <div style="font-size:.72rem;color:#999;margin:-4px 0 8px 2px">Ohne Benutzername kann später kein Login-Konto für dieses Mitglied erstellt werden.</div>
     <button class="btn btn-primary" onclick="addMitglied()">＋ Mitglied hinzufügen</button>
   </div>
   <div class="card">
@@ -1415,6 +1435,11 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
         <option value="Bass">Bass</option>
       </select>
     </div>
+    <div class="form-row" style="align-items:center">
+      <input class="fl-input" type="text" id="edit-m-username" placeholder="Benutzername (für Login)" style="margin-bottom:0">
+      <button class="btn btn-gray btn-sm" type="button" style="white-space:nowrap" onclick="fillUsernameSuggestion('edit-m')">🎲 Vorschlag</button>
+    </div>
+    <div id="edit-m-username-hint" style="font-size:.72rem;color:#999;margin:-4px 0 8px 2px"></div>
     <div class="modal-actions">
       <button class="btn btn-gray" onclick="closeModal()">Abbrechen</button>
       <button class="btn btn-success" onclick="saveMitglied()">💾 Speichern</button>
@@ -3609,16 +3634,44 @@ function renderMitglieder(){
   }).join('');
 }
 
+// Benutzername-Vorschlag: Initialen + Geburtsdatum (TTMMJJ), wie beim ursprünglichen Verteilen (z.B. MW290498).
+// Ohne Geburtsdatum: Initialen + 4 Zufallsziffern (min. 6 Zeichen, Firebase-Passwort-Mindestlänge).
+function suggestUsername(vorname, nachname, geburtstag){
+  const ini=((vorname||'').charAt(0)+(nachname||'').charAt(0)).toUpperCase();
+  let datePart='';
+  const digits=(geburtstag||'').match(/\d+/g)||[];
+  if(digits.length>=3){
+    const dd=digits[0].padStart(2,'0'), mm=digits[1].padStart(2,'0');
+    let yy=digits[2]; yy=(yy.length>2?yy.slice(-2):yy.padStart(2,'0'));
+    datePart=dd+mm+yy;
+  }
+  if(!datePart) datePart=String(Math.floor(1000+Math.random()*9000));
+  return ini+datePart;
+}
+function fillUsernameSuggestion(prefix){
+  const vn=document.getElementById(prefix==='m'?'m-vorname':'edit-m-vorname')?.value||'';
+  const nn=document.getElementById(prefix==='m'?'m-nachname':'edit-m-nachname')?.value||'';
+  const gb=document.getElementById(prefix==='m'?'m-geburtstag':'edit-m-geburtstag')?.value||'';
+  const el=document.getElementById(prefix+'-username'); if(el) el.value=suggestUsername(vn,nn,gb);
+}
+function usernameTaken(name, exceptMember){
+  const n=_norm(name); if(!n) return false;
+  return mitglieder.some(m=>m!==exceptMember && _norm(m.username)===n);
+}
 async function addMitglied(){
   const nachname=document.getElementById('m-nachname').value.trim();
   const vorname=document.getElementById('m-vorname').value.trim();
   if(!nachname||!vorname){alert('Vor- und Nachname erforderlich.');return;}
+  let username=document.getElementById('m-username').value.trim();
+  if(username && usernameTaken(username)){ alert('Dieser Benutzername ist schon vergeben. Bitte einen anderen wählen.'); return; }
   const maxNr=mitglieder.reduce((mx,x)=>Math.max(mx,parseInt(x.nr)||0),0);
-  const newM={id:uid(),nr:maxNr+1,nachname,vorname,handy:document.getElementById('m-handy').value.trim(),telefon:document.getElementById('m-telefon').value.trim(),email:document.getElementById('m-email').value.trim(),geburtstag:document.getElementById('m-geburtstag').value.trim(),adresse:document.getElementById('m-adresse').value.trim(),plz:document.getElementById('m-plz').value.trim(),stimme:document.getElementById('m-stimme')?.value||''};
+  const newM={id:uid(),nr:maxNr+1,nachname,vorname,username,handy:document.getElementById('m-handy').value.trim(),telefon:document.getElementById('m-telefon').value.trim(),email:document.getElementById('m-email').value.trim(),geburtstag:document.getElementById('m-geburtstag').value.trim(),adresse:document.getElementById('m-adresse').value.trim(),plz:document.getElementById('m-plz').value.trim(),stimme:document.getElementById('m-stimme')?.value||''};
   mitglieder.push(newM);
   await saveMitgliederToFB();
-  ['m-nachname','m-vorname','m-handy','m-telefon','m-email','m-geburtstag','m-adresse','m-plz'].forEach(id=>document.getElementById(id).value='');
+  ['m-nachname','m-vorname','m-handy','m-telefon','m-email','m-geburtstag','m-adresse','m-plz','m-username'].forEach(id=>document.getElementById(id).value='');
   renderMitglieder();
+  if(!username) showToast('Mitglied gespeichert – bitte noch einen Benutzernamen vergeben, bevor du das Konto erstellst','info');
+  else showToast('Mitglied gespeichert','ok');
 }
 
 async function deleteMitglied(id){
@@ -3631,14 +3684,27 @@ async function deleteMitglied(id){
 function openEditMitglied(id){
   const m=mitglieder.find(x=>(x.nr||x.id)==id);if(!m)return;
   document.getElementById('edit-m-id').value=id;
-  ['nachname','vorname','handy','telefon','email','geburtstag','adresse','plz','stimme'].forEach(f=>{const el=document.getElementById('edit-m-'+f);if(el)el.value=m[f]||'';});
+  ['nachname','vorname','handy','telefon','email','geburtstag','adresse','plz','stimme','username'].forEach(f=>{const el=document.getElementById('edit-m-'+f);if(el)el.value=m[f]||'';});
+  const unEl=document.getElementById('edit-m-username'), hint=document.getElementById('edit-m-username-hint');
+  const hasAccount=!!m.uid;
+  if(unEl) unEl.readOnly=hasAccount;
+  if(hint) hint.textContent = hasAccount
+    ? 'Hat bereits ein Login-Konto – Benutzername kann hier nicht mehr geändert werden (würde das Konto vom Mitglied trennen).'
+    : 'Ohne Benutzername kann später kein Login-Konto erstellt werden.';
   document.getElementById('modal-mitglied').classList.add('open');
 }
 
 async function saveMitglied(){
   const id=document.getElementById('edit-m-id').value;
   const m=mitglieder.find(x=>(x.nr||x.id)==id);if(!m)return;
-  ['nachname','vorname','handy','telefon','email','geburtstag','adresse','plz','stimme'].forEach(f=>{const el=document.getElementById('edit-m-'+f);if(el)m[f]=el.value.trim();});
+  const hasAccount=!!m.uid;
+  const fields=['nachname','vorname','handy','telefon','email','geburtstag','adresse','plz','stimme'];
+  if(!hasAccount) fields.push('username');
+  if(!hasAccount){
+    const newUn=document.getElementById('edit-m-username')?.value.trim()||'';
+    if(newUn && usernameTaken(newUn, m)){ alert('Dieser Benutzername ist schon vergeben. Bitte einen anderen wählen.'); return; }
+  }
+  fields.forEach(f=>{const el=document.getElementById('edit-m-'+f);if(el)m[f]=el.value.trim();});
   await saveMitgliederToFB();
   closeModal();
   renderMitglieder();
@@ -4177,13 +4243,15 @@ async function createUserAccount(mitglied) {
   const email = mitglied.email;
   const username = mitglied.username;
   if(!email) return {error: 'Keine E-Mail'};
-  
+  if(!username) return {error: 'Kein Benutzername gesetzt – erst bei „Mitglied bearbeiten" vergeben'};
+
   // Default password: username (user should change it)
   const defaultPw = username;
   try {
-    const userCred = await window._fbCreateUser(window._fbAuth, email, defaultPw);
-    const uid = userCred.user.uid;
-    
+    // WICHTIG: auf einer isolierten Zweit-App anlegen — createUserWithEmailAndPassword meldet sonst
+    // automatisch als der neue Nutzer an und würde den Admin aus der eigenen Sitzung werfen.
+    const uid = await window._fbCreateUserIsolated(email, defaultPw);
+
     // Store profile
     const profile = {
       uid, username, email,
@@ -4193,16 +4261,23 @@ async function createUserAccount(mitglied) {
       isAdmin: false,
       erstellt: new Date().toISOString()
     };
-    
+
     await dbFetch(DB+'/userprofiles/'+uid+'.json', {
       method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(profile)
     });
-    
+
     // Store username->email mapping
     await dbFetch(DB+'/usernames/'+username.toLowerCase()+'.json', {
       method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email, uid})
     });
-    
+
+    // Mitglieds-Eintrag gleich mit dem Konto verknüpfen (spart manuelles Verknüpfen in der Nutzerverwaltung)
+    const mi = mitglieder.indexOf(mitglied);
+    if(mi>=0 && !mitglieder[mi].uid){
+      mitglieder[mi].uid = uid;
+      await dbPut('mitglieder/'+mi+'/uid', uid).catch(e=>console.warn(e));
+    }
+
     return {success: true, username, defaultPw};
   } catch(e) {
     if(e.code === 'auth/email-already-in-use') return {error: 'E-Mail bereits registriert'};
@@ -4333,11 +4408,24 @@ async function deleteUserAccount(uid, username) {
 async function createAllAccounts() {
   const btn = document.getElementById('create-all-btn');
   btn.disabled = true; btn.textContent = '⏳ Erstelle Konten…';
+  // Wer hat schon ein Konto? (verlinkt über mitglied.uid ODER passenden Benutzernamen/E-Mail in userprofiles)
+  const profiles = await loadUserProfiles().catch(()=>({}));
+  const usedUsernames = new Set(Object.values(profiles).map(p=>_norm(p.username)).filter(Boolean));
+  const usedEmails = new Set(Object.values(profiles).map(p=>(p.email||'').toLowerCase()).filter(Boolean));
   const results = [];
   for(const m of (mitglieder||[])) {
     if(!m.email) { results.push({name: m.vorname+' '+m.nachname, error:'Keine E-Mail'}); continue; }
+    if(m.uid || usedUsernames.has(_norm(m.username)) || usedEmails.has((m.email||'').toLowerCase())){
+      continue; // schon registriert -> gar nicht erst versuchen (keine unnötigen Fehler/Aufrufe)
+    }
     const r = await createUserAccount(m);
     results.push({name: m.vorname+' '+m.nachname, username: m.username, ...r});
+  }
+  if(!results.length){
+    document.getElementById('create-all-result').innerHTML='<div style="font-size:.82rem;margin-top:8px;color:#888">Alle Mitglieder mit E-Mail haben bereits ein Konto.</div>';
+    btn.disabled = false; btn.textContent = '👥 Alle Mitglieder-Konten erstellen';
+    renderMitglieder(); renderUserVerwaltung();
+    return;
   }
   const ok = results.filter(r=>r.success).length;
   const err = results.filter(r=>r.error).length;
@@ -4347,7 +4435,7 @@ async function createAllAccounts() {
     '<details style="margin-top:6px"><summary style="cursor:pointer;color:#2563b5">Details anzeigen</summary>'+
     '<div style="margin-top:4px">'+results.map(r=>`<div>${r.name}: ${r.success?'✅ '+r.username+' / PW: '+r.defaultPw:'❌ '+r.error}</div>`).join('')+'</div></details></div>';
   btn.disabled = false; btn.textContent = '👥 Alle Mitglieder-Konten erstellen';
-  renderUserVerwaltung();
+  renderMitglieder(); renderUserVerwaltung();
 }
 
 
