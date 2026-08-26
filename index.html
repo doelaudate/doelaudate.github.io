@@ -856,7 +856,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
       <span id="plakate-stats" style="font-size:.8rem;color:#888"></span>
     </div>
     <div id="plakate-progress" style="display:none;background:#eef1f5;border-radius:6px;height:8px;overflow:hidden;margin:8px 0 4px"><div id="plakate-progress-fill" style="height:100%;width:0%;background:#27ae60;border-radius:6px;transition:width .3s"></div></div>
-    <div style="font-size:.82rem;color:#666;margin-bottom:12px">Trage dich auf einen Standort ein, wenn du das Plakat dorthin bringst.</div>
+    <div style="font-size:.82rem;color:#666;margin-bottom:12px">Trage dich auf einen Standort ein, wenn du das Plakat dorthin bringst. 💡 Diese Liste pflegen wir gemeinsam: Jede*r darf Standorte anlegen, Adresse/Ortschaft korrigieren oder falsche Einträge löschen (✏️/✕ bei jedem Standort) — du musst dafür kein Admin sein.</div>
     <div id="plakate-list"></div>
   </div>
   <div class="card" id="plakate-ranking-card" style="margin-top:12px;display:none">
@@ -4842,8 +4842,11 @@ function _plOrtschaftValue(selId){
   if(sel.value==='__frei__'){ const frei=document.getElementById(selId+'-frei'); const v=(frei&&frei.value.trim())||''; return v||'Sonstiges'; }
   return sel.value||'Sonstiges';
 }
+// Plakat-Standorte sind eine gemeinsam gepflegte Liste: JEDES angemeldete Mitglied darf
+// Standorte anlegen, bearbeiten und löschen — nicht nur Admins mit „plakate"-Recht.
+function canManagePlakate(){ return !!(typeof currentUser!=='undefined' && currentUser); }
 function editPlakat(key){
-  if(!uiEdit('plakate')) return;
+  if(!canManagePlakate()) return;
   const p=plakate.find(x=>x._key===key); if(!p) return;
   document.getElementById('ple-key').value=key;
   document.getElementById('ple-ort').value=p.ort||'';
@@ -4854,7 +4857,7 @@ function editPlakat(key){
   document.getElementById('modal-plakat-edit').classList.add('open');
 }
 async function savePlakatEdit(){
-  if(!uiEdit('plakate')){alert('Keine Berechtigung.');return;}
+  if(!canManagePlakate()){alert('Bitte zuerst anmelden.');return;}
   const key=document.getElementById('ple-key').value;
   const ort=document.getElementById('ple-ort').value.trim();
   if(!ort){alert('Bitte Standort eingeben.');return;}
@@ -4868,7 +4871,7 @@ async function savePlakatEdit(){
   await loadPlakate();
 }
 async function deletePlakat(key){
-  if(!uiEdit('plakate')) return;
+  if(!canManagePlakate()) return;
   if(!confirm('Standort löschen?'))return;
   await dbFetch(DB+'/plakate/'+key+'.json',{method:'DELETE'});
   await loadPlakate();
@@ -4888,7 +4891,7 @@ async function releasePlakat(key){
 function renderPlakate(){
   const el=document.getElementById('plakate-list');
   if(!el)return;
-  const canManage=uiEdit('plakate');
+  const canManage=canManagePlakate();
   // Formular-Select + Vorschlags-Chips einmalig befüllen (Nutzerwahl nicht überschreiben)
   const formSel=document.getElementById('pl-ortschaft');
   if(formSel && !formSel.options.length) _plFillOrtschaftSelect('pl-ortschaft','Dölau');
