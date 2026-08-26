@@ -272,6 +272,11 @@ html.dark img, html.dark video, html.dark .no-invert{ filter: invert(1) hue-rota
 .t-coll[open]>summary::after{transform:rotate(180deg)}
 .t-coll>summary:hover{color:var(--primary)}
 .t-coll>div{padding:2px 12px 11px}
+/* Mehrzeilige aufklappbare Karten (z.B. Nutzerverwaltung): eigener Pfeil-Indikator, ohne die einzeilige t-coll-Flex-Annahme */
+.uv-card>summary{list-style:none;position:relative;padding-right:26px}
+.uv-card>summary::-webkit-details-marker{display:none}
+.uv-card>summary::after{content:'▾';position:absolute;right:14px;top:10px;color:#9aa7b4;transition:transform .15s}
+.uv-card[open]>summary::after{transform:rotate(180deg)}
 .satb-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .satb-cell{flex:1;min-width:82px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
 .satb-name{font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
@@ -1076,6 +1081,8 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
         <div style="font-size:.78rem;color:#aaa;margin-top:4px">Erstellt Konten für alle Mitglieder. Benutzername = 1. Buchstabe Vorname + 1. Buchstabe Nachname + Geburtstag. Initiales Passwort = Benutzername.</div>
         <div id="create-all-result"></div>
       </div>
+      <input type="text" class="search-box" id="uv-search" placeholder="🔍 Nutzer suchen (Name, Benutzername, E-Mail)…" oninput="renderUserVerwaltung()" style="margin-bottom:8px">
+      <div id="uv-count" style="font-size:.78rem;color:#999;margin-bottom:8px"></div>
       <div id="user-verwaltung"></div>
     </div>
     </div>
@@ -4424,19 +4431,39 @@ async function linkUserToMember(userId, idx){
 async function renderUserVerwaltung() {
   const el = document.getElementById('user-verwaltung');
   if(!el) return;
+  const q=(document.getElementById('uv-search')?.value||'').trim().toLowerCase();
   el.innerHTML = '<div style="color:#aaa;font-size:.85rem">Lade Nutzer…</div>';
-  
+
   const profiles = await loadUserProfiles();
-  const users = Object.values(profiles).sort((a,b) => a.nachname?.localeCompare(b.nachname||'')||0);
-  
-  if(!users.length) {
+  const allUsers = Object.values(profiles).sort((a,b) => a.nachname?.localeCompare(b.nachname||'')||0);
+
+  if(!allUsers.length) {
     el.innerHTML = '<div class="empty">Noch keine Nutzerkonten erstellt.</div>';
+    const cnt=document.getElementById('uv-count'); if(cnt) cnt.textContent='';
+    return;
+  }
+  const users = q ? allUsers.filter(u=>{
+    const hay=[u.vorname,u.nachname,u.username,u.email].filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(q);
+  }) : allUsers;
+
+  const cnt=document.getElementById('uv-count');
+  if(cnt){
+    const adminCount=allUsers.filter(u=>u.isAdmin).length;
+    const unlinkedCount=allUsers.filter(u=>!findMemberForUser(u)).length;
+    cnt.textContent = q
+      ? `${users.length} von ${allUsers.length} Nutzern (Suche aktiv)`
+      : `${allUsers.length} Nutzer · 🔑 ${adminCount} Admin${adminCount===1?'':'s'}${unlinkedCount?` · ⚠️ ${unlinkedCount} ohne Mitglied-Verknüpfung`:''}`;
+  }
+
+  if(!users.length){
+    el.innerHTML = '<div class="empty">Keine Nutzer gefunden für „'+esc(q)+'".</div>';
     return;
   }
 
-  // "Allen senden"-Button oben
-  const allEmails = users.map(u=>u.email).filter(Boolean);
-  const banner = `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;padding:10px 14px;background:#fff8f0;border:1.5px solid #f39c12;border-radius:8px">
+  // "Allen senden"-Button oben (nur ohne aktive Suche, sonst irreführend "an alle 3 gefilterten")
+  const allEmails = allUsers.map(u=>u.email).filter(Boolean);
+  const banner = q ? '' : `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;padding:10px 14px;background:#fff8f0;border:1.5px solid #f39c12;border-radius:8px">
     <div style="font-size:.84rem;color:#7d6608">📧 Passwort-Reset-Mail an alle ${allEmails.length} Nutzer senden</div>
     <button class="btn btn-sm" style="background:#f39c12;color:white;font-weight:600" onclick="sendResetAll()">📧 Allen senden</button>
   </div>`;
@@ -4448,6 +4475,13 @@ async function renderUserVerwaltung() {
     const uid = u.uid;
     const chk = (key) => perms.includes(key) ? 'checked' : '';
     const linkedM = findMemberForUser(u);
+    // Kurzfassung für die zugeklappte Kopfzeile: Rechte auf einen Blick, ohne alles aufzuklappen
+    const permChips = u.isAdmin
+      ? '<span style="background:#fdecea;color:#c0392b;font-size:.68rem;font-weight:700;padding:1px 7px;border-radius:8px">🔑 Admin</span>'
+      : (perms.length
+          ? perms.map(p=>`<span style="background:#eef3fa;color:#1d4e96;font-size:.68rem;padding:1px 7px;border-radius:8px">${(permLabels[p]||p)}</span>`).join('')
+          : '<span style="color:#bbb;font-size:.72rem">keine Sonderrechte</span>');
+    const linkDot = linkedM ? '' : '<span title="Kein Mitglied verknüpft" style="color:#f39c12;font-size:.85rem">⚠️</span>';
     const linkHtml = linkedM
       ? `<div style="font-size:.78rem;color:#1a7a40;margin-bottom:8px">✅ Mitglied: <strong>${esc(memberName(linkedM)||'(ohne Name)')}</strong></div>`
       : `<div style="background:#fff8e7;border:1px solid #f9ca8b;border-radius:6px;padding:8px 10px;margin-bottom:8px">
@@ -4460,16 +4494,16 @@ async function renderUserVerwaltung() {
            </div>
          </div>`;
     return `
-    <div style="background:white;border-radius:8px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.07);overflow:hidden">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
-        <div>
-          <div style="font-weight:600;font-size:.9rem">${esc(u.vorname||'')} ${esc(u.nachname||'')}
-            ${u.isAdmin?'<span style="background:#e74c3c;color:white;font-size:.68rem;padding:1px 6px;border-radius:8px;margin-left:4px">Admin</span>':''}
+    <details class="uv-card" style="background:white;border-radius:8px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.07);overflow:hidden">
+      <summary style="cursor:pointer;padding:10px 14px">
+        <div style="min-width:0">
+          <div style="font-weight:600;font-size:.9rem;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span>${esc(u.vorname||'')} ${esc(u.nachname||'')}</span>${linkDot}
           </div>
           <div style="font-size:.78rem;color:#888">👤 ${esc(u.username||'')} &nbsp;·&nbsp; ✉️ ${esc(u.email||'')}</div>
+          <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap">${permChips}</div>
         </div>
-        <button class="btn btn-danger btn-sm" onclick="deleteUserAccount('${uid}','${esc(u.username||'')}')">✕</button>
-      </div>
+      </summary>
       <div style="border-top:1px solid #f0f0f0;padding:10px 14px;background:#fafafa">
         ${linkHtml}
         <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#999;margin-bottom:8px">🛡️ Berechtigungen</div>
@@ -4485,10 +4519,11 @@ async function renderUserVerwaltung() {
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <button class="btn btn-success btn-sm" onclick="saveUserPerms('${uid}')">💾 Speichern</button>
           <button class="btn btn-sm" style="background:#f39c12;color:white" onclick="sendResetForUser('${esc(u.email||'')}','${uid}')">📧 Reset-Mail</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteUserAccount('${uid}','${esc(u.username||'')}')">✕ Konto löschen</button>
           <span id="perm-result-${uid}" style="font-size:.8rem"></span>
         </div>
       </div>
-    </div>`;
+    </details>`;
   }).join('');
 }
 
