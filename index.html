@@ -2004,6 +2004,18 @@ function renderStart(){
     html+='</div>';
   }
 
+  // 📍 Plakat-Standorte in der Nähe (nur wenn eigener Wohnort geocodiert ist & es offene Standorte gibt)
+  const nearbyPlakate=(typeof nearestOpenPlakate==='function')?nearestOpenPlakate(3):[];
+  if(nearbyPlakate.length){
+    html+=`<div class="card" style="margin-top:12px;cursor:pointer" onclick="showPageByName('plakate')">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span class="card-title" style="margin-bottom:0">📍 Plakat-Standorte in deiner Nähe</span><span style="font-size:.76rem;color:#2563b5">Alle ›</span></div>`;
+    html+=nearbyPlakate.map(x=>`<div style="border-top:1px solid var(--line);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;gap:8px;align-items:center">
+        <span style="font-size:.88rem;font-weight:600">${esc(x.p.ort)}</span>
+        <span style="font-size:.76rem;color:#1d4e96;font-weight:700;white-space:nowrap">~${x.dist.toFixed(1)} km</span>
+      </div>`).join('');
+    html+='</div>';
+  }
+
   el.innerHTML=html;
 }
 
@@ -5114,7 +5126,7 @@ function renderPlakate(){
     return;
   }
   const myName=getUserVoteName();
-  const karte=p=>{
+  const karte=(p,distKm)=>{
     const done=!!p.von;
     const maps=p.adresse?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.adresse)}" target="_blank" rel="noopener" style="font-size:.78rem;color:#2563b5;text-decoration:none;white-space:nowrap">🗺️ Karte</a>`:'';
     const del=canManage?`<button class="btn btn-sm" style="flex-shrink:0;padding:2px 8px;background:#eef1f5;color:#1d4e96" title="Bearbeiten" onclick="editPlakat('${p._key}')">✏️</button><button class="btn btn-danger btn-sm" style="flex-shrink:0;padding:2px 8px" onclick="deletePlakat('${p._key}')">✕</button>`:'';
@@ -5124,14 +5136,22 @@ function renderPlakate(){
       : (myName
         ? `<button class="btn btn-sm btn-success" style="font-size:.78rem;flex-shrink:0" onclick="claimPlakat('${p._key}')">✋ Übernehmen</button>`
         : `<span style="display:flex;gap:5px;align-items:center;flex-shrink:0"><input class="fl-input" id="pl-name-${p._key}" placeholder="Dein Name" style="width:110px;padding:5px 8px;font-size:.8rem;margin:0"><button class="btn btn-sm btn-success" style="font-size:.78rem" onclick="claimPlakat('${p._key}')">✋</button></span>`);
+    const distBadge = distKm!=null ? `<span style="background:#eef3fa;color:#1d4e96;font-size:.72rem;font-weight:700;padding:1px 8px;border-radius:10px;margin-left:6px">📍 ~${distKm.toFixed(1)} km</span>` : '';
+    // Zuordnungs-Hilfe: wer wohnt am nächsten? (nur bei offenen Standorten mit Koordinaten, hilft beim gezielten Zuteilen)
+    let nearMembers='';
+    if(!done && typeof p.lat==='number' && typeof p.lng==='number'){
+      const near=nearestMembersToPoint(p.lat,p.lng,3);
+      if(near.length) nearMembers=`<div style="font-size:.72rem;color:#a06020;margin-top:3px">🏠 in der Nähe: ${near.map(x=>esc(prettyName(x.m.username)||memberName(x.m))+' ('+x.dist.toFixed(1)+' km)').join(', ')}</div>`;
+    }
     return `<div style="border-left:4px solid ${done?'#27ae60':'#f39c12'};padding:9px 12px;margin-bottom:7px;background:${done?'#f4faf5':'#fffdf5'};border-radius:0 8px 8px 0">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
         <div style="flex:1;min-width:150px">
-          <span style="font-weight:600;font-size:.9rem;color:#1b3a6b">${esc(p.ort)}</span>
+          <span style="font-weight:600;font-size:.9rem;color:#1b3a6b">${esc(p.ort)}</span>${distBadge}
           ${p.anzahl?`<span style="font-size:.76rem;color:#888"> · ${esc(p.anzahl)}×</span>`:''}
           ${done?`<div style="font-size:.78rem;color:#1a7a40;margin-top:1px">✅ ${esc(p.von)}</div>`:''}
           ${p.adresse?`<div style="font-size:.76rem;color:#777;margin-top:1px">📍 ${esc(p.adresse)} ${maps}</div>`:''}
           ${p.notiz?`<div style="font-size:.76rem;color:#999;font-style:italic;margin-top:1px">💬 ${esc(p.notiz)}</div>`:''}
+          ${nearMembers}
         </div>
         <div style="display:flex;gap:6px;align-items:center">${action}${del}</div>
       </div>
@@ -5141,10 +5161,15 @@ function renderPlakate(){
   const nachOrtschaft=list=>{
     const g={}; list.forEach(p=>{ const k=p.ortschaft||'Sonstiges'; (g[k]=g[k]||[]).push(p); });
     const order=[...PLAKAT_ORTSCHAFTEN.filter(o=>g[o]), ...Object.keys(g).filter(x=>!PLAKAT_ORTSCHAFTEN.includes(x)).sort()];
-    return order.map(o=>`<div style="font-size:.74rem;font-weight:700;color:#8a97a8;margin:9px 0 4px">📍 ${esc(o)} (${g[o].length})</div>`+g[o].map(karte).join('')).join('');
+    return order.map(o=>`<div style="font-size:.74rem;font-weight:700;color:#8a97a8;margin:9px 0 4px">📍 ${esc(o)} (${g[o].length})</div>`+g[o].map(p=>karte(p)).join('')).join('');
   };
   const offen=plakate.filter(p=>!p.von), fertig=plakate.filter(p=>p.von);
   let html='';
+  // „In deiner Nähe" — nur wenn eigener Wohnort bekannt & mind. 1 Treffer, ganz oben vor der Ortschafts-Gliederung
+  const nearby=nearestOpenPlakate(5);
+  if(nearby.length){
+    html+=`<div class="section-label" style="color:#1d4e96">📍 In deiner Nähe</div>`+nearby.map(x=>karte(x.p,x.dist)).join('');
+  }
   if(offen.length){
     html+=`<div class="section-label" style="color:#b9770e">🟠 Noch zu verteilen (${offen.length})</div>`+nachOrtschaft(offen);
   } else if(total){
@@ -5277,6 +5302,35 @@ function haversineKm(lat1,lon1,lat2,lon2){
   const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
+// Eigener Wohnort (falls Konto verknüpft & geocodiert) — zentral für Karte/Liste/Startseite
+function myLatLng(){
+  const idx=myMemberIndex(); if(idx<0) return null;
+  const m=mitglieder[idx];
+  return (m && typeof m.lat==='number' && typeof m.lng==='number') ? {lat:m.lat,lng:m.lng} : null;
+}
+// Die N nächstgelegenen OFFENEN Plakat-Standorte zum eigenen Wohnort, sortiert nach Entfernung
+function nearestOpenPlakate(limit){
+  const loc=myLatLng(); if(!loc) return [];
+  const list=[];
+  (plakate||[]).forEach(p=>{
+    if(!p.von && typeof p.lat==='number' && typeof p.lng==='number'){
+      list.push({p, dist:haversineKm(loc.lat,loc.lng,p.lat,p.lng)});
+    }
+  });
+  list.sort((a,b)=>a.dist-b.dist);
+  return limit?list.slice(0,limit):list;
+}
+// Die N nächstgelegenen Mitglieder zu einem Punkt (z.B. einem Plakat-Standort), sortiert nach Entfernung
+function nearestMembersToPoint(lat,lng,limit){
+  const list=[];
+  (mitglieder||[]).forEach(m=>{
+    if(typeof m.lat==='number' && typeof m.lng==='number'){
+      list.push({m, dist:haversineKm(lat,lng,m.lat,m.lng)});
+    }
+  });
+  list.sort((a,b)=>a.dist-b.dist);
+  return limit?list.slice(0,limit):list;
+}
 function renderPlakateMapMarkers(){
   if(!_plakateMapInstance || !window.L) return;
   _plakateMarkers.forEach(m=>_plakateMapInstance.removeLayer(m));
@@ -5285,19 +5339,8 @@ function renderPlakateMapMarkers(){
 
   // Eigener Wohnort (falls Konto verknüpft & geocodiert) -> für „nächstgelegene offene Standorte"
   // Unabhängig vom Mitglieder-Layer-Häkchen: das ist der eigene Standort, kein fremder.
-  const myIdx=myMemberIndex();
-  const myM=myIdx>=0?mitglieder[myIdx]:null;
-  const myLoc=(myM && typeof myM.lat==='number' && typeof myM.lng==='number')?{lat:myM.lat,lng:myM.lng}:null;
-  const openWithDist=[];
-  if(myLoc){
-    (plakate||[]).forEach(p=>{
-      if(typeof p.lat==='number' && typeof p.lng==='number' && !p.von){
-        openWithDist.push({key:p._key, dist:haversineKm(myLoc.lat,myLoc.lng,p.lat,p.lng)});
-      }
-    });
-    openWithDist.sort((a,b)=>a.dist-b.dist);
-  }
-  const distByKey={}; openWithDist.slice(0,3).forEach(x=>{ distByKey[x.key]=x.dist; });
+  const distByKey={};
+  nearestOpenPlakate(3).forEach(x=>{ distByKey[x.p._key]=x.dist; });
 
   (plakate||[]).forEach(p=>{
     if(typeof p.lat!=='number' || typeof p.lng!=='number') return;
