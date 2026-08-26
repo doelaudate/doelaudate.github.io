@@ -837,19 +837,32 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     <div style="margin-top:12px">
       <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#999;margin-bottom:5px">💡 Vorschläge antippen</div>
       <div id="pl-vorschlaege" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px"></div>
-      <div class="form-row">
-        <input class="fl-input" type="text" id="pl-ort" placeholder="Standort / Geschäft *" style="flex:2;min-width:160px">
-        <input class="fl-input" type="text" id="pl-anzahl" placeholder="Anzahl Plakate" style="flex:1;min-width:90px">
-      </div>
-      <div class="form-row">
-        <select class="fl-input" id="pl-ortschaft" style="flex:1;min-width:150px" onchange="document.getElementById('pl-ortschaft-frei').style.display=this.value==='__frei__'?'':'none'"></select>
-        <input class="fl-input" type="text" id="pl-ortschaft-frei" placeholder="Ortschaft eingeben…" style="flex:1;min-width:140px;display:none">
-      </div>
-      <input class="fl-input" type="text" id="pl-adresse" placeholder="Adresse (optional, für Karten-Link)" style="margin-bottom:8px">
-      <input class="fl-input" type="text" id="pl-notiz" placeholder="Notiz (optional, z. B. Ansprechpartner)" style="margin-bottom:8px">
+      <input class="fl-input" type="text" id="pl-ort" placeholder="Standort / Geschäft *" style="margin-bottom:8px">
+      <input class="fl-input" type="text" id="pl-adresse" placeholder="Adresse (z. B. Straße + Hausnummer)" style="margin-bottom:4px">
+      <div style="font-size:.72rem;color:#999;margin:0 0 10px 2px">📍 Mit Adresse erscheint der Standort automatisch auf der Karte, und wir schlagen die Ortschaft für dich vor.</div>
+      <details style="margin-bottom:10px">
+        <summary style="cursor:pointer;font-size:.8rem;color:#2563b5;font-weight:600;user-select:none">▾ Weitere Angaben (optional)</summary>
+        <div style="margin-top:8px">
+          <div class="form-row">
+            <select class="fl-input" id="pl-ortschaft" style="flex:1;min-width:150px" onchange="this.dataset.touched='1';document.getElementById('pl-ortschaft-frei').style.display=this.value==='__frei__'?'':'none'"></select>
+            <input class="fl-input" type="text" id="pl-ortschaft-frei" placeholder="Ortschaft eingeben…" style="flex:1;min-width:140px;display:none">
+          </div>
+          <input class="fl-input" type="text" id="pl-anzahl" placeholder="Anzahl Plakate" style="margin-bottom:8px">
+          <input class="fl-input" type="text" id="pl-notiz" placeholder="Notiz (z. B. Ansprechpartner)" style="margin-bottom:8px">
+        </div>
+      </details>
+      <div id="pl-geocode-status" style="font-size:.76rem;color:#888;min-height:16px;margin-bottom:6px"></div>
       <button class="btn btn-primary" onclick="addPlakat()">＋ Standort hinzufügen</button>
     </div>
   </details>
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <span class="card-title" style="margin-bottom:0">🗺️ Karte</span>
+      <button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="togglePlakateKarte()" id="plakate-karte-toggle-btn">Karte anzeigen</button>
+    </div>
+    <div id="plakate-map" style="height:360px;border-radius:10px;display:none"></div>
+    <div style="font-size:.76rem;color:#999;margin-top:6px">🟠 offen · 🟢 übernommen. Standorte ohne Adresse erscheinen nicht auf der Karte.</div>
+  </div>
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
       <span class="card-title" style="margin-bottom:0">📋 Plakat-Standorte</span>
@@ -1301,16 +1314,21 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   <div class="modal">
     <h3>✏️ Standort bearbeiten</h3>
     <input type="hidden" id="ple-key">
-    <div class="form-row">
-      <input class="fl-input" type="text" id="ple-ort" placeholder="Standort / Geschäft *" style="flex:2;min-width:160px">
-      <input class="fl-input" type="text" id="ple-anzahl" placeholder="Anzahl" style="flex:1;min-width:80px">
-    </div>
-    <div class="form-row">
-      <select class="fl-input" id="ple-ortschaft" style="flex:1;min-width:150px" onchange="document.getElementById('ple-ortschaft-frei').style.display=this.value==='__frei__'?'':'none'"></select>
-      <input class="fl-input" type="text" id="ple-ortschaft-frei" placeholder="Ortschaft eingeben…" style="flex:1;min-width:140px;display:none">
-    </div>
-    <input class="fl-input" type="text" id="ple-adresse" placeholder="Adresse (optional)" style="margin-bottom:8px">
-    <input class="fl-input" type="text" id="ple-notiz" placeholder="Notiz (optional)" style="margin-bottom:8px">
+    <input class="fl-input" type="text" id="ple-ort" placeholder="Standort / Geschäft *" style="margin-bottom:8px">
+    <input class="fl-input" type="text" id="ple-adresse" placeholder="Adresse (z. B. Straße + Hausnummer)" style="margin-bottom:4px">
+    <div style="font-size:.72rem;color:#999;margin:0 0 10px 2px">📍 Mit Adresse erscheint der Standort auf der Karte, Ortschaft wird vorgeschlagen.</div>
+    <details style="margin-bottom:10px">
+      <summary style="cursor:pointer;font-size:.8rem;color:#2563b5;font-weight:600;user-select:none">▾ Weitere Angaben (optional)</summary>
+      <div style="margin-top:8px">
+        <div class="form-row">
+          <select class="fl-input" id="ple-ortschaft" style="flex:1;min-width:150px" onchange="this.dataset.touched='1';document.getElementById('ple-ortschaft-frei').style.display=this.value==='__frei__'?'':'none'"></select>
+          <input class="fl-input" type="text" id="ple-ortschaft-frei" placeholder="Ortschaft eingeben…" style="flex:1;min-width:140px;display:none">
+        </div>
+        <input class="fl-input" type="text" id="ple-anzahl" placeholder="Anzahl" style="margin-bottom:8px">
+        <input class="fl-input" type="text" id="ple-notiz" placeholder="Notiz (optional)" style="margin-bottom:8px">
+      </div>
+    </details>
+    <div id="ple-geocode-status" style="font-size:.76rem;color:#888;min-height:16px;margin-bottom:6px"></div>
     <div class="modal-actions" style="justify-content:space-between">
       <button class="btn btn-gray" onclick="closeModal()">Abbrechen</button>
       <button class="btn btn-success" onclick="savePlakatEdit()">💾 Speichern</button>
@@ -4811,15 +4829,53 @@ async function loadPlakate(){
     renderPlakate();
   }catch(e){console.warn(e);}
 }
+// Adresse -> Koordinaten + Ortschafts-Vorschlag (OpenStreetMap/Nominatim, kostenlos, kein API-Key nötig)
+async function geocodeAddress(query){
+  if(!query) return null;
+  try{
+    const url='https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=de&q='+encodeURIComponent(query);
+    const r=await fetch(url,{headers:{'Accept-Language':'de'}});
+    if(!r.ok) return null;
+    const arr=await r.json();
+    if(!arr || !arr.length) return null;
+    const hit=arr[0];
+    const lat=parseFloat(hit.lat), lng=parseFloat(hit.lon);
+    if(isNaN(lat)||isNaN(lng)) return null;
+    const addr=hit.address||{};
+    const candidates=[addr.suburb, addr.city_district, addr.village, addr.town, addr.municipality, addr.county].filter(Boolean);
+    let ortschaft=null;
+    for(const c of candidates){
+      const treffer=PLAKAT_ORTSCHAFTEN.find(o=>o!=='Sonstiges' && (_norm(o)===_norm(c) || _norm(c).includes(_norm(o)) || _norm(o).includes(_norm(c))));
+      if(treffer){ ortschaft=treffer; break; }
+    }
+    return {lat,lng,ortschaft};
+  }catch(e){ console.warn('Geocoding fehlgeschlagen',e); return null; }
+}
 async function addPlakat(){
   const ort=document.getElementById('pl-ort').value.trim();
   if(!ort){alert('Bitte einen Standort eingeben.');return;}
   const anzahl=document.getElementById('pl-anzahl').value.trim();
   const adresse=document.getElementById('pl-adresse').value.trim();
   const notiz=document.getElementById('pl-notiz').value.trim();
-  const ortschaft=_plOrtschaftValue('pl-ortschaft');
-  await dbFetch(DB+'/plakate.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ort,ortschaft,anzahl,adresse,notiz,von:'',erstellt:new Date().toISOString()})});
+  let ortschaft=_plOrtschaftValue('pl-ortschaft');
+  let lat=null, lng=null;
+  const statusEl=document.getElementById('pl-geocode-status');
+  if(adresse){
+    if(statusEl) statusEl.textContent='⏳ Adresse wird gesucht…';
+    const geo=await geocodeAddress(adresse);
+    const sel=document.getElementById('pl-ortschaft');
+    const userTouched=sel && sel.dataset.touched==='1';
+    if(geo){
+      lat=geo.lat; lng=geo.lng;
+      if(geo.ortschaft && !userTouched) ortschaft=geo.ortschaft;
+      if(statusEl) statusEl.textContent='📍 Standort gefunden'+(geo.ortschaft?' · '+geo.ortschaft:'');
+    } else if(statusEl) statusEl.textContent='ℹ️ Adresse nicht gefunden – wird ohne Karten-Position gespeichert.';
+  } else if(statusEl) statusEl.textContent='';
+  const entry={ort,ortschaft,anzahl,adresse,notiz,von:'',erstellt:new Date().toISOString()};
+  if(lat!=null && lng!=null){ entry.lat=lat; entry.lng=lng; }
+  await dbFetch(DB+'/plakate.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(entry)});
   ['pl-ort','pl-anzahl','pl-adresse','pl-notiz'].forEach(id=>document.getElementById(id).value='');
+  if(statusEl) statusEl.textContent='';
   await loadPlakate();
 }
 // Ortschaften rund um Dölau für die Auswahl (freie Eingabe über „Andere…" möglich)
@@ -4835,6 +4891,7 @@ function _plFillOrtschaftSelect(selId, current){
   const opts=[...PLAKAT_ORTSCHAFTEN];
   if(current && !opts.includes(current)) opts.unshift(current);
   sel.innerHTML=opts.map(o=>`<option value="${esc(o)}"${o===current?' selected':''}>${esc(o)}</option>`).join('')+'<option value="__frei__">➕ Andere…</option>';
+  delete sel.dataset.touched; // frischer Zustand: noch nicht manuell geändert -> Geocoding darf vorschlagen
   const frei=document.getElementById(selId+'-frei'); if(frei){ frei.style.display='none'; frei.value=''; }
 }
 function _plOrtschaftValue(selId){
@@ -4854,6 +4911,7 @@ function editPlakat(key){
   document.getElementById('ple-adresse').value=p.adresse||'';
   document.getElementById('ple-notiz').value=p.notiz||'';
   _plFillOrtschaftSelect('ple-ortschaft', p.ortschaft||'Sonstiges');
+  const st=document.getElementById('ple-geocode-status'); if(st) st.textContent='';
   document.getElementById('modal-plakat-edit').classList.add('open');
 }
 async function savePlakatEdit(){
@@ -4861,12 +4919,31 @@ async function savePlakatEdit(){
   const key=document.getElementById('ple-key').value;
   const ort=document.getElementById('ple-ort').value.trim();
   if(!ort){alert('Bitte Standort eingeben.');return;}
-  const upd={ort,
-    ortschaft:_plOrtschaftValue('ple-ortschaft'),
+  const adresse=document.getElementById('ple-adresse').value.trim();
+  let ortschaft=_plOrtschaftValue('ple-ortschaft');
+  const existing=plakate.find(x=>x._key===key);
+  let lat=(existing&&typeof existing.lat==='number')?existing.lat:null;
+  let lng=(existing&&typeof existing.lng==='number')?existing.lng:null;
+  const statusEl=document.getElementById('ple-geocode-status');
+  const addressChanged=!existing || (existing.adresse||'')!==adresse;
+  if(adresse && addressChanged){
+    if(statusEl) statusEl.textContent='⏳ Adresse wird gesucht…';
+    const geo=await geocodeAddress(adresse);
+    const sel=document.getElementById('ple-ortschaft');
+    const userTouched=sel && sel.dataset.touched==='1';
+    if(geo){
+      lat=geo.lat; lng=geo.lng;
+      if(geo.ortschaft && !userTouched) ortschaft=geo.ortschaft;
+      if(statusEl) statusEl.textContent='📍 Position aktualisiert'+(geo.ortschaft?' · '+geo.ortschaft:'');
+    } else if(statusEl) statusEl.textContent='ℹ️ Adresse nicht gefunden.';
+  } else if(!adresse){ lat=null; lng=null; }
+  const upd={ort, ortschaft,
     anzahl:document.getElementById('ple-anzahl').value.trim(),
-    adresse:document.getElementById('ple-adresse').value.trim(),
-    notiz:document.getElementById('ple-notiz').value.trim()};
+    adresse,
+    notiz:document.getElementById('ple-notiz').value.trim(),
+    lat: (lat!=null?lat:null), lng: (lng!=null?lng:null)};
   await dbFetch(DB+'/plakate/'+key+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(upd)});
+  if(statusEl) statusEl.textContent='';
   closeModal();
   await loadPlakate();
 }
@@ -4964,6 +5041,72 @@ function renderPlakate(){
     rankCard.style.display=items.length?'':'none';
     rankEl.innerHTML=items.length?_statBars(items,'#8e44ad'):'';
   }
+  // Wenn die Karte gerade offen ist, Marker mit den frischen Daten aktualisieren
+  const mapEl=document.getElementById('plakate-map');
+  if(mapEl && mapEl.style.display!=='none' && window.L && _plakateMapInstance) renderPlakateMapMarkers();
+}
+
+// ===== PLAKATE: KARTE (Leaflet/OpenStreetMap, kostenlos, kein API-Key) =====
+let _leafletLoadPromise=null;
+function loadLeaflet(){
+  if(window.L) return Promise.resolve();
+  if(_leafletLoadPromise) return _leafletLoadPromise;
+  _leafletLoadPromise=new Promise((resolve,reject)=>{
+    const link=document.createElement('link');
+    link.rel='stylesheet'; link.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+    const script=document.createElement('script');
+    script.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload=()=>resolve();
+    script.onerror=()=>{ _leafletLoadPromise=null; reject(new Error('Kartenbibliothek konnte nicht geladen werden.')); };
+    document.body.appendChild(script);
+  });
+  return _leafletLoadPromise;
+}
+let _plakateMapInstance=null, _plakateMarkers=[];
+async function togglePlakateKarte(){
+  const mapEl=document.getElementById('plakate-map');
+  const btn=document.getElementById('plakate-karte-toggle-btn');
+  if(!mapEl || !btn) return;
+  if(mapEl.style.display==='none'){
+    btn.textContent='⏳ Lade Karte…'; btn.disabled=true;
+    try{
+      await loadLeaflet();
+      mapEl.style.display='block';
+      btn.textContent='Karte ausblenden'; btn.disabled=false;
+      if(!_plakateMapInstance){
+        _plakateMapInstance=L.map('plakate-map').setView([51.516,11.918],13); // Halle-Dölau, grobe Mitte
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap-Mitwirkende',maxZoom:19}).addTo(_plakateMapInstance);
+      } else {
+        setTimeout(()=>_plakateMapInstance.invalidateSize(),50);
+      }
+      renderPlakateMapMarkers();
+    }catch(e){
+      btn.textContent='Karte anzeigen'; btn.disabled=false;
+      alert('Karte konnte nicht geladen werden. Prüfe deine Internetverbindung.');
+    }
+  } else {
+    mapEl.style.display='none';
+    btn.textContent='Karte anzeigen';
+  }
+}
+function renderPlakateMapMarkers(){
+  if(!_plakateMapInstance || !window.L) return;
+  _plakateMarkers.forEach(m=>_plakateMapInstance.removeLayer(m));
+  _plakateMarkers=[];
+  const pts=[];
+  (plakate||[]).forEach(p=>{
+    if(typeof p.lat!=='number' || typeof p.lng!=='number') return;
+    const done=!!p.von;
+    const color=done?'#27ae60':'#f39c12';
+    const icon=L.divIcon({className:'',html:`<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`,iconSize:[16,16],iconAnchor:[8,8]});
+    const marker=L.marker([p.lat,p.lng],{icon}).addTo(_plakateMapInstance);
+    const status=done?('✅ '+esc(prettyName(p.von)||p.von)):'🟠 noch offen';
+    marker.bindPopup(`<strong>${esc(p.ort)}</strong><br>${esc(p.ortschaft||'')}<br>${status}`);
+    _plakateMarkers.push(marker);
+    pts.push([p.lat,p.lng]);
+  });
+  if(pts.length){ try{ _plakateMapInstance.fitBounds(pts,{padding:[30,30],maxZoom:15}); }catch(e){} }
 }
 
 // ===== GEBURTSTAGE IN TERMINE =====
