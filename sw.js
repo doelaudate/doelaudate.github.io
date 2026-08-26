@@ -1,4 +1,4 @@
-const CACHE = 'chor-doelau-v5';
+const CACHE = 'chor-doelau-v6';
 const OFFLINE_FILES = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -20,7 +20,24 @@ self.addEventListener('fetch', e => {
   try { url = new URL(req.url); } catch (_) { return; }
   // Nur eigene Domain aus dem Cache bedienen; Firebase/Identity/API immer direkt aus dem Netz.
   if (url.origin !== self.location.origin) return;
-  // Stale-while-revalidate: sofort aus dem Cache (schnell), im Hintergrund frische Version holen.
+
+  const isDocument = req.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('/index.html');
+  if (isDocument) {
+    // Die App-Seite selbst: IMMER zuerst das Netz versuchen (neue Funktionen sofort sichtbar, kein Warten
+    // auf den nächsten Öffnen-Zyklus). Nur bei fehlender Verbindung auf den Cache zurückfallen (Offline).
+    e.respondWith(
+      fetch(req).then(res => {
+        if (res && res.status === 200 && res.type === 'basic') {
+          caches.open(CACHE).then(cache => cache.put(req, res.clone()));
+        }
+        return res;
+      }).catch(() => caches.open(CACHE).then(cache => cache.match(req)))
+    );
+    return;
+  }
+
+  // Alles andere (Icons, Manifest …): stale-while-revalidate — sofort aus dem Cache (schnell),
+  // im Hintergrund frische Version nachladen. Ändert sich selten, daher unkritisch.
   e.respondWith(
     caches.open(CACHE).then(cache =>
       cache.match(req).then(cached => {
