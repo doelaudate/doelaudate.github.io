@@ -277,6 +277,9 @@ html.dark img, html.dark video, html.dark .no-invert{ filter: invert(1) hue-rota
 .uv-card>summary::-webkit-details-marker{display:none}
 .uv-card>summary::after{content:'▾';position:absolute;right:14px;top:10px;color:#9aa7b4;transition:transform .15s}
 .uv-card[open]>summary::after{transform:rotate(180deg)}
+/* Distanz-Badge über den nächstgelegenen offenen Plakat-Standorten auf der Karte */
+.plakate-dist-tip{background:#2563b5!important;color:#fff!important;border:none!important;font-weight:700;font-size:.7rem!important;padding:2px 6px!important;border-radius:8px!important;box-shadow:0 1px 3px rgba(0,0,0,.3)!important}
+.plakate-dist-tip::before{display:none!important}
 .satb-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .satb-cell{flex:1;min-width:82px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
 .satb-name{font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
@@ -3822,10 +3825,20 @@ async function saveMitglied(){
     const newUn=document.getElementById('edit-m-username')?.value.trim()||'';
     if(newUn && usernameTaken(newUn, m)){ alert('Dieser Benutzername ist schon vergeben. Bitte einen anderen wählen.'); return; }
   }
+  const alteAdresse=m.adresse||'';
   fields.forEach(f=>{const el=document.getElementById('edit-m-'+f);if(el)m[f]=el.value.trim();});
   await saveMitgliederToFB();
   closeModal();
   renderMitglieder();
+  // Adresse geändert -> Kartenposition im Hintergrund nachziehen (für „Mitglieder-Standorte" auf der Plakat-Karte)
+  if(m.adresse !== alteAdresse){
+    const idx=mitglieder.indexOf(m);
+    if(!m.adresse){ m.lat=null; m.lng=null; dbPut('mitglieder/'+idx+'/lat',null).catch(()=>{}); dbPut('mitglieder/'+idx+'/lng',null).catch(()=>{}); }
+    else {
+      const q=[m.adresse, m.plz].filter(Boolean).join(', ');
+      geocodeAddress(q).then(geo=>{ if(!geo) return; m.lat=geo.lat; m.lng=geo.lng; dbPut('mitglieder/'+idx+'/lat',geo.lat).catch(()=>{}); dbPut('mitglieder/'+idx+'/lng',geo.lng).catch(()=>{}); }).catch(()=>{});
+    }
+  }
 }
 
 async function saveMitgliederToFB(){
@@ -5258,19 +5271,48 @@ function renderPlakateMapMemberMarkers(){
     _plakateMemberMarkers.push(marker);
   });
 }
+function haversineKm(lat1,lon1,lat2,lon2){
+  const R=6371, toRad=x=>x*Math.PI/180;
+  const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
 function renderPlakateMapMarkers(){
   if(!_plakateMapInstance || !window.L) return;
   _plakateMarkers.forEach(m=>_plakateMapInstance.removeLayer(m));
   _plakateMarkers=[];
   const pts=[];
+
+  // Eigener Wohnort (falls Konto verknüpft & geocodiert) -> für „nächstgelegene offene Standorte"
+  // Unabhängig vom Mitglieder-Layer-Häkchen: das ist der eigene Standort, kein fremder.
+  const myIdx=myMemberIndex();
+  const myM=myIdx>=0?mitglieder[myIdx]:null;
+  const myLoc=(myM && typeof myM.lat==='number' && typeof myM.lng==='number')?{lat:myM.lat,lng:myM.lng}:null;
+  const openWithDist=[];
+  if(myLoc){
+    (plakate||[]).forEach(p=>{
+      if(typeof p.lat==='number' && typeof p.lng==='number' && !p.von){
+        openWithDist.push({key:p._key, dist:haversineKm(myLoc.lat,myLoc.lng,p.lat,p.lng)});
+      }
+    });
+    openWithDist.sort((a,b)=>a.dist-b.dist);
+  }
+  const distByKey={}; openWithDist.slice(0,3).forEach(x=>{ distByKey[x.key]=x.dist; });
+
   (plakate||[]).forEach(p=>{
     if(typeof p.lat!=='number' || typeof p.lng!=='number') return;
     const done=!!p.von;
+    const isNear = distByKey[p._key]!==undefined;
     const color=done?'#27ae60':'#f39c12';
-    const icon=L.divIcon({className:'',html:`<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`,iconSize:[16,16],iconAnchor:[8,8]});
+    const size = isNear?20:16;
+    const ring = isNear?'border:3px solid #2563b5;':'border:2px solid #fff;';
+    const icon=L.divIcon({className:'',html:`<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};${ring}box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`,iconSize:[size,size],iconAnchor:[size/2,size/2]});
     const marker=L.marker([p.lat,p.lng],{icon}).addTo(_plakateMapInstance);
     const status=done?('✅ '+esc(prettyName(p.von)||p.von)):'🟠 noch offen';
-    marker.bindPopup(`<strong>${esc(p.ort)}</strong><br>${esc(p.ortschaft||'')}<br>${status}`);
+    const distTxt = isNear?`<br><span style="color:#2563b5;font-weight:700">📍 ~${distByKey[p._key].toFixed(1)} km von dir</span>`:'';
+    const claimBtn = !done ? `<div style="margin-top:6px"><button onclick="claimPlakat('${p._key}')" style="background:#27ae60;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:.78rem;cursor:pointer;font-family:inherit">✋ Ich übernehme das</button></div>` : '';
+    marker.bindPopup(`<strong>${esc(p.ort)}</strong><br>${esc(p.ortschaft||'')}<br>${status}${distTxt}${claimBtn}`);
+    if(isNear){ try{ marker.bindTooltip('~'+distByKey[p._key].toFixed(1)+' km', {permanent:true, direction:'top', offset:[0,-size/2-2], className:'plakate-dist-tip'}); }catch(e){} }
     _plakateMarkers.push(marker);
     pts.push([p.lat,p.lng]);
   });
@@ -5679,6 +5721,7 @@ async function saveMeineKontaktdaten(){
   const i=myMemberIndex();
   const res=document.getElementById('kd-result');
   if(i<0){ if(res){res.style.color='#e74c3c';res.textContent='❌ Kein zugeordnetes Mitglied gefunden.';} return; }
+  const alteAdresse=mitglieder[i].adresse||'';
   const upd={
     handy:document.getElementById('kd-handy').value.trim(),
     telefon:document.getElementById('kd-telefon').value.trim(),
@@ -5693,6 +5736,22 @@ async function saveMeineKontaktdaten(){
     showToast('Kontaktdaten gespeichert','ok');
     setTimeout(()=>{if(res)res.textContent='';},3000);
     if(typeof renderMitglieder==='function') renderMitglieder();
+    // Adresse geändert -> Kartenposition (falls Mitglieder-Standorte irgendwo genutzt werden) im Hintergrund nachziehen
+    if(upd.adresse !== alteAdresse){
+      if(!upd.adresse){
+        mitglieder[i].lat=null; mitglieder[i].lng=null;
+        dbPut('mitglieder/'+i+'/lat', null).catch(()=>{});
+        dbPut('mitglieder/'+i+'/lng', null).catch(()=>{});
+      } else {
+        const q=[upd.adresse, upd.plz].filter(Boolean).join(', ');
+        geocodeAddress(q).then(geo=>{
+          if(!geo) return;
+          mitglieder[i].lat=geo.lat; mitglieder[i].lng=geo.lng;
+          dbPut('mitglieder/'+i+'/lat', geo.lat).catch(()=>{});
+          dbPut('mitglieder/'+i+'/lng', geo.lng).catch(()=>{});
+        }).catch(()=>{});
+      }
+    }
   }catch(e){ if(res){res.style.color='#e74c3c';res.textContent='❌ Speichern fehlgeschlagen: '+e;} showToast('Speichern fehlgeschlagen','err'); }
 }
 
