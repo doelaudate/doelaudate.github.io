@@ -866,7 +866,14 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
       <button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="togglePlakateKarte()" id="plakate-karte-toggle-btn">Karte anzeigen</button>
     </div>
     <div id="plakate-map" style="height:360px;border-radius:10px;display:none"></div>
-    <div style="font-size:.76rem;color:#999;margin-top:6px">🟠 offen · 🟢 übernommen. Standorte ohne Adresse erscheinen nicht auf der Karte.</div>
+    <div style="font-size:.76rem;color:#999;margin-top:6px">🟠 offen · 🟢 übernommen · 🟪 Mitglied (wenn eingeblendet). Standorte ohne Adresse erscheinen nicht auf der Karte.</div>
+    <div style="border-top:1px solid var(--line);margin-top:10px;padding-top:8px">
+      <label style="display:flex;align-items:center;gap:7px;font-size:.82rem;cursor:pointer;user-select:none">
+        <input type="checkbox" id="plakate-map-members-toggle" onchange="togglePlakateMapMembers()" style="accent-color:#8e44ad;width:16px;height:16px">
+        👥 Mitglieder-Standorte einblenden <span style="color:#999;font-weight:400">(zeigt Wohnorte auf der Karte, nur für dich – standardmäßig aus)</span>
+      </label>
+      <div id="plakate-map-members-status" style="font-size:.74rem;color:#999;min-height:14px;margin-top:2px"></div>
+    </div>
   </div>
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
@@ -5189,6 +5196,7 @@ async function togglePlakateKarte(){
         setTimeout(()=>_plakateMapInstance.invalidateSize(),50);
       }
       renderPlakateMapMarkers();
+      initPlakateMapMembersToggle(); // falls vorher aktiviert (nur auf diesem Gerät gemerkt), gleich mit anzeigen
     }catch(e){
       btn.textContent='Karte anzeigen'; btn.disabled=false;
       alert('Karte konnte nicht geladen werden. Prüfe deine Internetverbindung.');
@@ -5197,6 +5205,58 @@ async function togglePlakateKarte(){
     mapEl.style.display='none';
     btn.textContent='Karte anzeigen';
   }
+}
+// ===== Mitglieder-Standorte auf der Karte (Wohnorte) — standardmäßig AUS, jede*r schaltet nur für sich selbst =====
+const PLAKATE_MEMBERS_PREF_KEY='chor_plakate_map_members';
+let _plakateMemberMarkers=[];
+function initPlakateMapMembersToggle(){
+  const cb=document.getElementById('plakate-map-members-toggle'); if(!cb) return;
+  let on=false;
+  try{ on = localStorage.getItem(PLAKATE_MEMBERS_PREF_KEY)==='1'; }catch(e){}
+  cb.checked = on;
+  if(on) togglePlakateMapMembers(true);
+}
+async function togglePlakateMapMembers(silentInit){
+  const cb=document.getElementById('plakate-map-members-toggle'); if(!cb) return;
+  const on=cb.checked;
+  if(!silentInit){ try{ localStorage.setItem(PLAKATE_MEMBERS_PREF_KEY, on?'1':'0'); }catch(e){} }
+  const statusEl=document.getElementById('plakate-map-members-status');
+  if(_plakateMapInstance){ _plakateMemberMarkers.forEach(m=>_plakateMapInstance.removeLayer(m)); }
+  _plakateMemberMarkers=[];
+  if(!on){ if(statusEl) statusEl.textContent=''; return; }
+  if(!_plakateMapInstance) return; // Karte noch nicht offen -> wird beim Öffnen automatisch nachgeholt
+  const missing=(mitglieder||[]).filter(m=>m.adresse && typeof m.lat!=='number');
+  if(missing.length){
+    if(statusEl) statusEl.textContent='⏳ Wohnorte werden einmalig gesucht… (0/'+missing.length+')';
+    let done=0;
+    for(const m of missing){
+      const q=[m.adresse, m.plz].filter(Boolean).join(', ');
+      const geo=await geocodeAddress(q);
+      if(geo){
+        m.lat=geo.lat; m.lng=geo.lng;
+        const idx=mitglieder.indexOf(m);
+        dbPut('mitglieder/'+idx+'/lat', geo.lat).catch(()=>{});
+        dbPut('mitglieder/'+idx+'/lng', geo.lng).catch(()=>{});
+      }
+      done++;
+      if(statusEl) statusEl.textContent='⏳ Wohnorte werden einmalig gesucht… ('+done+'/'+missing.length+')';
+      await new Promise(r=>setTimeout(r,1100)); // Nominatim-Rate-Limit (max. 1 Anfrage/Sekunde)
+    }
+    if(statusEl) statusEl.textContent='';
+  }
+  renderPlakateMapMemberMarkers();
+}
+function renderPlakateMapMemberMarkers(){
+  if(!_plakateMapInstance || !window.L) return;
+  _plakateMemberMarkers.forEach(m=>_plakateMapInstance.removeLayer(m));
+  _plakateMemberMarkers=[];
+  (mitglieder||[]).forEach(m=>{
+    if(typeof m.lat!=='number' || typeof m.lng!=='number') return;
+    const icon=L.divIcon({className:'',html:`<div style="width:13px;height:13px;border-radius:3px;background:#8e44ad;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`,iconSize:[13,13],iconAnchor:[7,7]});
+    const marker=L.marker([m.lat,m.lng],{icon}).addTo(_plakateMapInstance);
+    marker.bindPopup(`👤 ${esc(prettyName(m.username)||memberName(m)||'Mitglied')}`);
+    _plakateMemberMarkers.push(marker);
+  });
 }
 function renderPlakateMapMarkers(){
   if(!_plakateMapInstance || !window.L) return;
