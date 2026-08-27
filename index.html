@@ -888,10 +888,17 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   <details class="card" style="margin-bottom:12px" ontoggle="if(this.open) initPlakateVorschlaege()">
     <summary style="cursor:pointer;font-weight:700;color:#1b3a6b;font-size:.92rem;user-select:none">🔍 Neue Standorte in der Nähe finden</summary>
     <div style="margin-top:10px">
-      <div style="font-size:.78rem;color:#888;margin-bottom:8px">Sucht echte Orte (Bäckereien, Kirchen, Läden …) aus OpenStreetMap in der Nähe – Standorte, die schon in deiner Liste stehen, werden herausgefiltert.</div>
+      <div style="font-size:.78rem;color:#888;margin-bottom:8px">Sucht echte Orte (Bäckereien, Kirchen, Vereine, Läden …) aus OpenStreetMap in der Nähe – Standorte, die schon in deiner Liste stehen, werden herausgefiltert.</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
         <input class="fl-input" type="text" id="pv-adresse" placeholder="Adresse oder Ortschaft (leer = dein Wohnort)" style="flex:1;min-width:180px;margin-bottom:0">
+        <select class="fl-input" id="pv-radius" style="width:auto;margin-bottom:0">
+          <option value="500">500 m</option>
+          <option value="800" selected>800 m</option>
+          <option value="1200">1,2 km</option>
+          <option value="2000">2 km</option>
+        </select>
         <button class="btn btn-primary btn-sm" onclick="searchPlakateVorschlaege()">🔍 Suchen</button>
+        <button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="searchGapArea()" title="Sucht dort, wo laut Abdeckungs-Tabelle die größte Lücke ist">🎯 Größte Lücke</button>
       </div>
       <div id="pv-status" style="font-size:.78rem;color:#888;min-height:16px;margin-bottom:6px"></div>
       <div id="pv-results"></div>
@@ -5335,8 +5342,8 @@ function renderPlakateMapMemberMarkers(){
 }
 
 // ===== Ortschafts-Abdeckung: wo wohnen viele Mitglieder, aber gibt es wenige Standorte? =====
-function renderPlakateAbdeckung(){
-  const el=document.getElementById('plakate-abdeckung'); if(!el) return;
+// Zentrale Berechnung (auch von searchGapArea genutzt, damit Tabelle & Vorschlag konsistent sind)
+function computeAbdeckungRows(){
   const byOrt={};
   (mitglieder||[]).forEach(m=>{ if(m.ortschaft){ const d=(byOrt[m.ortschaft]=byOrt[m.ortschaft]||{mitglieder:0,offen:0,gesamt:0}); d.mitglieder++; } });
   (plakate||[]).forEach(p=>{
@@ -5346,6 +5353,17 @@ function renderPlakateAbdeckung(){
   });
   const rows=Object.entries(byOrt).map(([ort,d])=>({ort,...d,luecke:d.mitglieder-d.gesamt}));
   rows.sort((a,b)=>b.luecke-a.luecke || b.mitglieder-a.mitglieder);
+  return rows;
+}
+// Mittelpunkt aller geocodierten Mitglieder einer Ortschaft — Suchzentrum für „Größte Lücke"
+function centroidForOrtschaft(ort){
+  const pts=(mitglieder||[]).filter(m=>m.ortschaft===ort && typeof m.lat==='number' && typeof m.lng==='number');
+  if(!pts.length) return null;
+  return { lat: pts.reduce((s,m)=>s+m.lat,0)/pts.length, lng: pts.reduce((s,m)=>s+m.lng,0)/pts.length };
+}
+function renderPlakateAbdeckung(){
+  const el=document.getElementById('plakate-abdeckung'); if(!el) return;
+  const rows=computeAbdeckungRows();
   if(!rows.length){ el.innerHTML='<div class="empty" style="padding:12px">Noch keine Daten. Mitglieder-Wohnorte müssen erst geocodiert sein (z.B. einmal „Mitglieder-Standorte einblenden" auf der Karte antippen).</div>'; return; }
   el.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;min-width:340px"><thead><tr><th>Ortschaft</th><th style="text-align:center">👥 Mitglieder</th><th style="text-align:center">📋 Standorte</th></tr></thead><tbody>`+
     rows.map(r=>`<tr><td>${esc(r.ort)}</td><td style="text-align:center">${r.mitglieder}</td><td style="text-align:center">${r.gesamt}${r.offen?` <span style="color:#c0620f">(${r.offen} offen)</span>`:''}</td></tr>`).join('')+
@@ -5357,25 +5375,63 @@ let _pvResults=[];
 function initPlakateVorschlaege(){ /* nur Container, kein Auto-Suchen — schont die kostenlose Overpass-API */ }
 async function searchNearbyPOIs(lat,lng,radiusM){
   radiusM=radiusM||800;
-  const q='[out:json][timeout:20];('+
+  const q='[out:json][timeout:25];('+
     'nwr["shop"~"^(bakery|convenience|supermarket|hairdresser|florist|beverages|books)$"](around:'+radiusM+','+lat+','+lng+');'+
-    'nwr["amenity"~"^(pharmacy|place_of_worship|kindergarten|doctors|library|bank|cafe|restaurant)$"](around:'+radiusM+','+lat+','+lng+');'+
+    'nwr["amenity"~"^(pharmacy|place_of_worship|kindergarten|doctors|library|bank|cafe|restaurant|fuel|community_centre|school|social_facility|social_centre)$"](around:'+radiusM+','+lat+','+lng+');'+
+    'nwr["leisure"~"^(fitness_centre|sports_centre)$"](around:'+radiusM+','+lat+','+lng+');'+
+    'nwr["club"="sport"](around:'+radiusM+','+lat+','+lng+');'+
     ');out center tags;';
   const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'data='+encodeURIComponent(q)});
   if(!r.ok) throw new Error('Overpass-Fehler '+r.status);
   const data=await r.json();
-  const CAT_ICON={bakery:'🥖',convenience:'🏪',supermarket:'🛒',hairdresser:'💇',florist:'💐',beverages:'🧃',books:'📚',pharmacy:'💊',place_of_worship:'⛪',kindergarten:'🧸',doctors:'🩺',library:'📖',bank:'🏦',cafe:'☕',restaurant:'🍽️'};
+  const CAT_ICON={
+    bakery:'🥖',convenience:'🏪',supermarket:'🛒',hairdresser:'💇',florist:'💐',beverages:'🧃',books:'📚',
+    pharmacy:'💊',place_of_worship:'⛪',kindergarten:'🧸',doctors:'🩺',library:'📖',bank:'🏦',cafe:'☕',restaurant:'🍽️',
+    fuel:'⛽',community_centre:'🏛️',social_centre:'🏛️',school:'🏫',social_facility:'🧓',
+    fitness_centre:'💪',sports_centre:'🏟️',sport:'⚽'
+  };
   return (data.elements||[]).map(el=>{
     const tags=el.tags||{}; const name=tags.name; if(!name) return null;
     const plat=el.type==='node'?el.lat:(el.center&&el.center.lat);
     const plon=el.type==='node'?el.lon:(el.center&&el.center.lon);
     if(typeof plat!=='number'||typeof plon!=='number') return null;
-    const cat=tags.shop||tags.amenity||'';
+    const cat=tags.shop||tags.amenity||tags.leisure||tags.club||'';
     return {name, lat:plat, lng:plon, icon:CAT_ICON[cat]||'📍', dist:haversineKm(lat,lng,plat,plon)};
   }).filter(Boolean).sort((a,b)=>a.dist-b.dist);
 }
-async function searchPlakateVorschlaege(){
+// Duplikat, wenn Name ähnlich ODER ein bestehender geocodierter Standort in <=50m liegt
+// (Name-Abgleich allein übersieht Umbenennungen/Schreibvarianten am selben Ort; Namensabgleich
+// bleibt zusätzlich nötig für Standorte ohne Koordinaten, z.B. „Schaukasten Kinderspielplatz").
+function isDuplicatePlakat(poi){
+  return (plakate||[]).some(p=>{
+    const pn=_norm(p.ort||'');
+    if(pn && (pn.includes(_norm(poi.name))||_norm(poi.name).includes(pn))) return true;
+    if(typeof p.lat==='number' && typeof p.lng==='number'){
+      return haversineKm(p.lat,p.lng,poi.lat,poi.lng) < 0.05; // 50 m ≈ selbes Gebäude
+    }
+    return false;
+  });
+}
+async function runPlakateSuche(lat,lng,label,radiusM){
   const statusEl=document.getElementById('pv-status'), resEl=document.getElementById('pv-results');
+  radiusM=radiusM||parseInt((document.getElementById('pv-radius')||{}).value,10)||800;
+  const radiusLabel = radiusM>=1000 ? (radiusM/1000).toLocaleString('de-DE',{maximumFractionDigits:1})+' km' : radiusM+' m';
+  if(statusEl) statusEl.textContent='⏳ Suche Orte in der Nähe von '+label+'…';
+  if(resEl) resEl.innerHTML='';
+  try{
+    const pois=await searchNearbyPOIs(lat,lng,radiusM);
+    _pvResults=pois.filter(p=>!isDuplicatePlakat(p));
+    if(!_pvResults.length){ if(statusEl) statusEl.textContent='ℹ️ Keine neuen Vorschläge gefunden (im Umkreis von ~'+radiusLabel+' ist schon alles erfasst, oder es gibt dort nichts Passendes).'; return; }
+    if(statusEl) statusEl.textContent='✅ '+_pvResults.length+' Vorschlag'+(_pvResults.length===1?'':'e')+' gefunden (im Umkreis von ~'+radiusLabel+'):';
+    if(resEl) resEl.innerHTML=_pvResults.slice(0,20).map((p,i)=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px">
+        <span style="font-size:.86rem">${p.icon} ${esc(p.name)} <span style="color:#999;font-size:.76rem">· ~${p.dist.toFixed(1)} km</span></span>
+        <button class="btn btn-sm btn-success" onclick="addSuggestedPlakat(${i})">＋ Übernehmen</button>
+      </div>`).join('');
+  }catch(e){ if(statusEl) statusEl.textContent='❌ Suche fehlgeschlagen (OpenStreetMap gerade nicht erreichbar). Bitte später erneut versuchen.'; }
+}
+async function searchPlakateVorschlaege(){
+  const statusEl=document.getElementById('pv-status');
   const q=(document.getElementById('pv-adresse').value||'').trim();
   let lat,lng,label;
   if(!q){
@@ -5388,20 +5444,18 @@ async function searchPlakateVorschlaege(){
     if(!geo){ if(statusEl) statusEl.textContent='❌ Adresse nicht gefunden.'; return; }
     lat=geo.lat; lng=geo.lng; label='„'+q+'"';
   }
-  if(statusEl) statusEl.textContent='⏳ Suche Orte in der Nähe von '+label+'…';
-  if(resEl) resEl.innerHTML='';
-  try{
-    const pois=await searchNearbyPOIs(lat,lng,800);
-    const existing=(plakate||[]).map(p=>_norm(p.ort));
-    _pvResults=pois.filter(p=>!existing.some(e=>e.includes(_norm(p.name))||_norm(p.name).includes(e)));
-    if(!_pvResults.length){ if(statusEl) statusEl.textContent='ℹ️ Keine neuen Vorschläge gefunden (im Umkreis von ~800 m ist schon alles erfasst, oder es gibt dort nichts Passendes).'; return; }
-    if(statusEl) statusEl.textContent='✅ '+_pvResults.length+' Vorschlag'+(_pvResults.length===1?'':'e')+' gefunden (im Umkreis von ~800 m):';
-    if(resEl) resEl.innerHTML=_pvResults.slice(0,20).map((p,i)=>`
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px">
-        <span style="font-size:.86rem">${p.icon} ${esc(p.name)} <span style="color:#999;font-size:.76rem">· ~${p.dist.toFixed(1)} km</span></span>
-        <button class="btn btn-sm btn-success" onclick="addSuggestedPlakat(${i})">＋ Übernehmen</button>
-      </div>`).join('');
-  }catch(e){ if(statusEl) statusEl.textContent='❌ Suche fehlgeschlagen (OpenStreetMap gerade nicht erreichbar). Bitte später erneut versuchen.'; }
+  await runPlakateSuche(lat,lng,label);
+}
+// „🎯 Größte Lücke": sucht automatisch dort, wo laut Abdeckungs-Tabelle am meisten Mitglieder
+// im Verhältnis zu erfassten Standorten wohnen (Mittelpunkt der geocodierten Mitglieder dort).
+async function searchGapArea(){
+  const statusEl=document.getElementById('pv-status');
+  const rows=computeAbdeckungRows();
+  const candidate=rows.find(r=>r.luecke>0 && centroidForOrtschaft(r.ort));
+  if(!candidate){ if(statusEl) statusEl.textContent='ℹ️ Keine Ortschaft mit bekannter Lücke und geocodierten Mitgliedern gefunden.'; return; }
+  const c=centroidForOrtschaft(candidate.ort);
+  const adresseEl=document.getElementById('pv-adresse'); if(adresseEl) adresseEl.value=candidate.ort;
+  await runPlakateSuche(c.lat, c.lng, '„'+candidate.ort+'" (größte Lücke: '+candidate.luecke+')');
 }
 async function addSuggestedPlakat(i){
   if(!canManagePlakate()){ alert('Bitte zuerst anmelden.'); return; }
