@@ -5016,10 +5016,11 @@ function matchOrtschaftFromAddress(addr){
   }
   return null;
 }
-async function geocodeAddress(query){
-  if(!query) return null;
+const GEOCODE_HALLE_CENTER={lat:51.516,lng:11.918}; // Dölau, gleicher Mittelpunkt wie die App-Karte
+const GEOCODE_MAX_KM=20; // Salzmünde/Teutschenthal/Zappendorf etc. sind noch ~10-15km entfernt
+async function _geocodeOne(q){
   try{
-    const url='https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=de&q='+encodeURIComponent(query);
+    const url='https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=de&q='+encodeURIComponent(q);
     const r=await fetch(url,{headers:{'Accept-Language':'de'}});
     if(!r.ok) return null;
     const arr=await r.json();
@@ -5027,8 +5028,28 @@ async function geocodeAddress(query){
     const hit=arr[0];
     const lat=parseFloat(hit.lat), lng=parseFloat(hit.lon);
     if(isNaN(lat)||isNaN(lng)) return null;
+    // Sanity-Check: Treffer muss in der Region um Halle liegen — schützt vor gleichnamigen Straßen in
+    // anderen Städten (z.B. gibt es "Von-Kügelgen-Straße" auch bei Leipzig, ~30km entfernt; ohne diesen
+    // Check hätte ein Mitglied dort fälschlich auf der Karte gelandet)
+    if(haversineKm(GEOCODE_HALLE_CENTER.lat,GEOCODE_HALLE_CENTER.lng,lat,lng)>GEOCODE_MAX_KM) return null;
     return {lat,lng,ortschaft:matchOrtschaftFromAddress(hit.address)};
   }catch(e){ console.warn('Geocoding fehlgeschlagen',e); return null; }
+}
+// Mehrere Anläufe: exakt -> ohne Hausnummer (Nominatim kennt manche Hausnummern nicht, die Straße mit
+// ungefährer Position aber schon) -> ohne Hausnummer + explizit "Halle (Saale)" zur Disambiguierung.
+async function geocodeAddress(query){
+  if(!query) return null;
+  let res=await _geocodeOne(query);
+  if(res) return res;
+  const parts=query.split(',');
+  const stripped=parts[0].replace(/\s+\d+[a-zA-Z]?\s*$/,'').trim();
+  if(stripped && stripped!==parts[0].trim()){
+    res=await _geocodeOne([stripped,...parts.slice(1)].join(','));
+    if(res) return res;
+    res=await _geocodeOne(stripped+', Halle (Saale)');
+    if(res) return res;
+  }
+  return null;
 }
 // Koordinaten -> Adresstext + Ortschaft (für POI-Vorschläge und Rückwärts-Auflösung)
 async function reverseGeocode(lat,lng){
@@ -5053,16 +5074,26 @@ async function addPlakat(){
   let ortschaft=_plOrtschaftValue('pl-ortschaft');
   let lat=null, lng=null;
   const statusEl=document.getElementById('pl-geocode-status');
+  const sel=document.getElementById('pl-ortschaft');
+  const userTouched=sel && sel.dataset.touched==='1';
   if(adresse){
     if(statusEl) statusEl.textContent='⏳ Adresse wird gesucht…';
     const geo=await geocodeAddress(adresse);
-    const sel=document.getElementById('pl-ortschaft');
-    const userTouched=sel && sel.dataset.touched==='1';
     if(geo){
       lat=geo.lat; lng=geo.lng;
       if(geo.ortschaft && !userTouched) ortschaft=geo.ortschaft;
       if(statusEl) statusEl.textContent='📍 Standort gefunden'+(geo.ortschaft?' · '+geo.ortschaft:'');
     } else if(statusEl) statusEl.textContent='ℹ️ Adresse nicht gefunden – wird ohne Karten-Position gespeichert.';
+  } else if(ort){
+    // Keine Adresse angegeben: viele Standorte tragen ihren Ort schon im Namen ("Tankstelle Dölau") —
+    // Position anhand des Namens versuchen, bevor ganz auf eine Karten-Position verzichtet wird.
+    if(statusEl) statusEl.textContent='⏳ Position wird anhand des Namens gesucht…';
+    const geo=await geocodeAddress(ort+', Halle (Saale)');
+    if(geo){
+      lat=geo.lat; lng=geo.lng;
+      if(geo.ortschaft && !userTouched) ortschaft=geo.ortschaft;
+      if(statusEl) statusEl.textContent='📍 Ungefähre Position anhand des Namens gefunden'+(geo.ortschaft?' · '+geo.ortschaft:'')+' — für mehr Genauigkeit gern noch eine Adresse ergänzen.';
+    } else if(statusEl) statusEl.textContent='';
   } else if(statusEl) statusEl.textContent='';
   const entry={ort,ortschaft,anzahl,adresse,notiz,von:'',erstellt:new Date().toISOString()};
   if(lat!=null && lng!=null){ entry.lat=lat; entry.lng=lng; }
@@ -5129,7 +5160,26 @@ async function savePlakatEdit(){
       if(geo.ortschaft && !userTouched) ortschaft=geo.ortschaft;
       if(statusEl) statusEl.textContent='📍 Position aktualisiert'+(geo.ortschaft?' · '+geo.ortschaft:'');
     } else if(statusEl) statusEl.textContent='ℹ️ Adresse nicht gefunden.';
-  } else if(!adresse){ lat=null; lng=null; }
+  } else if(!adresse){
+    // Keine Adresse (mehr) gesetzt: bei bewusst entfernter Adresse, geändertem Namen oder wenn noch nie
+    // eine Position bekannt war, per Namen versuchen ("Tankstelle Dölau" trägt den Ort schon im Namen) —
+    // sonst (unveränderter Name, schon per Namen geocodiert) unnötige Nominatim-Anfragen vermeiden.
+    const clearedAddress = existing && existing.adresse;
+    const ortChanged = !existing || (existing.ort||'')!==ort;
+    if(clearedAddress || ortChanged || lat==null){
+      if(ort){
+        if(statusEl) statusEl.textContent='⏳ Position wird anhand des Namens gesucht…';
+        const geo=await geocodeAddress(ort+', Halle (Saale)');
+        const sel=document.getElementById('ple-ortschaft');
+        const userTouched=sel && sel.dataset.touched==='1';
+        if(geo){
+          lat=geo.lat; lng=geo.lng;
+          if(geo.ortschaft && !userTouched) ortschaft=geo.ortschaft;
+          if(statusEl) statusEl.textContent='📍 Ungefähre Position anhand des Namens gefunden'+(geo.ortschaft?' · '+geo.ortschaft:'');
+        } else { lat=null; lng=null; if(statusEl) statusEl.textContent=''; }
+      } else { lat=null; lng=null; }
+    }
+  }
   const upd={ort, ortschaft,
     anzahl:document.getElementById('ple-anzahl').value.trim(),
     adresse,
