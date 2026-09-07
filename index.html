@@ -3433,6 +3433,7 @@ function terminHtml(t,past=false){
     ${(!past&&!infoOnly)?`<div class="vote-row" id="vrow-${t.id}">${buildVoteRow(t)}</div>`:''}
     ${infoOnly&&t.beschreibung?`<div style="font-size:.85rem;color:#555;margin:2px 0 4px">${esc(t.beschreibung)}</div>`:''}
     ${setlisteHtml(t)}
+    ${ablaufplanBlock(t)}
     ${!past?fahrtenBlock(t):''}
     ${!past?aufgabenBlock(t):''}
     ${showRueck?rueckmeldungenHtml(t, bd):''}
@@ -6454,6 +6455,80 @@ async function deleteAufgabe(terminId, taskId){
   if(!uiEdit('termine')) return;
   if(aufgaben[terminId]) delete aufgaben[terminId][taskId];
   await dbDel('aufgaben/'+encodeURIComponent(terminId)+'/'+taskId).catch(e=>console.warn(e));
+  renderTermine();
+}
+
+// ===== ABLAUFPLAN (pro Termin, z.B. für mehrtägige Events wie das Chorlager) =====
+// Liegt direkt am Termin (t.ablaufplan, Array {id,zeit,text}) statt in einer eigenen Sammlung,
+// weil nur Bearbeiter schreiben (kein Mitglieder-Beitrag wie bei Fahrten/Aufgaben) — granulare
+// PATCH auf termine/<idx>/ablaufplan, kein Ganz-Array-PUT der gesamten Termine.
+function ablaufplanBlock(t){
+  const canEdit=uiEdit('termine');
+  const items=Array.isArray(t.ablaufplan)?t.ablaufplan:[];
+  if(!items.length && !canEdit) return '';
+  const rows=items.map((it,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f2f2f2;font-size:.85rem">
+      <span style="font-weight:700;color:#1b3a6b;min-width:56px">${esc(it.zeit||'')}</span>
+      <span style="flex:1">${esc(it.text||'')}</span>
+      ${canEdit?`<span style="display:flex;gap:1px;flex-shrink:0">
+        ${i>0?`<button class="btn btn-sm" style="background:transparent;color:#888;padding:1px 5px;font-size:.72rem" onclick="moveAblaufplanPunkt('${esc(t.id)}','${it.id}',-1)" title="nach oben">↑</button>`:''}
+        ${i<items.length-1?`<button class="btn btn-sm" style="background:transparent;color:#888;padding:1px 5px;font-size:.72rem" onclick="moveAblaufplanPunkt('${esc(t.id)}','${it.id}',1)" title="nach unten">↓</button>`:''}
+        <button class="btn btn-sm" style="background:transparent;color:#1d4e96;padding:1px 5px;font-size:.72rem" onclick="editAblaufplanPunkt('${esc(t.id)}','${it.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm" style="opacity:1;position:static;padding:1px 6px;font-size:.72rem" onclick="deleteAblaufplanPunkt('${esc(t.id)}','${it.id}')">✕</button>
+      </span>`:''}
+    </div>`).join('');
+  const addForm=canEdit?`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+      <input class="fl-input" type="text" id="ap-zeit-${esc(t.id)}" placeholder="Zeit (z.B. Fr 18:00)" style="width:120px;margin-bottom:0;font-size:.8rem">
+      <input class="fl-input" type="text" id="ap-text-${esc(t.id)}" placeholder="Programmpunkt" style="flex:1;min-width:140px;margin-bottom:0;font-size:.8rem">
+      <button class="btn btn-sm btn-primary" style="font-size:.78rem" onclick="addAblaufplanPunkt('${esc(t.id)}')">＋</button>
+    </div>`:'';
+  return `<details class="t-coll"${items.length?' open':''}><summary>📋 Ablaufplan${items.length?` · ${items.length}`:''}</summary><div>
+    ${rows||'<div style="font-size:.8rem;color:#aaa">Noch keine Punkte.</div>'}
+    ${addForm}
+  </div></details>`;
+}
+async function addAblaufplanPunkt(terminId){
+  if(!uiEdit('termine')){ alert('Nur im Bearbeiten-Modus.'); return; }
+  const t=termine.find(x=>x.id===terminId); if(!t) return;
+  const idx=termine.indexOf(t);
+  const zeitEl=document.getElementById('ap-zeit-'+terminId), textEl=document.getElementById('ap-text-'+terminId);
+  const zeit=(zeitEl&&zeitEl.value.trim())||'';
+  const text=(textEl&&textEl.value.trim())||'';
+  if(!text){ alert('Bitte einen Programmpunkt eingeben.'); textEl&&textEl.focus(); return; }
+  if(!Array.isArray(t.ablaufplan)) t.ablaufplan=[];
+  t.ablaufplan.push({id:uid(), zeit, text});
+  await dbPut('termine/'+idx+'/ablaufplan', t.ablaufplan).catch(e=>console.warn(e));
+  if(zeitEl) zeitEl.value=''; if(textEl) textEl.value='';
+  renderTermine();
+}
+async function editAblaufplanPunkt(terminId, itemId){
+  if(!uiEdit('termine')) return;
+  const t=termine.find(x=>x.id===terminId); if(!t) return;
+  const idx=termine.indexOf(t);
+  const item=(t.ablaufplan||[]).find(x=>x.id===itemId); if(!item) return;
+  const zeit=prompt('Zeit:', item.zeit||''); if(zeit===null) return;
+  const text=prompt('Programmpunkt:', item.text||''); if(text===null) return;
+  item.zeit=zeit.trim(); item.text=text.trim();
+  await dbPut('termine/'+idx+'/ablaufplan', t.ablaufplan).catch(e=>console.warn(e));
+  renderTermine();
+}
+async function deleteAblaufplanPunkt(terminId, itemId){
+  if(!uiEdit('termine')) return;
+  const t=termine.find(x=>x.id===terminId); if(!t) return;
+  const idx=termine.indexOf(t);
+  t.ablaufplan=(t.ablaufplan||[]).filter(x=>x.id!==itemId);
+  await dbPut('termine/'+idx+'/ablaufplan', t.ablaufplan).catch(e=>console.warn(e));
+  renderTermine();
+}
+async function moveAblaufplanPunkt(terminId, itemId, dir){
+  if(!uiEdit('termine')) return;
+  const t=termine.find(x=>x.id===terminId); if(!t) return;
+  const idx=termine.indexOf(t);
+  const arr=t.ablaufplan||[];
+  const i=arr.findIndex(x=>x.id===itemId); if(i<0) return;
+  const j=i+dir; if(j<0||j>=arr.length) return;
+  [arr[i],arr[j]]=[arr[j],arr[i]];
+  await dbPut('termine/'+idx+'/ablaufplan', arr).catch(e=>console.warn(e));
   renderTermine();
 }
 
