@@ -894,6 +894,13 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
       <div id="plakate-abdeckung"></div>
     </div>
   </details>
+  <details class="card admin-only" style="margin-bottom:12px" ontoggle="if(this.open) renderZuteilungsVorschlaege()">
+    <summary style="cursor:pointer;font-weight:700;color:#1b3a6b;font-size:.92rem;user-select:none">🎯 Zuteilungsvorschläge <span style="font-weight:400;color:#999;font-size:.78rem">(nur Admins)</span></summary>
+    <div style="margin-top:10px">
+      <div style="font-size:.78rem;color:#888;margin-bottom:8px">Offene Standorte, für die ein nahegelegenes Mitglied (≤5 km, max. 2 Vorschläge pro Person) infrage käme — reine Vorschläge, keine automatische Zuweisung. Einfach anrufen/schreiben und fragen.</div>
+      <div id="plakate-zuteilung"></div>
+    </div>
+  </details>
   <details class="card admin-only" style="margin-bottom:12px" ontoggle="if(this.open) initPlakateVorschlaege()">
     <summary style="cursor:pointer;font-weight:700;color:#1b3a6b;font-size:.92rem;user-select:none">🔍 Neue Standorte in der Nähe finden <span style="font-weight:400;color:#999;font-size:.78rem">(nur Admins)</span></summary>
     <div style="margin-top:10px">
@@ -5461,6 +5468,65 @@ function renderPlakateAbdeckung(){
   el.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;min-width:340px"><thead><tr><th>Ortschaft</th><th style="text-align:center">👥 Mitglieder</th><th style="text-align:center">📋 Standorte</th></tr></thead><tbody>`+
     rows.map(r=>`<tr><td>${esc(r.ort)}</td><td style="text-align:center">${r.mitglieder}</td><td style="text-align:center">${r.gesamt}${r.offen?` <span style="color:#c0620f">(${r.offen} offen)</span>`:''}</td></tr>`).join('')+
     `</tbody></table></div>`;
+}
+
+// ===== Zuteilungsvorschläge: offene Standorte <-> nahegelegene Mitglieder (reiner Vorschlag, keine Zuweisung) =====
+const ZUTEILUNG_MAX_KM=5;          // Vorschläge nur innerhalb dieser Entfernung
+const ZUTEILUNG_MAX_PRO_MITGLIED=2; // über mehrere Personen verteilen statt eine zu überladen
+function computeZuteilungsVorschlaege(){
+  const openPlakate=(plakate||[]).filter(p=>!p.von && typeof p.lat==='number' && typeof p.lng==='number');
+  const geoMembers=(mitglieder||[]).filter(m=>typeof m.lat==='number' && typeof m.lng==='number');
+  const pairs=[];
+  openPlakate.forEach(p=>{
+    geoMembers.forEach(m=>{
+      const dist=haversineKm(p.lat,p.lng,m.lat,m.lng);
+      if(dist<=ZUTEILUNG_MAX_KM) pairs.push({p,m,dist});
+    });
+  });
+  // Nächste Paare zuerst zuteilen (greedy): jeder Standort höchstens einmal, jedes Mitglied höchstens
+  // ZUTEILUNG_MAX_PRO_MITGLIED mal — verhindert, dass ein Standort mehrfach oder eine Person mit allen
+  // Standorten in ihrer Nähe vorgeschlagen wird.
+  pairs.sort((a,b)=>a.dist-b.dist);
+  const assignedStandort=new Set(), countByMember=new Map(), result=[];
+  pairs.forEach(({p,m,dist})=>{
+    if(assignedStandort.has(p._key)) return;
+    const mKey=memberKey(m);
+    const cnt=countByMember.get(mKey)||0;
+    if(cnt>=ZUTEILUNG_MAX_PRO_MITGLIED) return;
+    assignedStandort.add(p._key);
+    countByMember.set(mKey,cnt+1);
+    result.push({p,m,dist});
+  });
+  result.sort((a,b)=>(a.p.ortschaft||'').localeCompare(b.p.ortschaft||'') || a.dist-b.dist);
+  return result;
+}
+function renderZuteilungsVorschlaege(){
+  const el=document.getElementById('plakate-zuteilung'); if(!el) return;
+  const rows=computeZuteilungsVorschlaege();
+  const openCount=(plakate||[]).filter(p=>!p.von).length;
+  if(!rows.length){
+    el.innerHTML='<div class="empty" style="padding:12px">'+(openCount
+      ? 'Keine Vorschläge möglich — in der Nähe (≤'+ZUTEILUNG_MAX_KM+' km) der offenen Standorte sind aktuell keine geocodierten Mitglieder bekannt.'
+      : 'Aktuell keine offenen Standorte übrig.')+'</div>';
+    return;
+  }
+  el.innerHTML=rows.map(({p,m,dist})=>{
+    const name=shortName(m.vorname,m.nachname)||memberName(m)||'?';
+    const digitsHandy=(m.handy||'').replace(/[^\d]/g,'');
+    const digitsAny=(m.handy||m.telefon||'').replace(/[^\d+]/g,'');
+    const waNr = digitsHandy ? digitsHandy.replace(/^0/,'49') : ''; // deutsche Nummer -> internationales Format für wa.me
+    const tel = digitsAny ? `<a href="tel:${esc(digitsAny)}" title="Anrufen" style="text-decoration:none;font-size:1.05rem">📞</a>` : '';
+    const wa = waNr ? `<a href="https://wa.me/${esc(waNr)}" target="_blank" rel="noopener" title="WhatsApp" style="text-decoration:none;font-size:1.05rem">💬</a>` : '';
+    const contact = (tel||wa) ? `<span style="display:flex;gap:8px">${tel}${wa}</span>` : '<span style="color:#bbb;font-size:.72rem">keine Kontaktdaten</span>';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px">
+        <strong style="font-size:.86rem">${esc(p.ort)}</strong><br>
+        <span style="font-size:.74rem;color:#888">${esc(p.ortschaft||'')}</span>
+      </div>
+      <div style="font-size:.84rem;min-width:120px">${esc(name)} <span style="color:#2563b5;font-weight:600">~${dist.toFixed(1)} km</span></div>
+      ${contact}
+    </div>`;
+  }).join('');
 }
 
 // ===== Neue Standort-Vorschläge (echte Orte via OpenStreetMap/Overpass in der Nähe) =====
