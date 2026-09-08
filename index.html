@@ -1045,8 +1045,10 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
         <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-liedwunsch" style="accent-color:#2563b5;width:16px;height:16px"> 🎵 Neuer Liedwunsch</label>
         <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-kommentar" style="accent-color:#2563b5;width:16px;height:16px"> 💬 Neuer Kommentar</label>
         <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-umfrage" style="accent-color:#2563b5;width:16px;height:16px"> 📊 Neue Umfrage</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-pinnwand" style="accent-color:#2563b5;width:16px;height:16px"> 📌 Neue Ankündigung (Pinnwand)</label>
         <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="checkbox" id="push-ev-absage" style="accent-color:#2563b5;width:16px;height:16px"> ❌ Chorleitung bei Absagen benachrichtigen</label>
       </div>
+      <div style="font-size:.76rem;color:#999;margin-top:8px">Jede*r Mitglied kann diese Kategorien zusätzlich für sich selbst ab-/anwählen (in den persönlichen Einstellungen) — hier legst du nur fest, welche Kategorien überhaupt push-fähig sind.</div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">
         <span style="font-size:.84rem;color:#444">🔔 Erinnerung vor Proben/Terminen:</span>
         <select id="push-remind-days" class="fl-input" style="width:auto;font-size:.82rem;padding:5px 8px">
@@ -1264,6 +1266,21 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     <div id="push-result" style="font-size:.82rem;min-height:16px;margin-top:8px"></div>
     <div id="push-ios-hint" style="display:none;font-size:.78rem;color:#888;margin-top:10px;background:#f4f6f8;border-radius:6px;padding:8px 10px;line-height:1.4">
       📱 <strong>iPhone:</strong> Push funktioniert nur, wenn die App über „Teilen → Zum Home-Bildschirm" installiert wurde und von dort geöffnet wird.
+    </div>
+    <div id="push-myprefs" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+      <div style="font-size:.82rem;color:#444;font-weight:600;margin-bottom:8px">Wobei möchtest du benachrichtigt werden?</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:.86rem;cursor:pointer"><input type="checkbox" id="mypush-ev-termin" style="accent-color:#2563b5;width:16px;height:16px"> 🗓️ Neue Termine</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.86rem;cursor:pointer"><input type="checkbox" id="mypush-ev-probe" style="accent-color:#2563b5;width:16px;height:16px"> 🎹 Neue Proben</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.86rem;cursor:pointer"><input type="checkbox" id="mypush-ev-liedwunsch" style="accent-color:#2563b5;width:16px;height:16px"> 🎵 Liedwünsche</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.86rem;cursor:pointer"><input type="checkbox" id="mypush-ev-kommentar" style="accent-color:#2563b5;width:16px;height:16px"> 💬 Kommentare</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.86rem;cursor:pointer"><input type="checkbox" id="mypush-ev-umfrage" style="accent-color:#2563b5;width:16px;height:16px"> 📊 Umfragen</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.86rem;cursor:pointer"><input type="checkbox" id="mypush-ev-pinnwand" style="accent-color:#2563b5;width:16px;height:16px"> 📌 Ankündigungen</label>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+        <button class="btn btn-primary btn-sm" onclick="saveMyPushPrefs()">💾 Speichern</button>
+        <span id="mypush-result" style="font-size:.8rem"></span>
+      </div>
     </div>
   </div>
 </div>
@@ -6323,12 +6340,36 @@ async function renderPushStatus(){
     st.innerHTML='<span style="color:#e67e22">⚠️ Dieses Gerät/Browser unterstützt keine Push-Nachrichten.</span>';
     if(btn) btn.style.display='none'; return;
   }
+  const prefsBox=document.getElementById('push-myprefs');
   try{
     const reg=await navigator.serviceWorker.ready;
     const sub=await reg.pushManager.getSubscription();
-    if(sub){ st.innerHTML='<span style="color:#27ae60">✅ Auf diesem Gerät aktiviert</span>'; if(btn){btn.textContent='🔕 Benachrichtigungen ausschalten'; btn.className='btn btn-gray';} }
-    else { st.innerHTML='<span style="color:#888">Nicht aktiviert</span>'; if(btn){btn.textContent='🔔 Benachrichtigungen aktivieren'; btn.className='btn btn-primary';} }
+    if(sub){
+      st.innerHTML='<span style="color:#27ae60">✅ Auf diesem Gerät aktiviert</span>'; if(btn){btn.textContent='🔕 Benachrichtigungen ausschalten'; btn.className='btn btn-gray';}
+      if(prefsBox){ prefsBox.style.display='block'; loadMyPushPrefs(); }
+    } else {
+      st.innerHTML='<span style="color:#888">Nicht aktiviert</span>'; if(btn){btn.textContent='🔔 Benachrichtigungen aktivieren'; btn.className='btn btn-primary';}
+      if(prefsBox) prefsBox.style.display='none';
+    }
   }catch(e){ st.textContent=''; }
+}
+// Kategorien, die sowohl Admin (global push-fähig?) als auch jedes Mitglied (für sich selbst) steuern kann
+const PUSH_CATEGORIES=['termin','probe','liedwunsch','kommentar','umfrage','pinnwand'];
+// Eigene Kategorien-Auswahl laden (Standard: alles an, wie bisher — Mitglieder, die die Einstellung nie
+// anfassen, bekommen weiterhin alles, kein Verhaltenswechsel für sie).
+async function loadMyPushPrefs(){
+  if(!currentUser) return;
+  try{
+    const r=await dbFetch(DB+'/pushsubs/'+currentUser.uid+'/prefs.json');
+    const prefs=(r.ok?await r.json():null)||{};
+    PUSH_CATEGORIES.forEach(k=>{ const el=document.getElementById('mypush-ev-'+k); if(el) el.checked = prefs[k]!==false; });
+  }catch(e){}
+}
+async function saveMyPushPrefs(){
+  if(!currentUser) return;
+  const prefs={}; PUSH_CATEGORIES.forEach(k=>{ const el=document.getElementById('mypush-ev-'+k); prefs[k]=el?!!el.checked:true; });
+  await dbFetch(DB+'/pushsubs/'+currentUser.uid+'/prefs.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(prefs)}).catch(e=>console.warn(e));
+  const r=document.getElementById('mypush-result'); if(r){ r.style.color='#27ae60'; r.textContent='✅ Gespeichert'; setTimeout(()=>{if(r)r.textContent='';},2000); }
 }
 
 async function togglePush(){
@@ -6359,7 +6400,7 @@ async function togglePush(){
 async function loadPushSettings(){
   try{
     const r=await dbFetch(DB+'/settings/push.json'); pushSettings=(r.ok?await r.json():null)||{};
-    const m={termin:'push-ev-termin',probe:'push-ev-probe',liedwunsch:'push-ev-liedwunsch',kommentar:'push-ev-kommentar',umfrage:'push-ev-umfrage'};
+    const m={termin:'push-ev-termin',probe:'push-ev-probe',liedwunsch:'push-ev-liedwunsch',kommentar:'push-ev-kommentar',umfrage:'push-ev-umfrage',pinnwand:'push-ev-pinnwand'};
     for(const k in m){ const el=document.getElementById(m[k]); if(el) el.checked=!!pushSettings[k]; }
     const ab=document.getElementById('push-ev-absage'); if(ab) ab.checked = pushSettings.absage!==false; // Standard an
     const rd=document.getElementById('push-remind-days'); if(rd) rd.value = String(pushSettings.remindDays||0);
@@ -6368,7 +6409,7 @@ async function loadPushSettings(){
   }catch(e){}
 }
 async function savePushSettings(){
-  const s={ termin:document.getElementById('push-ev-termin').checked, probe:document.getElementById('push-ev-probe').checked, liedwunsch:document.getElementById('push-ev-liedwunsch').checked, kommentar:document.getElementById('push-ev-kommentar').checked, umfrage:document.getElementById('push-ev-umfrage').checked, absage:document.getElementById('push-ev-absage').checked, remindDays:parseInt(document.getElementById('push-remind-days').value)||0 };
+  const s={ termin:document.getElementById('push-ev-termin').checked, probe:document.getElementById('push-ev-probe').checked, liedwunsch:document.getElementById('push-ev-liedwunsch').checked, kommentar:document.getElementById('push-ev-kommentar').checked, umfrage:document.getElementById('push-ev-umfrage').checked, pinnwand:document.getElementById('push-ev-pinnwand').checked, absage:document.getElementById('push-ev-absage').checked, remindDays:parseInt(document.getElementById('push-remind-days').value)||0 };
   await dbFetch(DB+'/settings/push.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(s)});
   pushSettings=s;
   const r=document.getElementById('push-settings-result'); r.style.color='#27ae60'; r.textContent='✅ Gespeichert'; setTimeout(()=>{if(r)r.textContent='';},2000);
@@ -6405,18 +6446,22 @@ async function sendBroadcast(){
 }
 // Legt eine Nachricht in die Warteschlange; ein automatischer Job verschickt sie.
 // Sofort-Versand über die Cloud-Function pushNow; bei Fehler zurück in die Warteschlange (Cron holt es nach)
-async function pushSend(title, body, adminsOnly){
+// eventKey (optional): Kategorie (termin/probe/liedwunsch/kommentar/umfrage/pinnwand) — damit Server/Warteschlange
+// die persönliche Kategorien-Auswahl jedes Mitglieds (pushsubs/<uid>/prefs) berücksichtigen können.
+async function pushSend(title, body, adminsOnly, eventKey){
   try{
     const u = window._fbAuth && window._fbAuth.currentUser;
     if(u){
       const idToken = await u.getIdToken();
-      const r = await fetch(window.PUSH_NOW_URL, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken, title, body, adminsOnly:!!adminsOnly})});
+      const r = await fetch(window.PUSH_NOW_URL, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken, title, body, adminsOnly:!!adminsOnly, eventKey:eventKey||null})});
       if(r.ok) return true;
     }
   }catch(e){ console.warn('pushNow fehlgeschlagen, nutze Warteschlange', e); }
   // Fallback: Warteschlange
   try{
-    const payload = adminsOnly ? {title, body, adminsOnly:true, ts:Date.now()} : {title, body, ts:Date.now()};
+    const payload = {title, body, ts:Date.now()};
+    if(adminsOnly) payload.adminsOnly=true;
+    if(eventKey) payload.eventKey=eventKey;
     await dbFetch(DB+'/pushqueue.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   }catch(e){ console.warn('Push-Fallback fehlgeschlagen', e); }
   return false;
@@ -6424,7 +6469,7 @@ async function pushSend(title, body, adminsOnly){
 async function notifyPush(eventKey, title, body){
   logNotification(title, body);           // immer im Glocken-Verlauf anzeigen
   if(!pushSettings || !pushSettings[eventKey]) return;   // Push nur wenn aktiviert
-  await pushSend(title, body, false);
+  await pushSend(title, body, false, eventKey);
 }
 // Nur an die Chorleitung (Admins) – z. B. wenn sich jemand abmeldet
 async function notifyAdminAbsage(title, body){
@@ -6516,6 +6561,7 @@ async function addPinnwand(){
   await dbPut('pinnwand/'+id, entry).catch(e=>console.warn(e));
   renderPinnwand();
   showToast('Ankündigung angepinnt','ok');
+  notifyPush('pinnwand','📌 Neue Ankündigung', text);
 }
 async function deletePinnwand(id){
   if(!canPin()) return;

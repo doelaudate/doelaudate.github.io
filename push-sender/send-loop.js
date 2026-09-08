@@ -49,6 +49,12 @@ async function sendToSubs(subList, pl){
   return sent;
 }
 
+// Kategorie-Filter: jedes Mitglied kann Kategorien für sich abwählen (pushsubs/<uid>/prefs). Fehlt eventKey
+// oder prefs, wird wie bisher gesendet (Opt-out, kein Verhaltenswechsel ohne aktives Abwählen).
+function filterByPrefs(subList, eventKey){
+  if (!eventKey) return subList;
+  return subList.filter(([, val]) => !(val && val.prefs && val.prefs[eventKey] === false));
+}
 async function sendOnce(onlyStale){
   const queue = await jget('/pushqueue');
   if (!queue) return;
@@ -59,7 +65,8 @@ async function sendOnce(onlyStale){
     // Frische Einträge erledigt die Sofort-Push-Cloud-Function; hier nur liegengebliebene (>90s) nachholen
     if (onlyStale && item && item.ts && (now - item.ts) < 90000) continue;
     let target = allSubs;
-    if (item && item.adminsOnly) target = allSubs.filter(([uid])=>adminUids.has(uid));
+    if (item && item.adminsOnly) target = target.filter(([uid])=>adminUids.has(uid));
+    target = filterByPrefs(target, item && item.eventKey);
     const sent = await sendToSubs(target, payload(item&&item.title, item&&item.body));
     await jdel('/pushqueue/' + qkey);
     console.log(new Date().toISOString(), 'Gesendet:', item&&item.title, '→', sent, item&&item.adminsOnly?'(nur Chorleitung)':'Geräte');
@@ -81,12 +88,12 @@ async function sendReminders(){
   const wann = days===1 ? 'morgen' : 'in '+days+' Tagen';
   const events = [];
   const termine = await jget('/termine');
-  if (Array.isArray(termine)) termine.forEach(t=>{ if(t && t.datum===target) events.push({ id:'t-'+t.id, title:'🔔 Erinnerung: '+(t.titel||'Termin'), body:wann+' ('+fmtDE(target)+')'+(t.uhrzeit?' um '+t.uhrzeit+' Uhr':'') }); });
+  if (Array.isArray(termine)) termine.forEach(t=>{ if(t && t.datum===target) events.push({ id:'t-'+t.id, eventKey:'termin', title:'🔔 Erinnerung: '+(t.titel||'Termin'), body:wann+' ('+fmtDE(target)+')'+(t.uhrzeit?' um '+t.uhrzeit+' Uhr':'') }); });
   const plan = await jget('/probenplan');
-  if (Array.isArray(plan)) plan.forEach(p=>{ if(p && p.datum===target) events.push({ id:'p-'+p.id, title:'🔔 Erinnerung: Probe', body:wann+' ('+fmtDE(target)+')' }); });
+  if (Array.isArray(plan)) plan.forEach(p=>{ if(p && p.datum===target) events.push({ id:'p-'+p.id, eventKey:'probe', title:'🔔 Erinnerung: Probe', body:wann+' ('+fmtDE(target)+')' }); });
   for (const ev of events){
     if (sent[ev.id]) continue;
-    await sendToSubs(allSubs, payload(ev.title, ev.body));
+    await sendToSubs(filterByPrefs(allSubs, ev.eventKey), payload(ev.title, ev.body));
     await jput('/reminders-sent/'+ev.id, Date.now());
     console.log('Erinnerung gesendet:', ev.title);
   }
