@@ -5320,7 +5320,7 @@ function renderPlakate(){
   const myName=getUserVoteName();
   const karte=(p,distKm)=>{
     const done=!!p.von;
-    const maps=p.adresse?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.adresse)}" target="_blank" rel="noopener" style="font-size:.78rem;color:#2563b5;text-decoration:none;white-space:nowrap">🗺️ Karte</a>`:'';
+    const maps=navLinkFor(p);
     const del=canManage?`<button class="btn btn-sm" style="flex-shrink:0;padding:2px 8px;background:#eef1f5;color:#1d4e96" title="Bearbeiten" onclick="editPlakat('${p._key}')">✏️</button><button class="btn btn-danger btn-sm" style="flex-shrink:0;padding:2px 8px" onclick="deletePlakat('${p._key}')">✕</button>`:'';
     // Aktion rechts: eingeloggt = nur Button; Gast = Namensfeld + Button
     const action=done
@@ -5360,7 +5360,8 @@ function renderPlakate(){
   // „In deiner Nähe" — nur wenn eigener Wohnort bekannt & mind. 1 Treffer, ganz oben vor der Ortschafts-Gliederung
   const nearby=nearestOpenPlakate(5);
   if(nearby.length){
-    html+=`<div class="section-label" style="color:#1d4e96">📍 In deiner Nähe</div>`+nearby.map(x=>karte(x.p,x.dist)).join('');
+    const routeBtn = nearby.length>1 ? `<button class="btn btn-sm" style="background:#eef3fa;color:#1b3a6b;font-size:.72rem;padding:3px 10px;flex-shrink:0" onclick="openPlakateRoute()">🗺️ Route planen (${nearby.length})</button>` : '';
+    html+=`<div class="section-label" style="color:#1d4e96;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><span>📍 In deiner Nähe</span>${routeBtn}</div>`+nearby.map(x=>karte(x.p,x.dist)).join('');
   }
   if(offen.length){
     html+=`<div class="section-label" style="color:#b9770e">🟠 Noch zu verteilen (${offen.length})</div>`+nachOrtschaft(offen);
@@ -5599,7 +5600,8 @@ function renderZuteilungsVorschlaege(){
     const waNr = digitsHandy ? digitsHandy.replace(/^0/,'49') : ''; // deutsche Nummer -> internationales Format für wa.me
     const tel = digitsAny ? `<a href="tel:${esc(digitsAny)}" title="Anrufen" style="text-decoration:none;font-size:1.05rem">📞</a>` : '';
     const wa = waNr ? `<a href="https://wa.me/${esc(waNr)}" target="_blank" rel="noopener" title="WhatsApp" style="text-decoration:none;font-size:1.05rem">💬</a>` : '';
-    const contact = (tel||wa) ? `<span style="display:flex;gap:8px">${tel}${wa}</span>` : '<span style="color:#bbb;font-size:.72rem">keine Kontaktdaten</span>';
+    const nav = `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" rel="noopener" title="Navigation" style="text-decoration:none;font-size:1.05rem">🧭</a>`;
+    const contact = (tel||wa) ? `<span style="display:flex;gap:8px">${nav}${tel}${wa}</span>` : `<span style="display:flex;gap:8px;align-items:center">${nav}<span style="color:#bbb;font-size:.72rem">keine Kontaktdaten</span></span>`;
     return `<div style="display:flex;align-items:center;gap:10px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;flex-wrap:wrap">
       <div style="flex:1;min-width:140px">
         <strong style="font-size:.86rem">${esc(p.ort)}</strong><br>
@@ -5714,6 +5716,36 @@ function haversineKm(lat1,lon1,lat2,lon2){
   const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
+// ===== Navigation zu Plakat-Standorten (Google-Maps-Links, funktionieren auf Android/iOS/Desktop gleich) =====
+// Mit Koordinaten: echte Turn-by-Turn-Navigation dorthin. Ohne Koordinaten (aber mit Adresse): nur Kartensuche.
+function navLinkFor(p){
+  if(typeof p.lat==='number' && typeof p.lng==='number'){
+    return `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" rel="noopener" style="font-size:.78rem;color:#2563b5;text-decoration:none;white-space:nowrap">🧭 Navigation</a>`;
+  }
+  if(p.adresse){
+    return `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.adresse)}" target="_blank" rel="noopener" style="font-size:.78rem;color:#2563b5;text-decoration:none;white-space:nowrap">🗺️ Karte</a>`;
+  }
+  return '';
+}
+// Mehrere Standorte als eine Runde: letzter = Ziel, Rest = Zwischenstopps. Kein "origin" gesetzt, damit
+// Google Maps beim Öffnen automatisch den aktuellen Gerätestandort als Start nimmt (kein Geolocation-Prompt
+// im Browser nötig — funktioniert auch, wenn die Berechtigung hier verweigert wäre).
+function buildRouteUrl(stops){
+  if(!stops || !stops.length) return null;
+  const dest=stops[stops.length-1];
+  const url=new URL('https://www.google.com/maps/dir/');
+  url.searchParams.set('api','1');
+  url.searchParams.set('destination', dest.lat+','+dest.lng);
+  const waypoints=stops.slice(0,-1).map(s=>s.lat+','+s.lng).join('|');
+  if(waypoints) url.searchParams.set('waypoints', waypoints);
+  return url.toString();
+}
+function openPlakateRoute(){
+  const stops=nearestOpenPlakate(5).map(x=>x.p);
+  if(!stops.length){ alert('Keine offenen Standorte mit bekannter Position in der Nähe.'); return; }
+  const url=buildRouteUrl(stops);
+  window.open(url,'_blank','noopener');
+}
 // Eigener Wohnort (falls Konto verknüpft & geocodiert) — zentral für Karte/Liste/Startseite
 function myLatLng(){
   const idx=myMemberIndex(); if(idx<0) return null;
@@ -5779,7 +5811,8 @@ function renderPlakateMapMarkers(){
     const status=done?('✅ '+esc(prettyName(p.von)||p.von)):'🟠 noch offen';
     const distTxt = isNear?`<br><span style="color:#2563b5;font-weight:700">📍 ~${distByKey[p._key].toFixed(1)} km von dir</span>`:'';
     const claimBtn = !done ? `<div style="margin-top:6px"><button onclick="claimPlakat('${p._key}')" style="background:#27ae60;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:.78rem;cursor:pointer;font-family:inherit">✋ Ich übernehme das</button></div>` : '';
-    marker.bindPopup(`<strong>${esc(p.ort)}</strong><br>${esc(p.ortschaft||'')}<br>${status}${distTxt}${claimBtn}`);
+    const navBtn = `<div style="margin-top:4px"><a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" rel="noopener" style="font-size:.78rem;color:#2563b5;text-decoration:none">🧭 Navigation starten</a></div>`;
+    marker.bindPopup(`<strong>${esc(p.ort)}</strong><br>${esc(p.ortschaft||'')}<br>${status}${distTxt}${navBtn}${claimBtn}`);
     if(isNear){ try{ marker.bindTooltip('~'+distByKey[p._key].toFixed(1)+' km', {permanent:true, direction:'top', offset:[0,-size/2-2], className:'plakate-dist-tip'}); }catch(e){} }
     _plakateMarkers.push(marker);
     pts.push([p.lat,p.lng]);
