@@ -993,6 +993,19 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
         <option value="fehlt">Meiste Fehltage</option>
       </select>
     </div>
+    <div style="background:#f6f8fb;border-radius:8px;padding:9px 10px;margin-bottom:10px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex:1;min-width:120px"><label style="display:block;font-size:.76rem;font-weight:600;margin-bottom:3px;color:#444">Von</label><input type="date" id="anwf-von" class="fl-input" style="margin-bottom:0" onchange="renderAnwStats()"></div>
+        <div style="flex:1;min-width:120px"><label style="display:block;font-size:.76rem;font-weight:600;margin-bottom:3px;color:#444">Bis</label><input type="date" id="anwf-bis" class="fl-input" style="margin-bottom:0" onchange="renderAnwStats()"></div>
+        <div style="flex:1;min-width:130px"><label style="display:block;font-size:.76rem;font-weight:600;margin-bottom:3px;color:#444">Saison</label><select id="anwf-saison" class="fl-input" style="margin-bottom:0" onchange="renderAnwStats()"><option value="">Alle Saisons</option></select></div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;align-items:center">
+        <button class="btn btn-gray btn-sm" onclick="setAnwPreset('12m')">Letzte 12 Monate</button>
+        <button class="btn btn-gray btn-sm" onclick="setAnwPreset('year')">Dieses Jahr</button>
+        <button class="btn btn-gray btn-sm" onclick="setAnwPreset('all')">Gesamt</button>
+        <button class="btn btn-gray btn-sm" style="margin-left:auto" onclick="resetAnwFilter()">↺ Zurücksetzen</button>
+      </div>
+    </div>
     <div id="anw-stats"></div>
   </div>
   </div>
@@ -1854,7 +1867,14 @@ function updateEditModeUI(){
     ib.title = editMode ? 'Bearbeiten-Modus ist AN – ausschalten' : 'Bearbeiten-Modus einschalten';
   }
 }
-let aktiveSaison='__all__', aktiveTerminTab='anstehend';
+let aktiveSaison='__current__', aktiveTerminTab='anstehend';
+// Jahr aus Saison-ID/Name ableiten (z.B. "sommer_2026"/"Sommer 2026" -> 2026) — funktioniert für Sommer- UND
+// Winter/Weihnachten-Saisons unabhängig vom genauen Namensschema; "Repertoire" hat kein Jahr (immer null).
+function songSeasonYear(s){
+  const m=String((s&&s.id)||(s&&s.name)||'').match(/(\d{4})/);
+  return m?parseInt(m[1],10):null;
+}
+function isCurrentYearSeason(s){ return songSeasonYear(s)===new Date().getFullYear(); }
 let liederView='aktiv'; // 'aktiv' | 'archiv'
 let kalMonat=new Date().getMonth(), kalJahr=new Date().getFullYear(), kalSel=null;
 
@@ -2081,16 +2101,20 @@ function renderSaisonTabs(){
   let seasons=D.seasons.map(s=>s);
   if(liederView==='aktiv'){ if(!admin) seasons=seasons.filter(s=>!s.hidden); }
   else { seasons=seasons.filter(s=>(s.songs||[]).some(x=>x.archived)); }
-  const tabs=[{id:'__all__',label:'Alle',type:'all'},...seasons.map(s=>({id:s.id,label:s.name,type:s.type,hidden:!!s.hidden}))];
+  // „Aktuell" nur in der Aktiv-Ansicht: kombiniert automatisch alle Saisons des laufenden Jahres
+  // (Sommer/Winter/beides — je nachdem was gerade existiert) + Repertoire, ohne manuelles Aus-/Einblenden.
+  const virtualTabs = liederView==='aktiv' ? [{id:'__current__',label:'Aktuell',type:'current'}] : [];
+  const tabs=[...virtualTabs,{id:'__all__',label:'Alle',type:'all'},...seasons.map(s=>({id:s.id,label:s.name,type:s.type,hidden:!!s.hidden}))];
   const tabHtml=tabs.map(t=>{
     const tc={sommer:'sommer',weihnachten:'weihnachten',repertoire:'repertoire'}[t.type]||'';
-    const ic={sommer:'☀️ ',weihnachten:'🎄 ',repertoire:'📚 ',all:'🎵 '}[t.type]||'🎵 ';
+    const ic={sommer:'☀️ ',weihnachten:'🎄 ',repertoire:'📚 ',all:'🎵 ',current:'🗓️ '}[t.type]||'🎵 ';
     const dim=(liederView==='aktiv'&&t.hidden)?'opacity:.5;':'';
+    const isVirtual = t.id==='__all__'||t.id==='__current__';
     let eye='';
-    if(admin && liederView==='aktiv' && t.id!=='__all__'){
+    if(admin && liederView==='aktiv' && !isVirtual){
       eye=`<span onclick="event.stopPropagation();toggleSeasonHidden('${t.id}')" title="${t.hidden?'Vorne einblenden':'Vorne ausblenden'}" style="margin-left:6px;cursor:pointer">${t.hidden?'🙈':'👁️'}</span>`;
     }
-    const drop=(admin && t.id!=='__all__')?` ondragover="event.preventDefault()" ondrop="dropOnSeason(event,'${t.id}')"`:'';
+    const drop=(admin && !isVirtual)?` ondragover="event.preventDefault()" ondrop="dropOnSeason(event,'${t.id}')"`:'';
     return `<button class="stab ${tc} ${aktiveSaison===t.id?'active':''}" style="${dim}" onclick="setSaison('${t.id}')"${drop}>${ic}${esc(t.label)}${eye}</button>`;
   }).join('');
   document.getElementById('saison-tabs').innerHTML=sw+tabHtml;
@@ -2104,7 +2128,7 @@ function setLiederPageTab(t){
   document.getElementById('ltab-wuensche').classList.toggle('active', t==='wuensche');
   if(t==='wuensche') renderLiedwuensche();
 }
-function setLiederView(v){ liederView=v; aktiveSaison='__all__'; renderLieder(); }
+function setLiederView(v){ liederView=v; aktiveSaison=(v==='aktiv')?'__current__':'__all__'; renderLieder(); }
 function setUmfragenTab(which){
   const views={umfragen:'uv-umfragen', terminfindung:'uv-terminfindung'};
   const tabs={umfragen:'utab-umfragen', terminfindung:'utab-terminfindung'};
@@ -2245,7 +2269,15 @@ function renderLieder(){
   let songs=D.seasons.flatMap(s=>(s.songs||[]).map(song=>Object.assign({},song,{seasonId:s.id,seasonName:s.name,seasonType:s.type,seasonHidden:!!s.hidden})));
   if(liederView==='archiv') songs=songs.filter(s=>s.archived);
   else { songs=songs.filter(s=>!s.archived); if(!admin) songs=songs.filter(s=>!s.seasonHidden); }
-  if(aktiveSaison!=='__all__') songs=songs.filter(s=>s.seasonId===aktiveSaison);
+  if(aktiveSaison==='__current__'){
+    // Automatisch alle Saisons des laufenden Jahres (Sommer/Winter/beides) + Repertoire — Fallback auf
+    // alles, falls es (noch) gar keine Saison für das aktuelle Jahr gibt.
+    const hasCurrentYear=D.seasons.some(isCurrentYearSeason);
+    const curIds=new Set(D.seasons.filter(s=>isCurrentYearSeason(s)||s.type==='repertoire').map(s=>s.id));
+    if(hasCurrentYear) songs=songs.filter(s=>curIds.has(s.seasonId));
+  } else if(aktiveSaison!=='__all__'){
+    songs=songs.filter(s=>s.seasonId===aktiveSaison);
+  }
   const q=(document.getElementById('lied-search')?.value||'').trim().toLowerCase();
   if(q) songs=songs.filter(s=>(s.name||'').toLowerCase().includes(q));
   const sort=document.getElementById('sort-sel')?.value||'last';
@@ -2256,14 +2288,15 @@ function renderLieder(){
   const el=document.getElementById('lieder-list');if(!el)return;
   if(!songs.length){el.innerHTML='<div class="empty">'+(liederView==='archiv'?'Archiv ist leer.':'Keine Lieder vorhanden.')+'</div>';return;}
   let html='';
-  // Admin: ganze Saison ins Archiv / zurück (nur wenn eine konkrete Saison gewählt ist)
-  if(admin && aktiveSaison!=='__all__'){
+  // Admin: ganze Saison ins Archiv / zurück (nur wenn eine konkrete, echte Saison gewählt ist — nicht bei
+  // den virtuellen Sammel-Tabs "Alle"/"Aktuell", die keine einzelne Saison sind)
+  if(admin && aktiveSaison!=='__all__' && aktiveSaison!=='__current__'){
     const cs=D.seasons.find(s=>s.id===aktiveSaison); const nm=cs?esc(cs.name):'Saison';
     html+= liederView==='archiv'
       ? `<div style="margin-bottom:10px"><button class="btn btn-sm btn-gray" onclick="archiveWholeSeason('${aktiveSaison}',false)">↩️ Ganze Saison „${nm}" zurückholen</button></div>`
       : `<div style="margin-bottom:10px"><button class="btn btn-sm btn-gray" onclick="archiveWholeSeason('${aktiveSaison}',true)">📦 Ganze Saison „${nm}" ins Archiv</button></div>`;
   }
-  if(aktiveSaison==='__all__'){const seen=new Set();D.seasons.forEach(s=>{let ss=songs.filter(x=>x.seasonId===s.id);ss=ss.filter(x=>{const k=songKey(x);if(seen.has(k))return false;seen.add(k);return true;});if(!ss.length)return;const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'}[s.type]||'🎵';html+=`<div class="section-label">${ic} ${esc(s.name)}</div>`+buildTbl(ss);});}
+  if(aktiveSaison==='__all__'||aktiveSaison==='__current__'){const seen=new Set();D.seasons.forEach(s=>{let ss=songs.filter(x=>x.seasonId===s.id);ss=ss.filter(x=>{const k=songKey(x);if(seen.has(k))return false;seen.add(k);return true;});if(!ss.length)return;const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'}[s.type]||'🎵';html+=`<div class="section-label">${ic} ${esc(s.name)}</div>`+buildTbl(ss);});}
   else html+=buildTbl(songs);
   el.innerHTML=html;
 }
@@ -2536,7 +2569,12 @@ function renderSongPicker(){
   if(!D)return;
   const el=document.getElementById('probe-song-picker');if(!el)return;
   el.innerHTML='';
-  D.seasons.forEach(s=>{
+  // Nur Saisons des laufenden Jahres (Sommer/Winter/beides) + Repertoire — bei der Probenplanung sollen
+  // nicht dutzende Lieder aus alten Archiv-Saisons zur Auswahl stehen. Fallback auf alles, falls es
+  // (noch) keine Saison für das aktuelle Jahr gibt.
+  const hasCurrentYear=D.seasons.some(isCurrentYearSeason);
+  const relevantSeasons=hasCurrentYear ? D.seasons.filter(s=>isCurrentYearSeason(s)||s.type==='repertoire') : D.seasons;
+  relevantSeasons.forEach(s=>{
     const aktiv=(s.songs||[]).filter(x=>!x.archived);
     if(!aktiv.length)return;
     const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'}[s.type]||'🎵';
@@ -2631,7 +2669,14 @@ function buildSongPickerInto(containerEl, selectedIds){
   if(!D || !containerEl) return;
   const sel=new Set(selectedIds||[]);
   containerEl.innerHTML='';
-  D.seasons.forEach(s=>{
+  // Wie renderSongPicker: nur aktuelles Jahr + Repertoire — ABER eine ältere Saison bleibt trotzdem
+  // sichtbar, wenn eines ihrer Lieder bei dieser Probe schon ausgewählt ist (sonst würde eine bereits
+  // eingetragene Probe beim Bearbeiten scheinbar "Lieder verlieren").
+  const hasCurrentYear=D.seasons.some(isCurrentYearSeason);
+  const relevantSeasons=D.seasons.filter(s=>
+    !hasCurrentYear || isCurrentYearSeason(s) || s.type==='repertoire' || (s.songs||[]).some(song=>sel.has(song.id))
+  );
+  relevantSeasons.forEach(s=>{
     if(!(s.songs||[]).length) return;
     const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'}[s.type]||'🎵';
     containerEl.innerHTML+=`<div style="width:100%;font-size:.7rem;font-weight:700;text-transform:uppercase;color:#999;margin:5px 0 3px">${ic} ${esc(s.name)}</div>`;
@@ -3142,10 +3187,45 @@ async function saveAnwesenheit(){
   const r=document.getElementById('anw-save-result'); if(r){ r.style.color='#27ae60'; r.textContent='✅ Gespeichert'; setTimeout(()=>{if(r)r.textContent='';},2500); }
   renderAnwStats();
 }
+function setAnwPreset(kind){
+  const von=document.getElementById('anwf-von'), bis=document.getElementById('anwf-bis');
+  const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const now=new Date();
+  if(kind==='all'){ if(von)von.value=''; if(bis)bis.value=''; }
+  else if(kind==='year'){ if(von)von.value=now.getFullYear()+'-01-01'; if(bis)bis.value=iso(now); }
+  else if(kind==='12m'){ const d=new Date(now); d.setMonth(d.getMonth()-12); if(von)von.value=iso(d); if(bis)bis.value=iso(now); }
+  renderAnwStats();
+}
+function resetAnwFilter(){
+  ['anwf-von','anwf-bis'].forEach(id=>{ const e=document.getElementById(id); if(e)e.value=''; });
+  const s=document.getElementById('anwf-saison'); if(s)s.value='';
+  renderAnwStats();
+}
+// Volle Probe (nicht nur Datum) zu einer ID finden — für den Saison-Filter (Lieder der Probe abgleichen)
+function probeById(probeId){
+  return (probenplan||[]).find(x=>x.id===probeId) || ((D&&D.proben)||[]).find(x=>x.id===probeId) || null;
+}
 function renderAnwStats(){
   const el=document.getElementById('anw-stats'); if(!el) return;
-  const captured=Object.entries(anwesenheit).filter(([,v])=>v&&v.erfasst);
-  if(!captured.length){ el.innerHTML='<div class="empty" style="padding:20px">Noch keine Anwesenheit erfasst.</div>'; return; }
+  // Saison-Auswahl befüllen (Auswahl beibehalten)
+  const selSais=document.getElementById('anwf-saison');
+  if(selSais){ const cur=selSais.value; selSais.innerHTML='<option value="">Alle Saisons</option>'+((D&&D.seasons)||[]).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join(''); selSais.value=cur; }
+  const von=document.getElementById('anwf-von')?.value||'';
+  const bis=document.getElementById('anwf-bis')?.value||'';
+  const saisonId=document.getElementById('anwf-saison')?.value||'';
+  const saisonSongIds = saisonId ? new Set((((D&&D.seasons)||[]).find(s=>s.id===saisonId)||{}).songs?.map(s=>s.id)||[]) : null;
+  const inRange=datum=> !!datum && (!von||datum>=von) && (!bis||datum<=bis);
+  const captured=Object.entries(anwesenheit).filter(([k,v])=>{
+    if(!v||!v.erfasst) return false;
+    if(!inRange(probeDatumById(k))) return false;
+    if(saisonSongIds){
+      const p=probeById(k); const ids=(p&&p.songIds)||[];
+      if(!ids.some(id=>saisonSongIds.has(id))) return false;
+    }
+    return true;
+  });
+  const filterActive=von||bis||saisonId;
+  if(!captured.length){ el.innerHTML='<div class="empty" style="padding:20px">'+(filterActive?'Keine erfasste Anwesenheit im gewählten Zeitraum/Saison.':'Noch keine Anwesenheit erfasst.')+'</div>'; return; }
   const total=captured.length;
   const rows=mitglieder.map(m=>{
     const k=memberKey(m); let fehlt=0;
@@ -3157,7 +3237,9 @@ function renderAnwStats(){
   if(sort==='name') rows.sort((a,b)=>a.name.localeCompare(b.name));
   else if(sort==='fehlt') rows.sort((a,b)=>b.fehlt-a.fehlt||a.name.localeCompare(b.name));
   else rows.sort((a,b)=>a.quote-b.quote||b.fehlt-a.fehlt);
-  el.innerHTML=`<div style="font-size:.8rem;color:#888;margin-bottom:8px">Erfasste Proben: <strong>${total}</strong></div>
+  const saisonName = saisonId ? ((((D&&D.seasons)||[]).find(s=>s.id===saisonId)||{}).name||'') : '';
+  const hint = filterActive ? `<div style="font-size:.8rem;color:#1d4e96;background:#eef3fb;border-radius:8px;padding:7px 11px;margin-bottom:10px">🔎 ${von||bis?`Zeitraum ${von?fmt(von):'Beginn'} – ${bis?fmt(bis):'heute'}`:'Gesamter Zeitraum'}${saisonName?` · Saison „${esc(saisonName)}"`:''}</div>` : '';
+  el.innerHTML=hint+`<div style="font-size:.8rem;color:#888;margin-bottom:8px">Erfasste Proben${filterActive?' (gefiltert)':''}: <strong>${total}</strong></div>
     <table class="overview-table" style="width:100%"><thead><tr><th>Mitglied</th><th style="text-align:center">Da</th><th style="text-align:center">Fehlt</th><th style="text-align:center">Quote</th></tr></thead><tbody>`+
     rows.map(r=>{ const c=r.quote>=80?'#27ae60':r.quote>=50?'#f39c12':'#e74c3c'; return `<tr><td>${esc(r.name)}</td><td style="text-align:center">${r.da}</td><td style="text-align:center;color:#922b21">${r.fehlt}</td><td style="text-align:center"><strong style="color:${c}">${r.quote}%</strong></td></tr>`; }).join('')+
     `</tbody></table>`;
