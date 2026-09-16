@@ -4937,6 +4937,31 @@ async function submitLiedwunsch(){
   btn.disabled=false;
 }
 
+// Anschließen ("auch ich wünsche mir das") — pro Person einmal, toggelbar, wie die Kommentar-Reaktionen
+function liedwunschUnterstuetzenHtml(w){
+  if(!w._key) return '';
+  const my=getUserVoteName(); const myKey=my?ufSafeKey(my):null;
+  const u=w.unterstuetzer||{};
+  const n=Object.keys(u).length;
+  const mine=!!(myKey&&u[myKey]);
+  const names=Object.values(u).map(v=>prettyName(v)).join(', ');
+  return `<button title="${esc(names)}" onclick="toggleLiedwunschUnterstuetzung('${w._key}')" style="background:${mine?'#d6eaf8':'#f0f2f5'};border:1.5px solid ${mine?'#2563b5':'transparent'};border-radius:14px;padding:3px 10px;font-size:.76rem;cursor:pointer;font-family:inherit;margin-top:4px">🙋 ${mine?'Du wünschst dir das auch':'Auch ich wünsche mir das'}${n?' · '+n:''}</button>`;
+}
+async function toggleLiedwunschUnterstuetzung(key){
+  const my=getUserVoteName(); if(!my){alert('Bitte zuerst anmelden.');return;}
+  const myKey=ufSafeKey(my);
+  const w=liedwuensche.find(x=>x._key===key); if(!w) return;
+  if(!w.unterstuetzer) w.unterstuetzer={};
+  const path=DB+'/liedwuensche/'+key+'/unterstuetzer/'+encodeURIComponent(myKey)+'.json';
+  if(w.unterstuetzer[myKey]){
+    delete w.unterstuetzer[myKey];
+    await dbFetch(path,{method:'DELETE'}).catch(e=>console.warn(e));
+  } else {
+    w.unterstuetzer[myKey]=my;
+    await dbFetch(path,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(my)}).catch(e=>console.warn(e));
+  }
+  renderLiedwuensche();
+}
 async function toggleLiedwunschErledigt(key, current){
   if(!hasPermission('lieder')) return;
   await dbFetch(DB+'/liedwuensche/'+key+'/erledigt.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(!current)});
@@ -4971,6 +4996,7 @@ function renderLiedwuensche(){
             <span style="font-size:.76rem;padding:2px 8px;border-radius:10px;background:${w.chorsatz?'#d5f5e3':'#fdecea'};color:${w.chorsatz?'#1a7a40':'#922b21'};font-weight:500">${w.chorsatz?'✅ Chorsatz vorhanden':'❌ Kein Chorsatz'}</span>
             <span style="font-size:.74rem;color:#aaa">👤 ${esc(prettyName(w.name))} · ${ds}</span>
           </div>
+          ${liedwunschUnterstuetzenHtml(w)}
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
           ${canManage?`<button class="btn btn-sm" style="background:${w.erledigt?'#ecf0f1':'#d5f5e3'};color:${w.erledigt?'#555':'#1a7a40'};font-size:.72rem" onclick="toggleLiedwunschErledigt('${w._key}',${w.erledigt})">${w.erledigt?'↩ Öffnen':'✓ Erledigt'}</button>
@@ -4983,7 +5009,9 @@ function renderLiedwuensche(){
   function saisonBlock(key,label,color){
     const items=liedwuensche.filter(w=>(w.saison||'sommer')===key);
     if(!items.length) return '';
-    const offen=items.filter(w=>!w.erledigt);
+    // Offene Wünsche mit den meisten Unterstützern zuerst — zeigt, was sich der Chor am meisten wünscht
+    const supCount=w=>Object.keys(w.unterstuetzer||{}).length;
+    const offen=items.filter(w=>!w.erledigt).sort((a,b)=>supCount(b)-supCount(a)||b.datum.localeCompare(a.datum));
     const erledigt=items.filter(w=>w.erledigt);
     let h=`<div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px;padding-bottom:6px;border-bottom:2px solid ${color}">
       <span style="font-size:1.05rem;font-weight:700;color:${color}">${label}</span>
