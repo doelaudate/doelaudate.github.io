@@ -6841,12 +6841,16 @@ async function moveAblaufplanPunkt(terminId, itemId, dir){
 async function loadTerminfindungen(){
   try{ const r=await dbFetch(DB+'/terminfindungen.json'); if(r.ok){ terminfindungen=(await r.json())||{}; } }catch(e){ console.warn('loadTerminfindungen',e); }
 }
-function addTfOption(d='',z=''){
+function addTfOption(d='',z='',d2=''){
   const box=document.getElementById('tf-optionen'); if(!box) return;
   const div=document.createElement('div');
   div.className='tf-opt';
-  div.style.cssText='display:flex;gap:6px;margin-bottom:6px;align-items:center';
-  div.innerHTML=`<input type="date" class="fl-input tf-d" style="flex:1;min-width:130px" value="${d}"><input type="text" class="fl-input tf-z" placeholder="Uhrzeit / Notiz (optional)" style="flex:1;min-width:110px" value="${esc(z)}"><button class="btn btn-danger btn-sm" style="opacity:1;position:static" onclick="this.parentElement.remove()">✕</button>`;
+  div.style.cssText='display:flex;gap:6px;margin-bottom:6px;align-items:center;flex-wrap:wrap';
+  div.innerHTML=`<input type="date" class="fl-input tf-d" style="flex:1;min-width:130px;margin-bottom:0" value="${d}" title="Datum (bei Zeitraum: Anfang)">
+    <span style="font-size:.78rem;color:#999;white-space:nowrap">bis (optional)</span>
+    <input type="date" class="fl-input tf-d2" style="flex:1;min-width:130px;margin-bottom:0" value="${d2}" title="Ende des Zeitraums, leer lassen für einen einzelnen Tag">
+    <input type="text" class="fl-input tf-z" placeholder="Uhrzeit / Notiz (optional)" style="flex:1;min-width:110px;margin-bottom:0" value="${esc(z)}">
+    <button class="btn btn-danger btn-sm" style="opacity:1;position:static" onclick="this.parentElement.remove()">✕</button>`;
   box.appendChild(div);
 }
 function resetTfForm(){
@@ -6856,7 +6860,13 @@ function resetTfForm(){
 async function createTerminfindung(){
   const titel=(document.getElementById('tf-titel').value||'').trim();
   if(!titel){ alert('Bitte einen Titel eingeben.'); return; }
-  const opts=[...document.querySelectorAll('#tf-optionen .tf-opt')].map(r=>({d:r.querySelector('.tf-d').value,z:r.querySelector('.tf-z').value.trim()})).filter(o=>o.d);
+  const opts=[...document.querySelectorAll('#tf-optionen .tf-opt')].map(r=>{
+    let d=r.querySelector('.tf-d').value;
+    let d2=r.querySelector('.tf-d2').value;
+    if(d2 && d2===d) d2=''; // gleiches Datum wie Anfang -> kein echter Zeitraum, wie ein Einzeltag behandeln
+    if(d2 && d && d2<d){ [d,d2]=[d2,d]; } // falsch herum eingegeben -> stillschweigend tauschen
+    return {d, d2, z:r.querySelector('.tf-z').value.trim()};
+  }).filter(o=>o.d);
   if(opts.length<2){ alert('Bitte mindestens zwei Datums-Optionen angeben.'); return; }
   const id=uid();
   const entry={titel, autor:getUserVoteName()||'—', ts:Date.now(), optionen:opts, stimmen:{}};
@@ -6914,7 +6924,7 @@ function renderTerminfindung(){
       const t=tally[i];
       const best=t.score===maxScore && maxScore>0;
       const myv=mine&&mine.v?mine.v[i]:null;
-      const dstr=o.d?fmt(o.d):''; const zstr=o.z?' · '+esc(o.z):'';
+      const dstr=o.d?(o.d2?fmt(o.d)+' – '+fmt(o.d2):fmt(o.d)):''; const zstr=o.z?' · '+esc(o.z):'';
       const btn=(val,ic,col)=>`<button class="btn btn-sm" style="padding:3px 9px;font-size:.82rem;${myv===val?`background:${col};color:#fff`:'background:#ececec;color:#666'}" onclick="tfVote('${p._key}',${i},'${val}')">${ic}</button>`;
       return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 9px;border-radius:8px;margin-bottom:5px;background:${best?'#eafaf0':'#f7f7f8'}">
         <div style="flex:1;min-width:140px;font-size:.86rem"><strong>${dstr}</strong>${zstr} ${best?'<span style="font-size:.68rem;color:#1a7a40;font-weight:700">★ beste</span>':''}
