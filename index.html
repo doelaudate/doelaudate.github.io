@@ -535,6 +535,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
 
 <div class="page active" id="p-start">
   <div id="pinnwand-card"></div>
+  <div id="tf-pinned-card"></div>
   <div id="start-content"></div>
 </div>
 
@@ -1988,6 +1989,7 @@ function closeMoreSheet(){ document.getElementById('more-sheet').classList.remov
 // START-ÜBERSICHT
 function renderStart(){
   try{ renderPinnwand(); }catch(e){}
+  try{ renderPinnedTerminfindung(); }catch(e){}
   const el=document.getElementById('start-content'); if(!el) return;
   const today=localToday();
   const TYP_IC={konzert:'🎵',fest:'🎪',chorlager:'🏕️',gottesdienst:'⛪',probe:'🎹',sonstiges:'📌'};
@@ -6902,45 +6904,70 @@ async function tfDelete(id){
   await dbDel('terminfindungen/'+id).catch(e=>console.warn(e));
   renderTerminfindung();
 }
-function renderTerminfindung(){
-  const el=document.getElementById('tf-list'); if(!el) return;
-  const editor=canUseEditMode();
-  const polls=Object.entries(terminfindungen||{}).map(([k,v])=>Object.assign({_key:k},v||{})).filter(x=>x&&x.titel).sort((a,b)=>(b.ts||0)-(a.ts||0));
-  if(!polls.length){ el.innerHTML='<div class="empty">Noch keine Terminfindung.'+(editor?' Erstelle oben eine neue.':'')+'</div>'; return; }
+// Manuell oben auf der Startseite anpinnen — wie die Pinnwand, aber pro Terminfindung einzeln umschaltbar
+async function tfTogglePin(id){
+  if(!canUseEditMode()) return;
+  const p=terminfindungen[id]; if(!p) return;
+  p.angepinnt=!p.angepinnt;
+  await dbPut('terminfindungen/'+id+'/angepinnt', !!p.angepinnt).catch(e=>console.warn(e));
+  renderTerminfindung();
+}
+// Eine einzelne Terminfindung als Karte — von der vollen Liste UND vom Angepinnt-Widget auf der Startseite genutzt
+function tfPollCardHtml(p, editor){
+  const opts=p.optionen||[];
+  const stimmen=p.stimmen||{};
+  const voters=Object.values(stimmen);
   const myk=myKey();
-  el.innerHTML=polls.map(p=>{
-    const opts=p.optionen||[];
-    const stimmen=p.stimmen||{};
-    const voters=Object.values(stimmen);
-    const tally=opts.map((o,i)=>{
-      let ja=0,ev=0,ne=0; const jaN=[];
-      voters.forEach(s=>{ const v=s&&s.v&&s.v[i]; if(v==='ja'){ja++;jaN.push(prettyName(s.name)||s.name);} else if(v==='evtl'){ev++;} else if(v==='nein'){ne++;} });
-      return {ja,ev,ne,jaN,score:ja*2+ev};
-    });
-    const maxScore=Math.max(0,...tally.map(t=>t.score));
-    const mine=myk?stimmen[myk]:null;
-    const loggedIn=(typeof currentUser!=='undefined'&&currentUser);
-    const rows=opts.map((o,i)=>{
-      const t=tally[i];
-      const best=t.score===maxScore && maxScore>0;
-      const myv=mine&&mine.v?mine.v[i]:null;
-      const dstr=o.d?(o.d2?fmt(o.d)+' – '+fmt(o.d2):fmt(o.d)):''; const zstr=o.z?' · '+esc(o.z):'';
-      const btn=(val,ic,col)=>`<button class="btn btn-sm" style="padding:3px 9px;font-size:.82rem;${myv===val?`background:${col};color:#fff`:'background:#ececec;color:#666'}" onclick="tfVote('${p._key}',${i},'${val}')">${ic}</button>`;
-      return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 9px;border-radius:8px;margin-bottom:5px;background:${best?'#eafaf0':'#f7f7f8'}">
-        <div style="flex:1;min-width:140px;font-size:.86rem"><strong>${dstr}</strong>${zstr} ${best?'<span style="font-size:.68rem;color:#1a7a40;font-weight:700">★ beste</span>':''}
-          <div style="font-size:.72rem;color:#888">✅ ${t.ja}${t.ev?` · ❓${t.ev}`:''}${t.ne?` · ❌${t.ne}`:''}${t.jaN.length?' — '+esc(t.jaN.join(', ')):''}</div>
-        </div>
-        ${(loggedIn&&!p.geschlossen)?`<div style="display:flex;gap:4px">${btn('ja','✅','#27ae60')}${btn('evtl','❓','#f39c12')}${btn('nein','❌','#e74c3c')}</div>`:''}
-      </div>`;
-    }).join('');
-    const ctrls=editor?`<div style="display:flex;gap:6px;margin-top:8px">
-        <button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96;font-size:.74rem" onclick="tfToggleClose('${p._key}')">${p.geschlossen?'🔓 Wieder öffnen':'🔒 Abschließen'}</button>
-        <button class="btn btn-danger btn-sm" style="opacity:1;position:static;font-size:.74rem" onclick="tfDelete('${p._key}')">✕ Löschen</button>
-      </div>`:'';
-    return `<div class="card"><div class="card-title">🗓️ ${esc(p.titel)}${p.geschlossen?' <span style="font-size:.66rem;color:#888">(abgeschlossen)</span>':''}</div>
-      <div style="font-size:.74rem;color:#999;margin-bottom:8px">von ${esc(prettyName(p.autor)||p.autor||'—')} · ${voters.length} Rückmeldung${voters.length===1?'':'en'}</div>
-      ${rows}${ctrls}</div>`;
+  const tally=opts.map((o,i)=>{
+    let ja=0,ev=0,ne=0; const jaN=[];
+    voters.forEach(s=>{ const v=s&&s.v&&s.v[i]; if(v==='ja'){ja++;jaN.push(prettyName(s.name)||s.name);} else if(v==='evtl'){ev++;} else if(v==='nein'){ne++;} });
+    return {ja,ev,ne,jaN,score:ja*2+ev};
+  });
+  const maxScore=Math.max(0,...tally.map(t=>t.score));
+  const mine=myk?stimmen[myk]:null;
+  const loggedIn=(typeof currentUser!=='undefined'&&currentUser);
+  const rows=opts.map((o,i)=>{
+    const t=tally[i];
+    const best=t.score===maxScore && maxScore>0;
+    const myv=mine&&mine.v?mine.v[i]:null;
+    const dstr=o.d?(o.d2?fmt(o.d)+' – '+fmt(o.d2):fmt(o.d)):''; const zstr=o.z?' · '+esc(o.z):'';
+    const btn=(val,ic,col)=>`<button class="btn btn-sm" style="padding:3px 9px;font-size:.82rem;${myv===val?`background:${col};color:#fff`:'background:#ececec;color:#666'}" onclick="tfVote('${p._key}',${i},'${val}')">${ic}</button>`;
+    return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 9px;border-radius:8px;margin-bottom:5px;background:${best?'#eafaf0':'#f7f7f8'}">
+      <div style="flex:1;min-width:140px;font-size:.86rem"><strong>${dstr}</strong>${zstr} ${best?'<span style="font-size:.68rem;color:#1a7a40;font-weight:700">★ beste</span>':''}
+        <div style="font-size:.72rem;color:#888">✅ ${t.ja}${t.ev?` · ❓${t.ev}`:''}${t.ne?` · ❌${t.ne}`:''}${t.jaN.length?' — '+esc(t.jaN.join(', ')):''}</div>
+      </div>
+      ${(loggedIn&&!p.geschlossen)?`<div style="display:flex;gap:4px">${btn('ja','✅','#27ae60')}${btn('evtl','❓','#f39c12')}${btn('nein','❌','#e74c3c')}</div>`:''}
+    </div>`;
   }).join('');
+  const ctrls=editor?`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+      <button class="btn btn-sm" style="background:${p.angepinnt?'#fdf0e0':'#eef1f5'};color:${p.angepinnt?'#c0620f':'#1d4e96'};font-size:.74rem" onclick="tfTogglePin('${p._key}')">${p.angepinnt?'📌 Angepinnt (lösen)':'📌 Oben anpinnen'}</button>
+      <button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96;font-size:.74rem" onclick="tfToggleClose('${p._key}')">${p.geschlossen?'🔓 Wieder öffnen':'🔒 Abschließen'}</button>
+      <button class="btn btn-danger btn-sm" style="opacity:1;position:static;font-size:.74rem" onclick="tfDelete('${p._key}')">✕ Löschen</button>
+    </div>`:'';
+  return `<div class="card"><div class="card-title">🗓️ ${esc(p.titel)}${p.geschlossen?' <span style="font-size:.66rem;color:#888">(abgeschlossen)</span>':''}${p.angepinnt?' <span style="font-size:.66rem;color:#c0620f">📌</span>':''}</div>
+    <div style="font-size:.74rem;color:#999;margin-bottom:8px">von ${esc(prettyName(p.autor)||p.autor||'—')} · ${voters.length} Rückmeldung${voters.length===1?'':'en'}</div>
+    ${rows}${ctrls}</div>`;
+}
+function renderTerminfindung(){
+  const el=document.getElementById('tf-list');
+  if(el){
+    const editor=canUseEditMode();
+    const polls=Object.entries(terminfindungen||{}).map(([k,v])=>Object.assign({_key:k},v||{})).filter(x=>x&&x.titel).sort((a,b)=>(b.ts||0)-(a.ts||0));
+    el.innerHTML = polls.length
+      ? polls.map(p=>tfPollCardHtml(p,editor)).join('')
+      : '<div class="empty">Noch keine Terminfindung.'+(editor?' Erstelle oben eine neue.':'')+'</div>';
+  }
+  try{ renderPinnedTerminfindung(); }catch(e){}
+}
+// Angepinnte, noch offene Terminfindungen ganz oben auf der Startseite — wie die Pinnwand, aber pro Umfrage
+// einzeln von einem Bearbeiter ausgewählt (tfTogglePin), damit direkt von dort abgestimmt werden kann.
+function renderPinnedTerminfindung(){
+  const card=document.getElementById('tf-pinned-card'); if(!card) return;
+  const editor=canUseEditMode();
+  const pinned=Object.entries(terminfindungen||{}).map(([k,v])=>Object.assign({_key:k},v||{})).filter(x=>x&&x.titel&&x.angepinnt&&!x.geschlossen).sort((a,b)=>(b.ts||0)-(a.ts||0));
+  card.innerHTML = pinned.length
+    ? `<div style="margin-bottom:12px"><div class="section-label" style="color:#c0620f">📌 Angepinnte Terminfindung</div>${pinned.map(p=>tfPollCardHtml(p,editor)).join('')}</div>`
+    : '';
 }
 
 async function loadAll(){
