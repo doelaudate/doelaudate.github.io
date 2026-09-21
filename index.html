@@ -1713,6 +1713,13 @@ const _J={'Content-Type':'application/json'};
 function dbPut(path, val){ return dbFetch(DB+'/'+path+'.json',{method:'PUT',headers:_J,body:JSON.stringify(val)}); }
 function dbPatch(path, obj){ return dbFetch(DB+'/'+path+'.json',{method:'PATCH',headers:_J,body:JSON.stringify(obj)}); }
 function dbDel(path){ return dbFetch(DB+'/'+path+'.json',{method:'DELETE'}); }
+// Lesehelfer: liefert die Daten (leerer Knoten -> fallback) oder undefined bei Netzwerk-/Serverfehler.
+// Aufrufer übernehmen nur bei !== undefined — ein kurzes Funkloch bei einer Hintergrund-Aktualisierung
+// lässt so den bisherigen Stand stehen, statt ihn zu leeren.
+async function dbGet(path, fallback){
+  try{ const r=await dbFetch(DB+'/'+path+'.json'); if(!r.ok) return undefined; const d=await r.json(); return d==null?fallback:d; }
+  catch(e){ console.warn('dbGet '+path, e); return undefined; }
+}
 
 // ===== BEDIENUNG: Schriftgröße, Suche, Ladeanzeige =====
 function applyFontSize(){
@@ -2743,9 +2750,10 @@ async function saveProbeEdit(){
 }
 
 // ===== PROBEN-ANWESENHEIT (Ab-/Zusage für geplante Proben) =====
-async function loadProbenstatus(){
-  try{ const r=await dbFetch(DB+'/probenstatus.json'); probenstatus=(r.ok?await r.json():null)||{}; renderProben(); try{renderStart();}catch(e){} }catch(e){}
-}
+// Innerhalb von loadAll übernimmt der abschließende Render-Durchlauf das Neuzeichnen (sonst doppelt);
+// bei Einzelaufrufen (z. B. nach dem Speichern) rendern die Ladefunktionen wie gewohnt selbst.
+function _selfRender(){ return !_loadAllRunning; }
+async function loadProbenstatus(){ const d=await dbGet('probenstatus',{}); if(d!==undefined) probenstatus=d; if(_selfRender()){ try{ renderProben(); renderStart(); }catch(e){} } }
 // Vergangene GEPLANTE Proben automatisch in den Probenverlauf übernehmen.
 // Läuft bei jedem App-Start eines angemeldeten Nutzers; dedupliziert über die Proben-ID.
 async function migrateVergangeneProben(){
@@ -2764,9 +2772,7 @@ async function migrateVergangeneProben(){
   }catch(e){ console.warn('Proben-Übernahme fehlgeschlagen',e); }
 }
 // ===== ABWESENHEIT (Zeiträume, z. B. Urlaub) =====
-async function loadAbwesenheit(){
-  try{ const r=await dbFetch(DB+'/abwesenheit.json'); abwesenheiten=(r.ok?await r.json():null)||{}; }catch(e){}
-}
+async function loadAbwesenheit(){ const d=await dbGet('abwesenheit',{}); if(d!==undefined) abwesenheiten=d; }
 function _periodsOf(rec){ if(!rec) return []; const p=rec.periods; return Array.isArray(p)?p:Object.values(p||{}); }
 function absenceCovers(rec, datum){ return _periodsOf(rec).some(p=> p&&p.von&&p.bis && datum>=p.von && datum<=p.bis); }
 function myAbsent(datum){ const uid=currentUser&&currentUser.uid; return uid?absenceCovers(abwesenheiten[uid], datum):false; }
@@ -2872,9 +2878,7 @@ const BEITRAG_QUARTAL = 30;            // € pro Quartal
 const BEITRAG_QS = ['q1','q2','q3','q4'];
 let beitraege = {};                    // { jahr: { memberKey: {q1,q2,q3,q4} } }
 let beitragJahr = new Date().getFullYear();
-async function loadBeitraege(){
-  try{ const r=await dbFetch(DB+'/beitraege.json'); beitraege=(r.ok?await r.json():null)||{}; }catch(e){ beitraege={}; }
-}
+async function loadBeitraege(){ const d=await dbGet('beitraege',{}); if(d!==undefined) beitraege=d; }
 // ===== ZUGRIFF BEITRÄGE: nur Kassenwart (Martin Wolff) =====
 const BEITRAG_OWNER_USERNAMES = ['MW290498'];
 const BEITRAG_OWNER_EMAILS = ['doelaudate@martinwolff-tenor.de'];
@@ -2971,9 +2975,7 @@ async function markBeitragJahr(key){
 
 // ===== CHORKASSE (für alle sichtbar; buchen nur Admin im Bearbeiten-Modus) =====
 let kasse = [];   // [{id, datum, text, betrag}] – betrag: + Einnahme / − Ausgabe
-async function loadKasse(){
-  try{ const r=await dbFetch(DB+'/kasse.json'); const d=r.ok?await r.json():null; kasse=Array.isArray(d)?d:[]; }catch(e){ kasse=[]; }
-}
+async function loadKasse(){ const d=await dbGet('kasse',[]); if(d!==undefined) kasse=Array.isArray(d)?d:[]; }
 function euro(n){ return (Number(n)||0).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
 function kasseStand(){ return kasse.reduce((s,b)=>s+(Number(b.betrag)||0),0); }
 function renderKasse(){
@@ -3024,9 +3026,7 @@ async function deleteKasse(id){
 }
 
 // ===== ANWESENHEIT (nur Admin) =====
-async function loadAnwesenheit(){
-  try{ const r=await dbFetch(DB+'/anwesenheit.json'); anwesenheit=(r.ok?await r.json():null)||{}; }catch(e){}
-}
+async function loadAnwesenheit(){ const d=await dbGet('anwesenheit',{}); if(d!==undefined) anwesenheit=d; }
 function allProbenSorted(){
   if(!D) return [];
   const alle=[...(probenplan||[]).map(p=>({...p,_src:'plan'})), ...((D.proben)||[]).map(p=>({...p,_src:'proben'}))];
@@ -3686,13 +3686,7 @@ async function saveTerminEdit(){
 // ===== UMFRAGEN (mit Auswertung) =====
 let umfragen={};
 function ufSafeKey(name){ return String(name||'').replace(/[.#$\[\]\/]/g,'_').replace(/\s+/g,' ').trim().slice(0,180) || 'anon'; }
-async function loadUmfragen(){
-  try{
-    const r=await dbFetch(DB+'/umfragen.json');
-    umfragen=(r.ok?await r.json():null)||{};
-  }catch(e){ umfragen={}; }
-  renderUmfragen();
-}
+async function loadUmfragen(){ const d=await dbGet('umfragen',{}); if(d!==undefined) umfragen=d; if(_selfRender()) renderUmfragen(); }
 function addUmfrageOption(val){
   const wrap=document.getElementById('uf-optionen'); if(!wrap)return;
   const row=document.createElement('div');
@@ -4009,7 +4003,7 @@ function populateLiedSelect(){
   D.seasons.flatMap(s=>s.songs||[]).forEach(song=>{const opt=document.createElement('option');opt.value=song.name;opt.textContent='🎵 '+song.name;sel.appendChild(opt);});
 }
 async function loadKommentare(){
-  try{const res=await dbFetch(DB+'/kommentare.json');if(!res.ok)return;const d=await res.json();kommentare=d?Object.entries(d).map(([k,v])=>Object.assign({},v,{_key:k})).sort((a,b)=>b.datum.localeCompare(a.datum)):[];renderKommentare();const cnt=document.getElementById('k-count');if(cnt)cnt.textContent=kommentare.length||'';}catch(e){console.warn(e);}
+  try{const res=await dbFetch(DB+'/kommentare.json');if(!res.ok)return;const d=await res.json();kommentare=d?Object.entries(d).map(([k,v])=>Object.assign({},v,{_key:k})).sort((a,b)=>b.datum.localeCompare(a.datum)):[];if(_selfRender())renderKommentare();const cnt=document.getElementById('k-count');if(cnt)cnt.textContent=kommentare.length||'';}catch(e){console.warn(e);}
 }
 async function deleteKommentar(key){
   if(!confirm('Kommentar löschen?'))return;
@@ -4431,6 +4425,7 @@ document.getElementById('reg-pw2')?.addEventListener('keydown', e => { if(e.key=
 async function doLogout() {
   await window._fbSignOut(window._fbAuth);
   currentUser = null; currentUserProfile = null;
+  _firstLoadDone = false; // nächste Anmeldung wieder mit Ladebildschirm (keine Daten der vorigen Sitzung aufblitzen)
   adminMode = false; sessionStorage.removeItem('chor_admin');
   closeModal();
   document.getElementById('login-overlay').style.display = 'flex';
@@ -4910,7 +4905,7 @@ async function loadLiedwuensche(){
     if(!res.ok)return;
     const d=await res.json();
     liedwuensche=d?Object.entries(d).map(([k,v])=>Object.assign({},v,{_key:k})).sort((a,b)=>b.datum.localeCompare(a.datum)):[];
-    renderLiedwuensche();
+    if(_selfRender()) renderLiedwuensche();
   }catch(e){console.warn(e);}
 }
 
@@ -5136,7 +5131,7 @@ async function loadPlakate(){
     if(!res.ok)return;
     const d=await res.json();
     plakate=d?Object.entries(d).map(([k,v])=>Object.assign({},v,{_key:k})).sort((a,b)=>(a.ort||'').localeCompare(b.ort||'')):[];
-    renderPlakate();
+    if(_selfRender()) renderPlakate();
   }catch(e){console.warn(e);}
 }
 // Adresse -> Koordinaten + Ortschafts-Vorschlag (OpenStreetMap/Nominatim, kostenlos, kein API-Key nötig)
@@ -6544,9 +6539,7 @@ function myKey(){
 }
 
 // ===== PINNWAND / ANKÜNDIGUNGEN (getrennt von Kommentaren, mit „gelesen von …") =====
-async function loadPinnwand(){
-  try{ const r=await dbFetch(DB+'/pinnwand.json'); if(r.ok){ pinnwand=(await r.json())||{}; } }catch(e){ console.warn('loadPinnwand',e); }
-}
+async function loadPinnwand(){ const d=await dbGet('pinnwand',{}); if(d!==undefined) pinnwand=d; }
 function renderPinnwand(){
   const card=document.getElementById('pinnwand-card'); if(!card) return;
   const editor=canPin();
@@ -6609,9 +6602,7 @@ async function markPinnwandRead(id){
 }
 
 // ===== FAHRGEMEINSCHAFTEN (pro Termin) =====
-async function loadFahrten(){
-  try{ const r=await dbFetch(DB+'/fahrten.json'); if(r.ok){ fahrten=(await r.json())||{}; } }catch(e){ console.warn('loadFahrten',e); }
-}
+async function loadFahrten(){ const d=await dbGet('fahrten',{}); if(d!==undefined) fahrten=d; }
 // Pro Termin: Fahrgemeinschaften an/aus (nur Bearbeiter schalten; standardmäßig aus)
 function fahrtenBlock(t){
   const on = t.fahrten===true;
@@ -6678,9 +6669,7 @@ async function removeFahrt(terminId){
 }
 
 // ===== AUFGABEN / DIENSTE (pro Termin) =====
-async function loadAufgaben(){
-  try{ const r=await dbFetch(DB+'/aufgaben.json'); if(r.ok){ aufgaben=(await r.json())||{}; } }catch(e){ console.warn('loadAufgaben',e); }
-}
+async function loadAufgaben(){ const d=await dbGet('aufgaben',{}); if(d!==undefined) aufgaben=d; }
 const AUFGABEN_VORSCHLAEGE=['🎂 Kuchen/Snacks','🪑 Auf-/Abbau','🎼 Noten mitbringen','🚗 Technik transportieren','📷 Fotos machen','🧃 Getränke'];
 // Pro Termin: Aufgaben an/aus (nur Bearbeiter schalten; standardmäßig aus)
 function aufgabenBlock(t){
@@ -6838,9 +6827,7 @@ async function moveAblaufplanPunkt(terminId, itemId, dir){
 }
 
 // ===== TERMINFINDUNG (Doodle-Stil) =====
-async function loadTerminfindungen(){
-  try{ const r=await dbFetch(DB+'/terminfindungen.json'); if(r.ok){ terminfindungen=(await r.json())||{}; } }catch(e){ console.warn('loadTerminfindungen',e); }
-}
+async function loadTerminfindungen(){ const d=await dbGet('terminfindungen',{}); if(d!==undefined) terminfindungen=d; }
 function addTfOption(d='',z='',d2=''){
   const box=document.getElementById('tf-optionen'); if(!box) return;
   const div=document.createElement('div');
@@ -6968,29 +6955,23 @@ function renderPinnedTerminfindung(){
     : '';
 }
 
-async function loadAll(){
-  showLoading(true);
-  try{
-    const [r1,r2,r3,r4]=await Promise.all([
-      dbFetch(DB+'/chorproben.json'),
-      dbFetch(DB+'/termine.json'),
-      dbFetch(DB+'/probenplan.json'),
-      dbFetch(DB+'/mitglieder.json')
-    ]);
-    if(r1.ok){const d=await r1.json();if(d&&d.seasons){D=d;D.seasons=D.seasons.map(s=>Object.assign({},s,{songs:Array.isArray(s.songs)?s.songs:[]}));D.proben=Array.isArray(D.proben)?D.proben:[];}}
-    if(r2.ok){const d=await r2.json();if(d&&Array.isArray(d)&&d.length)termine=d;else termine=INIT_TERMINE;}else termine=INIT_TERMINE;
-    if(r3.ok){const d=await r3.json();if(d&&Array.isArray(d))probenplan=d;}
-    if(r4.ok){const d=await r4.json();if(d&&Array.isArray(d)&&d.length)mitglieder=d;else mitglieder=[];}else mitglieder=[];
-  }catch(e){termine=INIT_TERMINE;mitglieder=[];console.warn(e);}
-  const d=new Date();
-  document.getElementById('stand').textContent='Stand: '+d.toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'})+' · '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr';
-  try{ await migrateVergangeneProben(); }catch(e){ console.warn(e); }
-  if(D){renderLieder();renderProben();populateLiedSelect();}
-  else document.getElementById('lieder-list').innerHTML='<div class="empty">Noch keine Daten. Tracker öffnen und synchronisieren.</div>';
-  try{ renderStart(); }catch(e){ console.warn('renderStart',e); }
-  renderTermine();
-  renderMitglieder();
-  await Promise.all([
+// Ladevorgang: nur beim ERSTEN Laden der Vollbild-Ladebildschirm; spätere Aktualisierungen (Intervall,
+// Zurückwechseln in die App) laufen still im Hintergrund. Läuft schon ein Ladevorgang, wird dieser
+// wiederverwendet statt einen zweiten parallel zu starten (vorher konnten sich Ladevorgänge stapeln).
+let _loadAllRunning=null, _lastLoadAll=0, _firstLoadDone=false;
+function loadAll(){
+  if(_loadAllRunning) return _loadAllRunning;
+  _loadAllRunning=(async()=>{
+    try{ await _loadAllImpl(); }
+    finally{ _lastLoadAll=Date.now(); _firstLoadDone=true; _loadAllRunning=null; }
+  })();
+  return _loadAllRunning;
+}
+async function _loadAllImpl(){
+  if(!_firstLoadDone) showLoading(true);
+  // Alle Nebendaten sofort mitstarten (vorher erst NACH den Grunddaten -> zwei Round-Trips hintereinander).
+  // Deren eigene Zwischen-Renders sind unkritisch: am Ende folgt ein vollständiger Render-Durchlauf.
+  const nebendaten=Promise.all([
     loadKommentare(),
     loadLiedwuensche(),
     loadPlakate(),
@@ -7007,15 +6988,34 @@ async function loadAll(){
     loadTerminfindungen(),
     loadUserProfiles().then(p=>{ userprofilesCache=p||{}; }).catch(()=>{})
   ]);
-  try{ renderPinnwand(); }catch(e){ console.warn('renderPinnwand',e); }
-  try{ renderTermine(); }catch(e){}
+  try{
+    const [r1,r2,r3,r4]=await Promise.all([
+      dbFetch(DB+'/chorproben.json'),
+      dbFetch(DB+'/termine.json'),
+      dbFetch(DB+'/probenplan.json'),
+      dbFetch(DB+'/mitglieder.json')
+    ]);
+    if(r1.ok){const d=await r1.json();if(d&&d.seasons){D=d;D.seasons=D.seasons.map(s=>Object.assign({},s,{songs:Array.isArray(s.songs)?s.songs:[]}));D.proben=Array.isArray(D.proben)?D.proben:[];}}
+    if(r2.ok){const d=await r2.json();if(d&&Array.isArray(d)&&d.length)termine=d;else termine=INIT_TERMINE;}else termine=INIT_TERMINE;
+    if(r3.ok){const d=await r3.json();if(d&&Array.isArray(d))probenplan=d;}
+    if(r4.ok){const d=await r4.json();if(d&&Array.isArray(d)&&d.length)mitglieder=d;else mitglieder=[];}else mitglieder=[];
+  }catch(e){termine=INIT_TERMINE;mitglieder=[];console.warn(e);}
+  const d=new Date();
+  document.getElementById('stand').textContent='Stand: '+d.toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'})+' · '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr';
+  try{ await migrateVergangeneProben(); }catch(e){ console.warn(e); }
+  await nebendaten;
+  // Ein einziger vollständiger Render-Durchlauf mit allen Daten (vorher liefen Start/Termine/Proben
+  // pro Ladevorgang 2-3x, teils mit noch unvollständigen Daten).
+  if(D){renderLieder();populateLiedSelect();}
+  else document.getElementById('lieder-list').innerHTML='<div class="empty">Noch keine Daten. Tracker öffnen und synchronisieren.</div>';
+  try{ renderMitglieder(); }catch(e){ console.warn('renderMitglieder',e); }
   try{ if(document.getElementById('p-umfragen')?.classList.contains('active')) renderTerminfindung(); }catch(e){}
-  // Profile sind jetzt geladen -> Namens-Anzeigen mit aktuellen Anzeigenamen neu aufbauen
+  // Termine, Umfragen, Kommentare, Liedwünsche, Proben, Start (inkl. Pinnwand + angepinnter Terminfindung)
+  // und Plakate — alles mit vollständigen Daten und aktuellen Anzeigenamen, je genau einmal.
   refreshNameDisplays();
-  try{ renderStart(); }catch(e){ console.warn('renderStart',e); }
   if(document.getElementById('uf-optionen') && !document.querySelector('#uf-optionen .uf-opt')) resetUmfrageForm();
   loadNotice();
-  if(!window._notifPoll){ window._notifPoll=setInterval(loadBenachrichtigungen, 90000); }
+  if(!window._notifPoll){ window._notifPoll=setInterval(()=>{ if(!document.hidden) loadBenachrichtigungen(); }, 90000); }
   loadPushSettings();
   applyAdminMode();
   applyFontSize();
@@ -7029,8 +7029,10 @@ async function loadAll(){
 }
 
 // loadAll is called by onAuthChange when user logs in
-setInterval(()=>{if(currentUser){loadAll();if(aktiveTerminTab==='kalender')renderKalender();}},120000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser)loadAll();});
+// Nur aktualisieren, wenn die App auch sichtbar ist (im Hintergrund nichts laden) …
+setInterval(()=>{if(currentUser&&!document.hidden){loadAll().then(()=>{if(aktiveTerminTab==='kalender')renderKalender();});}},120000);
+// … und beim Zurückwechseln höchstens alle 30 s (vorher bei JEDEM App-Wechsel komplett neu, inkl. Ladebildschirm)
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser&&Date.now()-_lastLoadAll>30000)loadAll();});
 // Offline-Hinweis: Banner ein-/ausblenden; beim Wieder-online-Gehen frisch laden
 function updateOfflineBar(){ const b=document.getElementById('offline-bar'); if(b) b.style.display=navigator.onLine?'none':'block'; }
 window.addEventListener('online',()=>{ updateOfflineBar(); if(currentUser)loadAll(); });
