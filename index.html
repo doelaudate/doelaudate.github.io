@@ -1064,6 +1064,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
         <span id="push-settings-result" style="font-size:.8rem"></span>
       </div>
       <div id="push-subs-count" style="font-size:.78rem;color:#aaa;margin-top:8px"></div>
+      <div id="push-overview" style="margin-top:14px;padding-top:12px;border-top:1px solid #e6eaf0"></div>
     </div>
     </div>
     <div class="konsole-pane" id="kp-senden">
@@ -4151,6 +4152,7 @@ function renderKonsole(){
   if(alMin) alMin.value = localStorage.getItem('auto_logout_min')||'0';
 
   loadPushSettings();
+  renderPushOverview();
   loadNotice();
   renderStimmenZuweisen();
   renderUserVerwaltung();
@@ -6476,16 +6478,16 @@ async function togglePush(){
       try{ await sub.unsubscribe(); }catch(e){}
       await dbFetch(DB+'/pushsubs/'+currentUser.uid+'.json',{method:'DELETE'});
       res.style.color='#888'; res.textContent='🔕 Benachrichtigungen deaktiviert.';
-      renderPushStatus(); return;
+      renderPushStatus(); reportPushStatus(true); return;
     }
     const perm=await Notification.requestPermission();
-    if(perm!=='granted'){ res.style.color='#e74c3c'; res.textContent='❌ Erlaubnis nicht erteilt. Bitte im Browser für diese Seite freigeben.'; return; }
+    if(perm!=='granted'){ res.style.color='#e74c3c'; res.textContent='❌ Erlaubnis nicht erteilt. Bitte im Browser für diese Seite freigeben.'; reportPushStatus(true); return; }
     sub=await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: urlB64ToUint8(VAPID_PUBLIC) });
     await dbFetch(DB+'/pushsubs/'+currentUser.uid+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ sub: sub.toJSON(), name:(getUserVoteName()||''), ts:Date.now() })});
     res.style.color='#27ae60'; res.textContent='✅ Benachrichtigungen aktiviert!';
     // Sofortige lokale Bestätigung – zeigt direkt, dass Benachrichtigungen ankommen
     try{ await reg.showNotification('🎵 Chor Dölau', { body:'✅ Benachrichtigungen sind jetzt aktiviert!', icon:'/icon-192.png', badge:'/icon-192.png', tag:'welcome' }); }catch(e){}
-    renderPushStatus();
+    renderPushStatus(); reportPushStatus(true);
   }catch(e){ res.style.color='#e74c3c'; res.textContent='❌ Fehler: '+(e.message||e); }
 }
 
@@ -6496,9 +6498,85 @@ async function loadPushSettings(){
     for(const k in m){ const el=document.getElementById(m[k]); if(el) el.checked=!!pushSettings[k]; }
     const ab=document.getElementById('push-ev-absage'); if(ab) ab.checked = pushSettings.absage!==false; // Standard an
     const rd=document.getElementById('push-remind-days'); if(rd) rd.value = String(pushSettings.remindDays||0);
-    const c=document.getElementById('push-subs-count');
-    if(c){ const sr=await dbFetch(DB+'/pushsubs.json'); const so=sr.ok?await sr.json():null; c.textContent='📱 '+(so?Object.keys(so).length:0)+' Gerät(e) abonniert'; }
   }catch(e){}
+}
+
+// ===== Push-Status je Gerät melden (für die Admin-Übersicht "Wer hat Push aktiv?") =====
+// "Blockiert" weiß nur der Browser auf dem Gerät selbst — der Server sieht davon nichts. Darum meldet
+// jedes Gerät seinen Zustand nach pushstatus/<uid>/<geräte-id>. Nur bei Änderung bzw. höchstens alle 3 Tage.
+async function myPushState(){
+  if(!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return 'nicht_unterstuetzt';
+  if(Notification.permission==='denied') return 'blockiert';
+  try{
+    const reg=await Promise.race([navigator.serviceWorker.ready, new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),4000))]);
+    const sub=await reg.pushManager.getSubscription();
+    return sub?'aktiv':'nicht_aktiviert';
+  }catch(e){ return null; }
+}
+async function reportPushStatus(force){
+  if(!currentUser) return;
+  try{
+    const s=await myPushState(); if(!s) return;
+    let last=null; try{ last=JSON.parse(localStorage.getItem('chor_push_reported')||'null'); }catch(e){}
+    if(!force && last && last.s===s && last.u===currentUser.uid && Date.now()-last.t < 3*24*60*60*1000) return;
+    let dev=null; try{ dev=localStorage.getItem('chor_push_devid'); if(!dev){ dev=Math.random().toString(36).slice(2,10); localStorage.setItem('chor_push_devid',dev); } }catch(e){}
+    if(!dev) dev='x'+Math.random().toString(36).slice(2,8);
+    const ua=navigator.userAgent;
+    const p=/iphone|ipad|ipod/i.test(ua)?'ios':/android/i.test(ua)?'android':'desktop';
+    const r=await dbFetch(DB+'/pushstatus/'+currentUser.uid+'/'+dev+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({s,p,t:Date.now()})});
+    if(r.ok){ try{ localStorage.setItem('chor_push_reported',JSON.stringify({s,t:Date.now(),u:currentUser.uid})); }catch(e){} }
+  }catch(e){ console.warn('reportPushStatus',e); }
+}
+
+// Admin-Übersicht: pro Mitglied der beste bekannte Zustand über alle seine Geräte
+let _pushOverviewNames=[];
+async function renderPushOverview(){
+  const el=document.getElementById('push-overview'); if(!el) return;
+  el.innerHTML='<div style="color:#aaa;font-size:.82rem">Lade Push-Übersicht…</div>';
+  try{
+    const [sr,str,profiles]=await Promise.all([
+      dbFetch(DB+'/pushsubs.json?shallow=true').then(r=>r.ok?r.json():null).catch(()=>null),
+      dbFetch(DB+'/pushstatus.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      loadUserProfiles().catch(()=>({}))
+    ]);
+    const subs=sr||{}, stat=str||{};
+    const c=document.getElementById('push-subs-count'); if(c) c.textContent='📱 '+Object.keys(subs).length+' Gerät(e) abonniert';
+    const groups={aktiv:[],blockiert:[],nicht_aktiviert:[],nicht_unterstuetzt:[],unbekannt:[]};
+    const platIcon={ios:'🍎',android:'🤖',desktop:'💻'};
+    Object.entries(profiles).forEach(([uid,p])=>{
+      if(!p) return;
+      const name=(p.anzeigename||((p.vorname||'')+' '+(p.nachname||'')).trim()||p.username||uid);
+      const devs=Object.values(stat[uid]||{});
+      const has=s=>devs.some(d=>d&&d.s===s);
+      const plat=(devs.map(d=>d&&d.p).filter(Boolean).pop())||'';
+      let g;
+      if(subs[uid] || has('aktiv')) g='aktiv';
+      else if(has('blockiert')) g='blockiert';
+      else if(has('nicht_aktiviert')) g='nicht_aktiviert';
+      else if(has('nicht_unterstuetzt')) g='nicht_unterstuetzt';
+      else g='unbekannt';
+      groups[g].push({name,plat});
+    });
+    Object.values(groups).forEach(a=>a.sort((x,y)=>x.name.localeCompare(y.name,'de')));
+    _pushOverviewNames=[].concat(groups.blockiert,groups.nicht_aktiviert,groups.nicht_unterstuetzt).map(x=>x.name);
+    const list=a=>a.map(x=>`<span style="display:inline-block;background:#f4f6fa;border-radius:12px;padding:2px 9px;margin:2px 3px 2px 0;font-size:.8rem">${x.plat?(platIcon[x.plat]||'')+' ':''}${esc(x.name)}</span>`).join('');
+    const sec=(icon,titel,hint,a,open,color)=>a.length?`<details ${open?'open':''} style="margin-top:8px"><summary style="cursor:pointer;font-weight:600;font-size:.86rem;color:${color}">${icon} ${titel} (${a.length})</summary><div style="font-size:.76rem;color:#888;margin:3px 0 4px">${hint}</div><div>${list(a)}</div></details>`:'';
+    const total=Object.keys(groups).reduce((n,k)=>n+groups[k].length,0);
+    el.innerHTML=`<div style="font-weight:700;font-size:.9rem;color:#1b3a6b;margin-bottom:2px">📊 Wer hat Push aktiv?</div>
+      <div style="font-size:.78rem;color:#888">${groups.aktiv.length} von ${total} Mitgliedern erreichbar. Der Status wird beim App-Öffnen gemeldet — „Noch nicht gemeldet" heißt: App seit dem Update nicht geöffnet.</div>
+      ${sec('🔕','Blockiert (abgelehnt)','Haben die Erlaubnis verweigert — der Knopf in der App hilft hier nicht mehr, sie müssen es in den Browser-/Geräte-Einstellungen freigeben. Am besten persönlich ansprechen.',groups.blockiert,true,'#c0620f')}
+      ${sec('🔔','Nicht aktiviert','Noch nie zugestimmt bzw. wieder ausgeschaltet — bekommen die Erinnerung auf der Startseite.',groups.nicht_aktiviert,true,'#2563b5')}
+      ${sec('⚠️','Gerät unterstützt kein Push','iPhone: die App muss erst über „Teilen → Zum Home-Bildschirm" installiert werden.',groups.nicht_unterstuetzt,true,'#8a6d3b')}
+      ${sec('❔','Noch nicht gemeldet','',groups.unbekannt,false,'#888')}
+      ${sec('✅','Aktiv','',groups.aktiv,false,'#27ae60')}
+      ${_pushOverviewNames.length?`<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn btn-gray btn-sm" onclick="copyPushOverviewNames()">📋 Namen der nicht Erreichten kopieren</button><button class="btn btn-gray btn-sm" onclick="renderPushOverview()">🔄 Aktualisieren</button><span id="push-overview-msg" style="font-size:.78rem;color:#27ae60"></span></div>`:`<div style="margin-top:10px"><button class="btn btn-gray btn-sm" onclick="renderPushOverview()">🔄 Aktualisieren</button></div>`}`;
+  }catch(e){ el.innerHTML='<div style="color:#e74c3c;font-size:.82rem">❌ Push-Übersicht konnte nicht geladen werden.</div>'; }
+}
+function copyPushOverviewNames(){
+  const txt=_pushOverviewNames.join(', ');
+  const done=()=>{ const m=document.getElementById('push-overview-msg'); if(m){ m.textContent='✅ Kopiert'; setTimeout(()=>{ if(m) m.textContent=''; },2000); } };
+  if(navigator.clipboard?.writeText) navigator.clipboard.writeText(txt).then(done).catch(()=>prompt('Namen kopieren:',txt));
+  else prompt('Namen kopieren:',txt);
 }
 async function savePushSettings(){
   const s={ termin:document.getElementById('push-ev-termin').checked, probe:document.getElementById('push-ev-probe').checked, liedwunsch:document.getElementById('push-ev-liedwunsch').checked, kommentar:document.getElementById('push-ev-kommentar').checked, umfrage:document.getElementById('push-ev-umfrage').checked, pinnwand:document.getElementById('push-ev-pinnwand').checked, absage:document.getElementById('push-ev-absage').checked, remindDays:parseInt(document.getElementById('push-remind-days').value)||0 };
@@ -7117,6 +7195,7 @@ async function _loadAllImpl(){
   loadNotice();
   if(!window._notifPoll){ window._notifPoll=setInterval(()=>{ if(!document.hidden) loadBenachrichtigungen(); }, 90000); }
   loadPushSettings();
+  reportPushStatus();
   applyAdminMode();
   applyFontSize();
   const _sb=document.getElementById('search-btn'); if(_sb) _sb.style.display='block';
