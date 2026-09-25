@@ -454,6 +454,49 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
 
 <div id="toast-wrap"></div>
 
+<!-- GAST-ANSICHT: ?gast=<token> zeigt ohne Login nur die freigegebenen Noten, solange der Link gültig ist.
+     Token + Ablauf prüft serverseitig die Cloud Function gastNoten (der DB-Knoten gastlinks bleibt für Anonyme gesperrt). -->
+<div id="gast-view" style="display:none;position:fixed;left:0;top:0;right:0;bottom:0;z-index:100000;background:#f4f6fa;overflow:auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#222">
+  <div style="max-width:520px;margin:0 auto;padding:22px 16px 40px">
+    <div style="text-align:center;margin-bottom:14px"><img src="logo.png" alt="Dö Laudate" style="width:150px;height:auto"></div>
+    <div style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(27,58,107,.10);padding:18px 16px">
+      <div style="font-size:1.15rem;font-weight:700;color:#1b3a6b">🎵 Noten für Gäste</div>
+      <div id="gast-sub" style="font-size:.85rem;color:#666;margin:4px 0 14px">Wird geladen…</div>
+      <div id="gast-list"></div>
+    </div>
+    <div style="text-align:center;font-size:.74rem;color:#999;margin-top:14px">Zur persönlichen Nutzung im Chor Dölau. Bitte nicht weitergeben.</div>
+  </div>
+</div>
+<script>
+(function(){
+  var m=location.search.match(/[?&]gast=([A-Za-z0-9]{16,64})(?:&|$)/);
+  if(!m) return;
+  window._gastMode=true;
+  var view=document.getElementById('gast-view'), sub=document.getElementById('gast-sub'), list=document.getElementById('gast-list');
+  view.style.display='block';
+  document.title='Noten für Gäste – Chor Dölau';
+  function fail(t){ sub.textContent=t; sub.style.color='#c0392b'; }
+  fetch('https://europe-west1-chor-doelau.cloudfunctions.net/gastNoten?t='+m[1])
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(g){
+      if(!g || !g.songs || !(g.bis>Date.now())){ fail('Dieser Link ist abgelaufen oder ungültig. Bitte bei der Chorleitung einen neuen anfragen.'); return; }
+      var d=new Date(g.bis);
+      sub.textContent=(g.label?g.label+' · ':'')+'gültig bis '+d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})+', '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr';
+      var songs=Array.isArray(g.songs)?g.songs:Object.keys(g.songs).map(function(k){return g.songs[k];});
+      songs.forEach(function(s){
+        if(!s || !/^https:\/\//i.test(s.p||'')) return;
+        var a=document.createElement('a'); a.href=s.p; a.target='_blank'; a.rel='noopener';
+        a.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 4px;border-top:1px solid #eef1f5;text-decoration:none;color:#1b3a6b;font-weight:600;font-size:.95rem';
+        var n=document.createElement('span'); n.textContent=s.n||'Lied';
+        var o=document.createElement('span'); o.textContent='📄 Noten öffnen'; o.style.cssText='font-weight:500;font-size:.82rem;color:#2563b5;white-space:nowrap';
+        a.appendChild(n); a.appendChild(o); list.appendChild(a);
+      });
+      if(!list.firstChild) fail('Für diesen Link sind keine Noten hinterlegt.');
+    })
+    .catch(function(){ fail('Keine Verbindung – bitte später erneut versuchen.'); });
+})();
+</script>
+
 <!-- LADEANZEIGE -->
 <div id="loading-overlay" style="display:none">
   <img src="logo.png" alt="Dö Laudate" style="width:150px;height:auto;opacity:.92">
@@ -1154,6 +1197,32 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
       <div id="user-verwaltung"></div>
     </div>
     </div>
+    <div class="konsole-pane" id="kp-gast">
+    <div class="konsole-section">
+      <div class="konsole-title">🎫 Gastzugang zu den Noten</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:10px">Erzeugt einen Link, mit dem jemand <strong>ohne Konto</strong> nur die ausgewählten Noten öffnen kann — bis zum gewählten Ablaufdatum. Sonst sieht der Gast nichts aus der App.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <input type="text" id="gast-label" class="fl-input" placeholder="Für wen? (z. B. Gastsänger Herr Müller)" maxlength="60" style="flex:2;min-width:180px;margin-bottom:0">
+        <select id="gast-tage" class="fl-input" style="flex:1;min-width:120px;margin-bottom:0">
+          <option value="3">3 Tage</option><option value="7">7 Tage</option><option value="14" selected>14 Tage</option><option value="30">30 Tage</option><option value="90">90 Tage</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+        <button class="btn btn-gray btn-sm" onclick="gastSelect('current')">Aktuelle Saison</button>
+        <button class="btn btn-gray btn-sm" onclick="gastSelect('all')">Alle</button>
+        <button class="btn btn-gray btn-sm" onclick="gastSelect('none')">Keine</button>
+      </div>
+      <div id="gast-songs" style="max-height:280px;overflow:auto;border:1px solid #e6eaf0;border-radius:8px;padding:6px 10px;margin-bottom:10px"></div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="createGastLink()">🎫 Gast-Link erstellen</button>
+        <span id="gast-result" style="font-size:.8rem"></span>
+      </div>
+      <div id="gast-new" style="margin-top:10px"></div>
+      <div style="font-weight:700;font-size:.9rem;color:#1b3a6b;margin:16px 0 4px">Bestehende Gast-Links</div>
+      <div id="gast-links"></div>
+      <div style="font-size:.74rem;color:#999;margin-top:8px">Hinweis: Der Ablauf sperrt den Link. Wer ein PDF schon heruntergeladen hat, behält seine Kopie — das lässt sich technisch nicht verhindern.</div>
+    </div>
+    </div>
     <div class="konsole-pane" id="kp-stimmen">
     <div class="konsole-section">
       <div class="konsole-title">🎚️ Stimmen zuweisen (S/A/T/B)</div>
@@ -1173,6 +1242,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
       <button class="km" data-kp="sicherheit" onclick="konsoleNav('sicherheit')">🔑 Sicherheit</button>
       <button class="km" data-kp="benutzer" onclick="konsoleNav('benutzer')">👥 Benutzer</button>
       <button class="km" data-kp="stimmen" onclick="konsoleNav('stimmen')">🎚️ Stimmen</button>
+      <button class="km" data-kp="gast" onclick="konsoleNav('gast')">🎫 Gast-Noten</button>
     </div>
     </div><!-- /konsole-layout -->
   </div>
@@ -4104,6 +4174,93 @@ function konsoleNav(id){
   document.querySelectorAll('#p-konsole .konsole-pane').forEach(p=>p.classList.toggle('active', p.id==='kp-'+id));
   document.querySelectorAll('#p-konsole .km').forEach(b=>b.classList.toggle('active', b.getAttribute('data-kp')===id));
   const c=document.querySelector('.konsole-content'); if(c) c.scrollTop=0;
+  if(id==='gast') renderGastAdmin();
+}
+
+// ===== Gastzugang zu den Noten (ablaufender Link ohne Konto) =====
+// Daten: gastlinks/<token> = {label, bis, erstellt, von, songs:[{n,p}]} — Momentaufnahme der gewählten Lieder.
+// Gäste lesen ihn nie direkt, sondern über die Cloud Function gastNoten (prüft Token + Ablauf serverseitig).
+function gastBaseUrl(){ return location.origin+location.pathname; }
+function gastSongsWithPdf(){
+  const out=[];
+  (D&&D.seasons||[]).forEach(s=>{
+    const list=(s.songs||[]).filter(x=>x.pdf && !x.archived && /^https:\/\//i.test(x.pdf));
+    if(list.length) out.push({season:s, songs:list});
+  });
+  return out;
+}
+function renderGastAdmin(){
+  const box=document.getElementById('gast-songs'); if(!box) return;
+  const groups=gastSongsWithPdf();
+  box.innerHTML = groups.length ? groups.map(g=>`<div style="margin:6px 0 2px;font-weight:600;font-size:.82rem;color:#1b3a6b">${esc(g.season.name)}</div>`+
+    g.songs.map(x=>`<label style="display:flex;align-items:center;gap:8px;font-size:.86rem;padding:2px 0;cursor:pointer"><input type="checkbox" class="gast-cb" data-season="${esc(g.season.id||'')}" data-cur="${isCurrentYearSeason(g.season)?1:0}" value="${esc(x.id)}" style="accent-color:#2563b5;width:16px;height:16px"> ${esc(x.name)}</label>`).join('')).join('')
+    : '<div style="color:#999;font-size:.83rem;padding:6px 0">Noch keine Lieder mit hinterlegten Noten (PDF).</div>';
+  loadGastLinks();
+}
+function gastSelect(mode){
+  document.querySelectorAll('#gast-songs .gast-cb').forEach(cb=>{ cb.checked = mode==='all' || (mode==='current' && cb.dataset.cur==='1'); });
+}
+async function createGastLink(){
+  if(!hasPermission('lieder')) return;
+  const res=document.getElementById('gast-result');
+  const ids=[...document.querySelectorAll('#gast-songs .gast-cb:checked')].map(cb=>cb.value);
+  if(!ids.length){ res.style.color='#e74c3c'; res.textContent='❌ Bitte mindestens ein Lied auswählen.'; return; }
+  const songs=ids.map(id=>findSongById(id)).filter(s=>s&&s.pdf).map(s=>({n:s.name,p:s.pdf}));
+  const tage=parseInt(document.getElementById('gast-tage').value)||14;
+  const label=document.getElementById('gast-label').value.trim();
+  const b=new Uint8Array(12); crypto.getRandomValues(b);
+  const token=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');
+  const bis=Date.now()+tage*24*60*60*1000;
+  res.style.color='#2563b5'; res.textContent='⏳ …';
+  try{
+    const r=await dbFetch(DB+'/gastlinks/'+token+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({label,bis,erstellt:Date.now(),von:getUserVoteName()||'',songs})});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    res.textContent='';
+    const link=gastBaseUrl()+'?gast='+token;
+    const d=new Date(bis).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+    const msg='Hallo'+(label?' '+label:'')+', hier sind die Noten für den Chor Dölau (gültig bis '+d+'): '+link;
+    document.getElementById('gast-new').innerHTML=`<div style="background:#f0fff4;border:1px solid #bfe6cc;border-radius:8px;padding:10px">
+      <div style="font-size:.82rem;color:#27ae60;font-weight:600;margin-bottom:4px">✅ Gast-Link erstellt · gültig bis ${d}</div>
+      <input type="text" readonly class="fl-input" value="${esc(link)}" onclick="this.select()" style="margin-bottom:8px;font-size:.8rem">
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary btn-sm" onclick="copyGastLink('${token}')">📋 Link kopieren</button><a class="btn btn-gray btn-sm" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">💬 Per WhatsApp senden</a></div></div>`;
+    loadGastLinks();
+  }catch(e){ res.style.color='#e74c3c'; res.textContent='❌ Fehler: '+(e.message||e); }
+}
+function copyGastLink(token){
+  const link=gastBaseUrl()+'?gast='+token;
+  const ok=()=>showToast('Link kopiert','ok');
+  if(navigator.clipboard?.writeText) navigator.clipboard.writeText(link).then(ok).catch(()=>prompt('Link kopieren:',link));
+  else prompt('Link kopieren:',link);
+}
+async function loadGastLinks(){
+  const el=document.getElementById('gast-links'); if(!el) return;
+  try{
+    const r=await dbFetch(DB+'/gastlinks.json'); const o=(r.ok?await r.json():null)||{};
+    const rows=Object.entries(o).filter(([k,v])=>v&&v.bis).sort((a,b)=>b[1].bis-a[1].bis);
+    if(!rows.length){ el.innerHTML='<div style="color:#999;font-size:.83rem">Noch keine Gast-Links.</div>'; return; }
+    const now=Date.now();
+    el.innerHTML=rows.map(([k,v])=>{
+      const active=v.bis>now;
+      const d=new Date(v.bis).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+      const n=Array.isArray(v.songs)?v.songs.length:Object.keys(v.songs||{}).length;
+      return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 0;border-top:1px solid #eef1f5">
+        <div style="flex:1;min-width:150px"><div style="font-size:.88rem;font-weight:600">${esc(v.label||'(ohne Bezeichnung)')}</div>
+        <div style="font-size:.76rem;color:${active?'#27ae60':'#999'}">${active?'✅ gültig bis '+d:'⌛ abgelaufen am '+d} · ${n} Lied${n===1?'':'er'}</div></div>
+        ${active?`<button class="btn btn-gray btn-sm" onclick="copyGastLink('${k}')">📋</button><button class="btn btn-gray btn-sm" onclick="extendGastLink('${k}',7)">+7 Tage</button>`:''}
+        <button class="btn btn-danger btn-sm" style="opacity:1;position:static" onclick="deleteGastLink('${k}')">${active?'Widerrufen':'Löschen'}</button></div>`;
+    }).join('');
+  }catch(e){ el.innerHTML='<div style="color:#e74c3c;font-size:.83rem">❌ Liste konnte nicht geladen werden.</div>'; }
+}
+async function extendGastLink(k,tage){
+  try{
+    const r=await dbFetch(DB+'/gastlinks/'+k+'/bis.json'); const bis=r.ok?await r.json():null; if(!bis) return;
+    await dbFetch(DB+'/gastlinks/'+k+'/bis.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(Math.max(bis,Date.now())+tage*24*60*60*1000)});
+    loadGastLinks();
+  }catch(e){ showToast('Fehler beim Verlängern','err'); }
+}
+async function deleteGastLink(k){
+  if(!confirm('Gast-Link löschen? Er funktioniert danach sofort nicht mehr.')) return;
+  try{ await dbFetch(DB+'/gastlinks/'+k+'.json',{method:'DELETE'}); loadGastLinks(); }catch(e){ showToast('Fehler beim Löschen','err'); }
 }
 const NOTICE_DEFAULT='ℹ️ Diese Seite wird von der Chorleitung gepflegt und lädt Änderungen automatisch.';
 async function loadNotice(){
