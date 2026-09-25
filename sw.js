@@ -1,8 +1,18 @@
-const CACHE = 'chor-doelau-v6';
-const OFFLINE_FILES = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
+const CACHE = 'chor-doelau-v7';
+const OFFLINE_FILES = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png', '/logo.png'];
+// Firebase-SDK (fest versioniert, ändert sich nie): ohne diese Skripte startet die App offline gar nicht.
+const SDK_FILES = [
+  'https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js',
+  'https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js',
+  'https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js'
+];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(OFFLINE_FILES)));
+  e.waitUntil(caches.open(CACHE).then(async c => {
+    await c.addAll(OFFLINE_FILES);
+    // SDK best effort (opaque no-cors-Antworten) — ein Fehler hier darf die Installation nicht kippen
+    await Promise.all(SDK_FILES.map(u => fetch(u, { mode: 'no-cors' }).then(r => c.put(u, r)).catch(() => {})));
+  }));
   self.skipWaiting();
 });
 
@@ -18,6 +28,11 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   let url;
   try { url = new URL(req.url); } catch (_) { return; }
+  // Firebase-SDK: Cache zuerst (versioniert = unveränderlich), sonst Netz und dabei nachcachen.
+  if (SDK_FILES.indexOf(req.url) !== -1) {
+    e.respondWith(caches.open(CACHE).then(cache => cache.match(req.url).then(hit => hit || fetch(req).then(res => { cache.put(req.url, res.clone()); return res; }))));
+    return;
+  }
   // Nur eigene Domain aus dem Cache bedienen; Firebase/Identity/API immer direkt aus dem Netz.
   if (url.origin !== self.location.origin) return;
 
@@ -27,11 +42,12 @@ self.addEventListener('fetch', e => {
     // auf den nächsten Öffnen-Zyklus). Nur bei fehlender Verbindung auf den Cache zurückfallen (Offline).
     e.respondWith(
       fetch(req).then(res => {
+        // Immer unter '/index.html' ablegen — sonst entstünde pro Query (?gast=…, ?x=…) ein eigener Eintrag
         if (res && res.status === 200 && res.type === 'basic') {
-          caches.open(CACHE).then(cache => cache.put(req, res.clone()));
+          caches.open(CACHE).then(cache => cache.put('/index.html', res.clone()));
         }
         return res;
-      }).catch(() => caches.open(CACHE).then(cache => cache.match(req)))
+      }).catch(() => caches.open(CACHE).then(cache => cache.match('/index.html').then(hit => hit || cache.match('/'))))
     );
     return;
   }

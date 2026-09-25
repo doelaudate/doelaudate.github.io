@@ -1773,12 +1773,46 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
 <script>
 const DB='https://chor-doelau-default-rtdb.europe-west1.firebasedatabase.app';
 // Datenbank-Zugriff mit Anmelde-Token (für geschützte Regeln). Vor Anmeldung normaler Zugriff.
+// Offline-Lesecache: jede erfolgreiche Lese-Antwort landet in localStorage; ohne Verbindung (oder bei
+// hängendem Netz) liefert dbFetch stattdessen den letzten Stand. Ausgenommen sind sensible/Admin-Knoten.
+// Beim Abmelden wird alles gelöscht (doLogout → clearOfflineCache).
+const OC_PREFIX='chor_oc_';
+const OC_SKIP=/\/(pushsubs|pushstatus|gastlinks|loginthrottle|usernames|beitraege)(\/|\.json)|\/userprofiles\.json|shallow=true/;
+let _offlineTs=0; // Zeitpunkt des Stands, der gerade aus dem Cache angezeigt wird (0 = Live-Daten)
+function _ocRead(key){ try{ const c=JSON.parse(localStorage.getItem(key)||'null'); return (c&&typeof c.d==='string')?c:null; }catch(e){ return null; } }
+function clearOfflineCache(){
+  try{ Object.keys(localStorage).filter(k=>k.indexOf(OC_PREFIX)===0).forEach(k=>localStorage.removeItem(k)); }catch(e){}
+  _offlineTs=0;
+}
 async function dbFetch(url, opts){
+  const isGet=!opts||!opts.method||opts.method==='GET';
+  const cacheable=isGet && url.indexOf(DB)===0 && !OC_SKIP.test(url);
+  const key=cacheable?OC_PREFIX+url.slice(DB.length):null;
+  const cached=cacheable?_ocRead(key):null;
   try{
     const u = window._fbAuth && window._fbAuth.currentUser;
     if(u){ const tok = await u.getIdToken(); url += (url.indexOf('?')>=0?'&':'?') + 'auth=' + tok; }
   }catch(e){}
-  return fetch(url, opts);
+  // Gibt es einen Cache-Stand, lieber nach 10 s darauf zurückfallen als ewig auf schwaches Netz zu warten.
+  let ctl=null, timer=null;
+  if(cached && typeof AbortController!=='undefined' && !(opts&&opts.signal)){ ctl=new AbortController(); timer=setTimeout(()=>ctl.abort(),10000); opts=Object.assign({},opts,{signal:ctl.signal}); }
+  try{
+    const r=await fetch(url, opts);
+    if(timer) clearTimeout(timer);
+    if(cacheable && r.ok){
+      r.clone().text().then(t=>{ try{ localStorage.setItem(key,JSON.stringify({t:Date.now(),d:t})); }catch(e){} }).catch(()=>{});
+      if(_offlineTs){ _offlineTs=0; try{ updateOfflineBar(); }catch(e){} }
+    }
+    return r;
+  }catch(e){
+    if(timer) clearTimeout(timer);
+    if(cached){
+      _offlineTs=cached.t; try{ updateOfflineBar(); }catch(_){}
+      return new Response(cached.d,{status:200,headers:{'Content-Type':'application/json','X-From-Cache':'1'}});
+    }
+    if(!isGet){ try{ showToast('📴 Keine Verbindung – Änderung nicht gespeichert','err'); }catch(_){} }
+    throw e;
+  }
 }
 // Kompakte DB-Schreibhelfer (path OHNE führendes DB und OHNE .json). Erben Auth aus dbFetch.
 const _J={'Content-Type':'application/json'};
@@ -4395,6 +4429,8 @@ function onAuthChange(user) {
   if(window._registering){ currentUser = user; return; }
   currentUser = user;
   if(user) {
+    // Offline-Cache gehört immer genau einem Konto — bei Kontowechsel auf demselben Gerät verwerfen
+    try{ if(localStorage.getItem('chor_oc_owner')!==user.uid){ clearOfflineCache(); localStorage.setItem('chor_oc_owner',user.uid); } }catch(e){}
     document.getElementById('login-overlay').style.display = 'none';
     loadUserProfile(user.uid, user.email);
   } else {
@@ -4585,6 +4621,7 @@ document.getElementById('reg-pw2')?.addEventListener('keydown', e => { if(e.key=
 
 async function doLogout() {
   await window._fbSignOut(window._fbAuth);
+  clearOfflineCache(); // keine Vereinsdaten auf dem Gerät zurücklassen
   currentUser = null; currentUserProfile = null;
   _firstLoadDone = false; // nächste Anmeldung wieder mit Ladebildschirm (keine Daten der vorigen Sitzung aufblitzen)
   adminMode = false; sessionStorage.removeItem('chor_admin');
@@ -7370,7 +7407,15 @@ setInterval(()=>{if(currentUser&&!document.hidden){loadAll().then(()=>{if(aktive
 // … und beim Zurückwechseln höchstens alle 30 s (vorher bei JEDEM App-Wechsel komplett neu, inkl. Ladebildschirm)
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser&&Date.now()-_lastLoadAll>30000)loadAll();});
 // Offline-Hinweis: Banner ein-/ausblenden; beim Wieder-online-Gehen frisch laden
-function updateOfflineBar(){ const b=document.getElementById('offline-bar'); if(b) b.style.display=navigator.onLine?'none':'block'; }
+function updateOfflineBar(){
+  const b=document.getElementById('offline-bar'); if(!b) return;
+  const off=!navigator.onLine || !!_offlineTs;
+  b.style.display=off?'block':'none';
+  if(off){
+    const st=_offlineTs?new Date(_offlineTs).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+    b.textContent='📴 Keine Internetverbindung — '+(st?'du siehst den Stand von '+st+' Uhr. ':'Anzeige ist evtl. nicht aktuell. ')+'Änderungen sind gerade nicht möglich.';
+  }
+}
 window.addEventListener('online',()=>{ updateOfflineBar(); if(currentUser)loadAll(); });
 window.addEventListener('offline',updateOfflineBar);
 updateOfflineBar();
