@@ -999,7 +999,9 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     <button id="atab-statistik" class="stab active" onclick="setAuswertungTab('statistik')">📈 Statistik</button>
     <button id="atab-anwesenheit" class="stab" onclick="setAuswertungTab('anwesenheit')">✅ Anwesenheit</button>
     <button id="atab-rueckblick" class="stab" onclick="setAuswertungTab('rueckblick')">🎊 Jahresrückblick</button>
+    <button id="atab-besetzung" class="stab" onclick="setAuswertungTab('besetzung')">🏖️ Besetzung</button>
   </div>
+  <div id="av-besetzung" style="display:none"><div id="besetzung-content"></div></div>
   <div id="av-rueckblick" style="display:none">
     <div class="card" style="margin-bottom:12px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -2118,6 +2120,38 @@ function openMoreSheet(){
 }
 function closeMoreSheet(){ document.getElementById('more-sheet').classList.remove('open'); }
 
+// ===== PROBE-RÜCKBLICK: kurze Notiz der Chorleitung zur letzten Probe (Startseite) =====
+// Daten: probenotizen/<probeId> = {gut, wdh, ts}. Unabhängig vom Probenplan/Verlauf gespeichert, damit die
+// Notiz beim Übernehmen vergangener Proben nicht verloren geht.
+let probenotizen={};
+async function loadProbenotizen(){ const d=await dbGet('probenotizen',{}); if(d!==undefined) probenotizen=d; }
+function probeRueckblickCard(){
+  if(!currentUser || typeof allProbenSorted!=='function') return '';
+  const today=localToday();
+  const p=allProbenSorted().find(x=>x.datum<=today); if(!p) return '';
+  const days=(Date.now()-new Date(p.datum+'T12:00:00').getTime())/86400000;
+  const n=probenotizen[p.id]||null;
+  const canEdit=hasPermission('proben');
+  if(!n && !(canEdit && days<=10)) return '';
+  if(n && days>21 && !canEdit) return '';
+  const id=esc(p.id);
+  const view=n?`${n.gut?`<div style="font-size:.88rem;margin-top:6px">👍 ${esc(n.gut)}</div>`:''}${n.wdh?`<div style="font-size:.88rem;margin-top:5px">🔁 <strong>Nächstes Mal wiederholen:</strong> ${esc(n.wdh)}</div>`:''}`:'<div style="font-size:.82rem;color:#999;margin-top:5px">Noch kein Rückblick eingetragen.</div>';
+  const form=canEdit?`<details style="margin-top:8px"${n?'':' open'}><summary style="cursor:pointer;font-size:.8rem;color:#1d4e96;font-weight:600">${n?'✏️ Rückblick bearbeiten':'✍️ Wie lief die Probe?'}</summary>
+    <input class="fl-input" id="pr-gut-${id}" placeholder="👍 Was lief gut?" value="${esc(n&&n.gut||'')}" maxlength="200" style="margin:8px 0 6px;font-size:.84rem">
+    <input class="fl-input" id="pr-wdh-${id}" placeholder="🔁 Was wiederholen wir nächstes Mal?" value="${esc(n&&n.wdh||'')}" maxlength="200" style="margin-bottom:6px;font-size:.84rem">
+    <button class="btn btn-primary btn-sm" onclick="saveProbeRueckblick('${id}')">💾 Speichern</button></details>`:'';
+  return `<div class="card" style="margin-bottom:12px;border-left:4px solid #2563b5"><div class="card-title" style="margin-bottom:0">🔁 Rückblick letzte Probe · ${fmt(p.datum)}</div>${view}${form}</div>`;
+}
+async function saveProbeRueckblick(id){
+  if(!hasPermission('proben')) return;
+  const gut=((document.getElementById('pr-gut-'+id)||{}).value||'').trim();
+  const wdh=((document.getElementById('pr-wdh-'+id)||{}).value||'').trim();
+  if(!gut && !wdh){ delete probenotizen[id]; await dbDel('probenotizen/'+encodeURIComponent(id)).catch(e=>console.warn(e)); }
+  else { const n={gut,wdh,ts:Date.now()}; probenotizen[id]=n; await dbPut('probenotizen/'+encodeURIComponent(id), n).catch(e=>console.warn(e)); }
+  showToast('Rückblick gespeichert','ok');
+  renderStart();
+}
+
 // START-ÜBERSICHT
 function renderStart(){
   try{ renderPinnwand(); }catch(e){}
@@ -2142,6 +2176,8 @@ function renderStart(){
   ];
   if(canPin()) _qa.push(`<button class="qa qa-adm" onclick="document.getElementById('pw-text')&&document.getElementById('pw-text').focus();window.scrollTo({top:0,behavior:'smooth'})"><span class="qa-ic">📌</span>Ankündigen</button>`);
   html+=`<div class="qa-row">${_qa.join('')}</div>`;
+
+  html+=probeRueckblickCard();
 
   // Nächste Probe (mit Abmelde-Möglichkeit direkt hier)
   const nextProbe=(probenplan||[]).filter(p=>p.datum>=today).sort((a,b)=>a.datum.localeCompare(b.datum))[0];
@@ -2440,7 +2476,7 @@ function renderLieder(){
   else songs.sort((a,b)=>a.count-b.count);
   const el=document.getElementById('lieder-list');if(!el)return;
   if(!songs.length){el.innerHTML='<div class="empty">'+(liederView==='archiv'?'Archiv ist leer.':'Keine Lieder vorhanden.')+'</div>';return;}
-  let html='';
+  let html=uebenSummaryHtml();
   // Admin: ganze Saison ins Archiv / zurück (nur wenn eine konkrete, echte Saison gewählt ist — nicht bei
   // den virtuellen Sammel-Tabs "Alle"/"Aktuell", die keine einzelne Saison sind)
   if(admin && aktiveSaison!=='__all__' && aktiveSaison!=='__current__'){
@@ -2459,7 +2495,8 @@ function buildTbl(songs){
     const openLink = s.pdf?`<a href="${esc(s.pdf)}" target="_blank" rel="noopener" style="text-decoration:none;font-size:1.15rem" title="Noten öffnen">📄</a>`:'';
     const uebenLink = s.uebe?`<a href="${esc(s.uebe)}" target="_blank" rel="noopener" style="text-decoration:none;font-size:1.1rem" title="Stimmcoach – Üben">🎤</a>`:'';
     const hasHoer = _hoerHasAny(s);
-    const hoerBtn = (hasHoer||canEdit)?`<button onclick="openHoer('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:1.05rem;padding:0 1px" title="Hörbeispiele &amp; Übungsvideos">🎧</button>`:'';
+    const hoerMine = hasHoer && _hoerHasMine(s);
+    const hoerBtn = (hasHoer||canEdit)?`<button onclick="openHoer('${s.id}')" style="background:${hoerMine?'#dbe8fb':'none'};border:none;${hoerMine?'border-radius:8px;':''}cursor:pointer;font-size:1.05rem;padding:0 ${hoerMine?'4px':'1px'}" title="${hoerMine?'Hörbeispiel für deine Stimme vorhanden':'Hörbeispiele &amp; Übungsvideos'}">🎧</button>`:'';
     const editBtn = canEdit?`<button onclick="editSongPdf('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:.85rem;opacity:.45;padding:0 2px" title="Noten/Üben bearbeiten">✏️</button>`:'';
     const archBtn = canEdit?(liederView==='archiv'
       ? `<button onclick="toggleSongArchived('${s.id}',false)" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:0 2px" title="Aus Archiv wiederherstellen">↩️</button>`
@@ -2467,7 +2504,7 @@ function buildTbl(songs){
     const moveBtn = (canEdit && (D.seasons||[]).length>1)?`<button onclick="moveSong('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:1rem;opacity:.5;padding:0 2px" title="In andere Saison verschieben">↔️</button>`:'';
     const cell = (openLink||uebenLink||hoerBtn||editBtn||archBtn||moveBtn) ? [openLink,uebenLink,hoerBtn,editBtn,moveBtn,archBtn].filter(Boolean).join(' ') : '—';
     const dragAttr = canEdit?` draggable="true" ondragstart="dragSong(event,'${s.id}')" style="cursor:grab"`:'';
-    return `<tr${dragAttr}><td><strong>${esc(s.name)}</strong></td><td>${fmt(s.last)}</td><td style="text-align:center;color:#666">${s.count}×</td><td><span class="dot" style="background:${dotC(s.last)}"></span><span class="badge" style="${bdgS(s.last)}">${bdgT(s.last)}</span></td><td style="text-align:center;white-space:nowrap">${cell}</td></tr>`;
+    return `<tr${dragAttr}><td><strong>${esc(s.name)}</strong>${uebenRowHtml(s)}</td><td>${fmt(s.last)}</td><td style="text-align:center;color:#666">${s.count}×</td><td><span class="dot" style="background:${dotC(s.last)}"></span><span class="badge" style="${bdgS(s.last)}">${bdgT(s.last)}</span></td><td style="text-align:center;white-space:nowrap">${cell}</td></tr>`;
   }).join('')+'</tbody></table>';
 }
 function findSongById(id){
@@ -2514,6 +2551,53 @@ async function saveSongUebe(){
   closeModal();
 }
 
+// ===== ÜBE-TRACKER: jedes Mitglied markiert pro Lied „kann ich" oder „brauche Hilfe" =====
+// Daten: ueben/<songId>/<uid> = 'kann' | 'hilfe'. Mitglieder sehen nur den eigenen Status, die Chorleitung die Summen.
+let uebenStatus={};
+async function loadUeben(){ const d=await dbGet('ueben',{}); if(d!==undefined) uebenStatus=d; }
+function uebenLeitung(){ return !!(adminMode || (currentUserProfile&&currentUserProfile.isAdmin) || hasPermission('lieder')); }
+function uebenCounts(id){
+  const o=uebenStatus[id]||{}; let kann=0,hilfe=0;
+  Object.values(o).forEach(v=>{ if(v==='kann')kann++; else if(v==='hilfe')hilfe++; });
+  return {kann,hilfe};
+}
+function uebenRowHtml(s){
+  if(!currentUser || liederView==='archiv' || s.archived) return '';
+  const my=(uebenStatus[s.id]||{})[currentUser.uid]||'';
+  const btn=(val,label,on,off)=>`<button onclick="setUeben('${esc(s.id)}','${val}')" style="border:1px solid ${my===val?on:'#d5dbe3'};background:${my===val?on:'transparent'};color:${my===val?'#fff':'#777'};border-radius:11px;padding:1px 8px;font-size:.68rem;cursor:pointer;font-weight:${my===val?'700':'500'}">${label}</button>`;
+  let h=`<div style="display:flex;gap:5px;margin-top:4px;align-items:center;flex-wrap:wrap">${btn('kann','✅ kann ich','#27ae60')}${btn('hilfe','🆘 Hilfe','#e67e22')}`;
+  if(uebenLeitung()){ const c=uebenCounts(s.id); if(c.kann||c.hilfe) h+=`<span onclick="showUebenDetail('${esc(s.id)}')" style="font-size:.68rem;color:#888;cursor:pointer;text-decoration:underline dotted" title="Wer? (antippen)">${c.kann?'✅ '+c.kann:''}${c.kann&&c.hilfe?' · ':''}${c.hilfe?'<b style="color:#e67e22">🆘 '+c.hilfe+'</b>':''}</span>`; }
+  return h+'</div>';
+}
+async function setUeben(id,val){
+  if(!currentUser) return;
+  const uid=currentUser.uid;
+  const cur=(uebenStatus[id]||{})[uid]||'';
+  if(!uebenStatus[id]) uebenStatus[id]={};
+  if(cur===val){ delete uebenStatus[id][uid]; dbDel('ueben/'+encodeURIComponent(id)+'/'+uid).catch(e=>console.warn(e)); }
+  else { uebenStatus[id][uid]=val; dbPut('ueben/'+encodeURIComponent(id)+'/'+uid, val).catch(e=>console.warn(e)); }
+  renderLieder();
+}
+function uebenSummaryHtml(){
+  if(!uebenLeitung() || liederView==='archiv') return '';
+  const rows=[];
+  (D&&D.seasons||[]).forEach(se=>(se.songs||[]).forEach(s=>{ if(s.archived) return; const c=uebenCounts(s.id); if(c.hilfe) rows.push({n:s.name,h:c.hilfe,id:s.id}); }));
+  if(!rows.length) return '';
+  rows.sort((a,b)=>b.h-a.h||a.n.localeCompare(b.n,'de'));
+  return `<div style="background:#fff6ec;border:1px solid #f5d9b8;border-radius:10px;padding:9px 12px;margin-bottom:12px;font-size:.82rem"><strong style="color:#c0620f">🆘 Hier brauchen Sänger*innen Hilfe:</strong> ${rows.slice(0,8).map(r=>`<span onclick="showUebenDetail('${esc(r.id)}')" style="cursor:pointer;display:inline-block;margin:2px 6px 0 0;text-decoration:underline dotted">${esc(r.n)} (${r.h})</span>`).join('')}</div>`;
+}
+function showUebenDetail(id){
+  if(!uebenLeitung()) return;
+  const song=findSongById(id); const o=uebenStatus[id]||{};
+  const nameOf=uid=>{ const m=_matchMemberByProfile(uid,''); const p=userprofilesCache&&userprofilesCache[uid]; return m?(shortName(m.vorname,m.nachname)||memberName(m)):(p?((p.vorname||'')+' '+(p.nachname||'')).trim()||p.username||'?':'?'); };
+  const voiceOf=uid=>{ const m=_matchMemberByProfile(uid,''); return (m&&m.stimme)||'ohne Stimme'; };
+  const grp=st=>{
+    const by={}; Object.entries(o).filter(([,v])=>v===st).forEach(([uid])=>{ (by[voiceOf(uid)]=by[voiceOf(uid)]||[]).push(nameOf(uid)); });
+    return Object.keys(by).sort().map(v=>'  '+v+': '+by[v].sort().join(', ')).join('\n')||'  –';
+  };
+  alert('„'+(song?song.name:'Lied')+'"\n\n🆘 Brauchen Hilfe:\n'+grp('hilfe')+'\n\n✅ Können es:\n'+grp('kann'));
+}
+
 // ===== HÖRBEISPIELE (mehrere Aufnahmen/Links pro Stimme + Übungsvideos) =====
 const HOER_VOICES=[['S','Sopran','#e67e22'],['A','Alt','#2563b5'],['T','Tenor','#27ae60'],['B','Bass','#8e44ad'],['ALL','Allgemein / Übungsvideos','#7f8c8d']];
 let _hMediaRec=null, _hChunks=[], _hActive=null, _hTimer=null, _hStream=null;
@@ -2527,6 +2611,15 @@ function _hoerItems(song, voice){
 function _hoerHasAny(song){
   return HOER_VOICES.some(([k])=>_hoerItems(song,k).length>0);
 }
+// Stimme des angemeldeten Mitglieds als Hörbeispiel-Kürzel (S/A/T/B) — null, wenn unbekannt
+function myVoiceCode(){
+  try{
+    const uid=currentUser&&currentUser.uid; if(!uid) return null;
+    const m=_matchMemberByProfile(uid,'');
+    return m?({Sopran:'S',Alt:'A',Tenor:'T',Bass:'B'}[m.stimme]||null):null;
+  }catch(e){ return null; }
+}
+function _hoerHasMine(song){ const v=myVoiceCode(); return !!v && _hoerItems(song,v).length>0; }
 // YouTube-Video-ID aus gängigen Link-Formaten extrahieren (für Vorschaubild)
 function youtubeId(url){
   const m=String(url||'').match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
@@ -2567,7 +2660,10 @@ function renderHoer(){
   const id=document.getElementById('hoer-songid').value;
   const song=findSongById(id); if(!song) return;
   const canRec=hasPermission('lieder');
-  document.getElementById('hoer-body').innerHTML=HOER_VOICES.map(([k,name,color])=>{
+  // Eigene Stimme zuerst + hervorgehoben; Mitglieder sehen fremde Stimmen ohne Inhalt gar nicht erst
+  const mine=myVoiceCode();
+  const voices=HOER_VOICES.slice().sort((a,b)=>(a[0]===mine?-1:0)-(b[0]===mine?-1:0));
+  document.getElementById('hoer-body').innerHTML=voices.filter(([k])=>canRec||k===mine||_hoerItems(song,k).length).map(([k,name,color])=>{
     const items=_hoerItems(song,k);
     let recCtrl='';
     if(canRec && k!=='ALL'){ // Mikrofon-Aufnahme nur für einzelne Stimmen sinnvoll, nicht "Allgemein"
@@ -2584,9 +2680,10 @@ function renderHoer(){
     const list = items.length
       ? items.map(it=>_hoerItemHtml(it,k,canRec)).join('')
       : (canRec?'':'<div style="font-size:.78rem;color:#aaa;margin-top:2px">— noch nichts hinterlegt —</div>');
-    return `<div style="padding:9px 0;border-bottom:1px solid #f0f0f0">
+    const isMine=(k===mine);
+    return `<div style="padding:9px ${isMine?'8px':'0'};border-bottom:1px solid #f0f0f0;${isMine?'background:#eef5ff;border-radius:8px;margin-bottom:4px':''}">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
-        <span style="min-width:${k==='ALL'?'150px':'52px'};font-weight:700;color:${color};font-size:.85rem">${esc(name)}</span>
+        <span style="min-width:${k==='ALL'?'150px':'52px'};font-weight:700;color:${color};font-size:.85rem">${esc(name)}</span>${isMine?'<span style="font-size:.7rem;font-weight:700;color:#1d4e96;background:#dbe8fb;border-radius:8px;padding:1px 8px">⭐ Deine Stimme</span>':''}
         <div style="display:flex;gap:5px;flex-wrap:wrap">${recCtrl}${linkBtn}</div>
       </div>
       ${list}
@@ -3405,10 +3502,55 @@ function setAuswertungTab(t){
   document.getElementById('av-statistik').style.display = t==='statistik'?'':'none';
   document.getElementById('av-anwesenheit').style.display = t==='anwesenheit'?'':'none';
   document.getElementById('av-rueckblick').style.display = t==='rueckblick'?'':'none';
+  document.getElementById('av-besetzung').style.display = t==='besetzung'?'':'none';
   document.getElementById('atab-statistik').classList.toggle('active', t==='statistik');
   document.getElementById('atab-anwesenheit').classList.toggle('active', t==='anwesenheit');
   document.getElementById('atab-rueckblick').classList.toggle('active', t==='rueckblick');
-  if(t==='anwesenheit') renderAnwesenheitPage(); else if(t==='rueckblick') renderRueckblickAdmin(); else renderStatistik();
+  document.getElementById('atab-besetzung').classList.toggle('active', t==='besetzung');
+  if(t==='anwesenheit') renderAnwesenheitPage(); else if(t==='rueckblick') renderRueckblickAdmin(); else if(t==='besetzung') renderBesetzung(); else renderStatistik();
+}
+
+// ===== BESETZUNGS-VORSCHAU (Chorleitung): wer fehlt voraussichtlich bei den nächsten Proben/Terminen? =====
+// Proben: Selbst-Abmeldungen + eingetragene Abwesenheit (Urlaub). Termine: Absagen + Urlaub; „vielleicht" und
+// „noch offen" werden getrennt gezeigt. Pro Stimme, damit man früh sieht, wo eine Stimme dünn wird.
+function _besCell(voice, present, total, extra){
+  if(!total) return `<td style="text-align:center;color:#ccc">–</td>`;
+  const pct=present/total;
+  const c=(pct<0.5||present<=1)?'#e74c3c':pct<0.7?'#e67e22':'#27ae60';
+  return `<td style="text-align:center"><strong style="color:${c}">${present}</strong><span style="color:#aaa">/${total}</span>${extra||''}</td>`;
+}
+function renderBesetzung(){
+  const el=document.getElementById('besetzung-content'); if(!el) return;
+  if(!D||!mitglieder.length){ el.innerHTML='<div class="empty" style="padding:20px">Daten werden geladen…</div>'; return; }
+  const today=localToday();
+  const V=SATB_VOICES.concat(['—']);
+  const head=`<thead><tr><th>Datum</th><th style="text-align:center">Gesamt</th>${SATB_VOICES.map(v=>`<th style="text-align:center">${v.charAt(0)}</th>`).join('')}<th style="text-align:center">o. St.</th></tr></thead>`;
+  const voiceOf=m=>SATB_VOICES.includes(m.stimme)?m.stimme:'—';
+  // ---- Proben ----
+  const proben=allProbenSorted().filter(p=>p.datum>=today).reverse().slice(0,8);
+  const probeRows=proben.map(p=>{
+    const sa=selbstabmeldungen(p.id); const fehlt=sa.matchedKeys;
+    const tot={},pres={}; V.forEach(v=>{tot[v]=0;pres[v]=0;});
+    mitglieder.forEach(m=>{ const v=voiceOf(m); tot[v]++; if(!fehlt.has(memberKey(m))) pres[v]++; });
+    const all=mitglieder.length-fehlt.size;
+    const namen=sa.names.length?`<div style="font-size:.72rem;color:#922b21;margin:0 0 4px">❌ ${sa.names.map(n=>esc(prettyName(n)||n)).join(', ')}</div>`:'';
+    return `<tr><td style="white-space:nowrap">${fmt(p.datum)}</td>${_besCell('',all,mitglieder.length)}${SATB_VOICES.map(v=>_besCell(v,pres[v],tot[v])).join('')}${_besCell('—',pres['—'],tot['—'])}</tr>`+(namen?`<tr><td colspan="7" style="padding-top:0;border-top:none">${namen}</td></tr>`:'');
+  }).join('');
+  // ---- Termine (mit Abstimmung) ----
+  const terms=(termine||[]).filter(t=>!t.keineAbstimmung && t.typ!=='probe' && (t.datum_ende||t.datum)>=today).sort((a,b)=>a.datum.localeCompare(b.datum)).slice(0,8);
+  const termRows=terms.map(t=>{
+    const bd=terminVoteBreakdown(t); const st=bd.stat;
+    const totAll=mitglieder.length, jaAll=bd.ja.length, vlAll=bd.vl.length, neinAll=bd.nein.length, offen=bd.notVoted.length;
+    const cell=(v)=>{ const s=st[v]; if(!s.total) return `<td style="text-align:center;color:#ccc">–</td>`; return `<td style="text-align:center"><strong style="color:#27ae60">${s.ja}</strong>${s.vl?`<span style="color:#f39c12">+${s.vl}</span>`:''}<span style="color:#aaa">/${s.total}</span></td>`; };
+    return `<tr><td><strong>${esc(t.titel||'Termin')}</strong><div style="font-size:.72rem;color:#888">${fmt(t.datum)}${t.datum_ende?' – '+fmt(t.datum_ende):''} · <span style="color:#27ae60">✅${jaAll}</span> <span style="color:#f39c12">❓${vlAll}</span> <span style="color:#e74c3c">❌${neinAll}</span> · ${offen} offen</div></td>${SATB_VOICES.map(cell).join('')}${cell('—')}</tr>`;
+  }).join('');
+  const tbl=(h,b)=>`<div style="overflow-x:auto"><table class="overview-table" style="width:100%">${h}<tbody>${b}</tbody></table></div>`;
+  el.innerHTML=`<div class="card"><div class="card-title">🎹 Nächste Proben – voraussichtlich anwesend</div>
+      <div style="font-size:.76rem;color:#888;margin-bottom:8px">Nach Abzug von Abmeldungen und eingetragenem Urlaub. <span style="color:#e74c3c">Rot</span> = unter 50 % oder höchstens 1 Person pro Stimme, <span style="color:#e67e22">orange</span> = unter 70 %.</div>
+      ${probeRows?tbl(head,probeRows):'<div class="empty">Keine kommenden Proben im Plan.</div>'}</div>
+    <div class="card" style="margin-top:12px"><div class="card-title">📆 Termine – Rückmeldungen je Stimme</div>
+      <div style="font-size:.76rem;color:#888;margin-bottom:8px"><span style="color:#27ae60">Grün</span> = Zusagen, <span style="color:#f39c12">+n</span> = vielleicht, <span style="color:#aaa">/n</span> = Mitglieder der Stimme.</div>
+      ${termRows?tbl(`<thead><tr><th>Termin</th>${SATB_VOICES.map(v=>`<th style="text-align:center">${v.charAt(0)}</th>`).join('')}<th style="text-align:center">o. St.</th></tr></thead>`,termRows):'<div class="empty">Keine kommenden Termine mit Abstimmung.</div>'}</div>`;
 }
 
 // ===== JAHRESRÜCKBLICK =====
@@ -7618,6 +7760,8 @@ async function _loadAllImpl(){
     loadAufgaben(),
     loadTerminfindungen(),
     dbGet('settings/rueckblick',null).then(s=>{ if(s!==undefined) rueckblickSetting=s; }),
+    loadUeben(),
+    loadProbenotizen(),
     loadUserProfiles().then(p=>{ userprofilesCache=p||{}; }).catch(()=>{})
   ]);
   try{
