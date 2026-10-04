@@ -429,6 +429,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   // Server-Endpoint für Benutzername-Login/Reset (E-Mail bleibt serverseitig)
   window.USERNAME_AUTH_URL = 'https://europe-west1-chor-doelau.cloudfunctions.net/usernameAuth';
   window.PUSH_NOW_URL = 'https://europe-west1-chor-doelau.cloudfunctions.net/pushNow';
+  window.BACKUP_NOW_URL = 'https://europe-west1-chor-doelau.cloudfunctions.net/backupNow';
   _auth.onAuthStateChanged((user) => {
     if(window.onAuthChange) window.onAuthChange(user);
   });
@@ -1166,6 +1167,11 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-gray" onclick="exportData()">⬇️ Alle Daten exportieren (JSON)</button>
         <button class="btn btn-danger btn-sm" onclick="clearAllKommentare()">🗑️ Alle Kommentare löschen</button>
+      </div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid #e6eaf0">
+        <div style="font-weight:700;font-size:.9rem;color:#1b3a6b;margin-bottom:3px">☁️ Automatisches Cloud-Backup</div>
+        <div style="font-size:.8rem;color:#666;margin-bottom:8px">Jeden Sonntag um 3 Uhr wird die gesamte Datenbank gesichert (die letzten 12 Stände bleiben erhalten). Abrufbar in der Firebase-Konsole unter Storage → Ordner „backups".</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><button class="btn btn-primary btn-sm" onclick="runCloudBackup()">☁️ Jetzt sichern</button><span id="cloud-backup-status" style="font-size:.8rem;color:#888">…</span></div>
       </div>
     </div>
     <div class="konsole-section">
@@ -3510,6 +3516,29 @@ function setAuswertungTab(t){
   if(t==='anwesenheit') renderAnwesenheitPage(); else if(t==='rueckblick') renderRueckblickAdmin(); else if(t==='besetzung') renderBesetzung(); else renderStatistik();
 }
 
+// ===== CLOUD-BACKUP (Status + Knopf; die Sicherung selbst macht die Cloud Function) =====
+function _backupAgeHtml(i){
+  const d=new Date(i.ts); const days=Math.floor((Date.now()-i.ts)/86400000);
+  const stale=days>9;
+  return `<span style="color:${stale?'#e74c3c':'#27ae60'}">${stale?'⚠️':'✅'} Letztes Backup: ${d.toLocaleDateString('de-DE')} ${d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr · ${i.kb} KB · ${i.anzahl||'?'} Stände gespeichert${stale?' – länger als 9 Tage her, bitte prüfen!':''}</span>`;
+}
+async function renderCloudBackupStatus(){
+  const el=document.getElementById('cloud-backup-status'); if(!el) return;
+  const i=await dbGet('settings/lastBackup',null);
+  if(i===undefined) { el.textContent=''; return; }
+  el.innerHTML=i?_backupAgeHtml(i):'<span style="color:#e67e22">Noch kein Backup vorhanden – „Jetzt sichern" klicken.</span>';
+}
+async function runCloudBackup(){
+  const el=document.getElementById('cloud-backup-status'); if(!el) return;
+  el.style.color='#2563b5'; el.textContent='⏳ Sicherung läuft…';
+  try{
+    const u=window._fbAuth&&window._fbAuth.currentUser; if(!u) throw new Error('nicht angemeldet');
+    const r=await fetch(window.BACKUP_NOW_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:await u.getIdToken()})});
+    if(!r.ok) throw new Error(r.status===403?'nur für Admins':'Fehler '+r.status);
+    el.innerHTML=_backupAgeHtml(await r.json());
+  }catch(e){ el.style.color='#e74c3c'; el.textContent='❌ '+(e.message||e); }
+}
+
 // ===== BESETZUNGS-VORSCHAU (Chorleitung): wer fehlt voraussichtlich bei den nächsten Proben/Terminen? =====
 // Proben: Selbst-Abmeldungen + eingetragene Abwesenheit (Urlaub). Termine: Absagen + Urlaub; „vielleicht" und
 // „noch offen" werden getrennt gezeigt. Pro Stimme, damit man früh sieht, wo eine Stimme dünn wird.
@@ -4686,6 +4715,7 @@ function renderKonsole(){
 
   loadPushSettings();
   renderPushOverview();
+  renderCloudBackupStatus();
   loadNotice();
   renderStimmenZuweisen();
   renderUserVerwaltung();
