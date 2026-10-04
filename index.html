@@ -577,6 +577,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
 <div class="page active" id="p-start">
   <div id="pinnwand-card"></div>
   <div id="tf-pinned-card"></div>
+  <div id="rueckblick-card"></div>
   <div id="push-reminder-card"></div>
   <div id="start-content"></div>
 </div>
@@ -997,6 +998,19 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   <div class="sub-tabs">
     <button id="atab-statistik" class="stab active" onclick="setAuswertungTab('statistik')">📈 Statistik</button>
     <button id="atab-anwesenheit" class="stab" onclick="setAuswertungTab('anwesenheit')">✅ Anwesenheit</button>
+    <button id="atab-rueckblick" class="stab" onclick="setAuswertungTab('rueckblick')">🎊 Jahresrückblick</button>
+  </div>
+  <div id="av-rueckblick" style="display:none">
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select id="rb-jahr" class="fl-input" style="width:auto;margin-bottom:0" onchange="renderRueckblickAdmin()"></select>
+        <button class="btn btn-gray btn-sm" onclick="copyRueckblickText()">📋 Als Text kopieren</button>
+        <button class="btn btn-primary btn-sm" onclick="publishRueckblick()">📣 Für Mitglieder veröffentlichen</button>
+        <button class="btn btn-gray btn-sm" id="rb-unpublish" style="display:none" onclick="unpublishRueckblick()">Zurückziehen</button>
+      </div>
+      <div id="rb-status" style="font-size:.78rem;color:#888;margin-top:8px"></div>
+    </div>
+    <div id="rb-content"></div>
   </div>
   <div id="av-statistik">
     <div class="card" style="margin-bottom:12px">
@@ -1428,6 +1442,13 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
       <button class="btn btn-gray" onclick="closeModal()">Schließen</button>
       <button class="btn btn-primary" onclick="closeModal();showPageByName('termine')">Alle Termine ›</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-rueckblick">
+  <div class="modal" style="max-width:560px">
+    <div id="rb-modal-content"></div>
+    <div class="modal-actions"><button class="btn btn-gray" onclick="closeModal()">Schließen</button></div>
   </div>
 </div>
 
@@ -2102,6 +2123,7 @@ function renderStart(){
   try{ renderPinnwand(); }catch(e){}
   try{ renderPinnedTerminfindung(); }catch(e){}
   try{ renderPushReminder(); }catch(e){}
+  try{ renderRueckblickCard(); }catch(e){}
   const el=document.getElementById('start-content'); if(!el) return;
   const today=localToday();
   const TYP_IC={konzert:'🎵',fest:'🎪',chorlager:'🏕️',gottesdienst:'⛪',probe:'🎹',sonstiges:'📌'};
@@ -3382,9 +3404,148 @@ function _statBars(items, color){
 function setAuswertungTab(t){
   document.getElementById('av-statistik').style.display = t==='statistik'?'':'none';
   document.getElementById('av-anwesenheit').style.display = t==='anwesenheit'?'':'none';
+  document.getElementById('av-rueckblick').style.display = t==='rueckblick'?'':'none';
   document.getElementById('atab-statistik').classList.toggle('active', t==='statistik');
   document.getElementById('atab-anwesenheit').classList.toggle('active', t==='anwesenheit');
-  if(t==='anwesenheit') renderAnwesenheitPage(); else renderStatistik();
+  document.getElementById('atab-rueckblick').classList.toggle('active', t==='rueckblick');
+  if(t==='anwesenheit') renderAnwesenheitPage(); else if(t==='rueckblick') renderRueckblickAdmin(); else renderStatistik();
+}
+
+// ===== JAHRESRÜCKBLICK =====
+// Berechnet alles für ein Kalenderjahr aus den vorhandenen Daten (stattgefundene Proben, erfasste Anwesenheit,
+// Termine). Admin sieht zusätzlich die Ehrenliste; die für Mitglieder veröffentlichte Fassung enthält keine
+// Einzelwerte einzelner Personen.
+let rueckblickSetting=null; // settings/rueckblick = {jahr, ts} — von der Chorleitung veröffentlicht
+const RB_AUFTRITT=['konzert','fest','gottesdienst'];
+function rueckblickData(year){
+  const y=String(year), today=localToday();
+  const inY=d=>!!d && String(d).slice(0,4)===y && d<=today;
+  const probenAll=(D&&D.proben)||[];
+  const proben=probenAll.filter(p=>inY(p.datum));
+  const songById={}; ((D&&D.seasons)||[]).forEach(s=>(s.songs||[]).forEach(x=>{ songById[x.id]=x; }));
+  const freq={}; proben.forEach(p=>(p.songIds||[]).forEach(id=>{ freq[id]=(freq[id]||0)+1; }));
+  const firstSeen={}; probenAll.forEach(p=>(p.songIds||[]).forEach(id=>{ if(p.datum&&(!firstSeen[id]||p.datum<firstSeen[id])) firstSeen[id]=p.datum; }));
+  const top=Object.entries(freq).filter(([id])=>songById[id]).map(([id,c])=>({name:songById[id].name,c})).sort((a,b)=>b.c-a.c||a.name.localeCompare(b.name,'de'));
+  const neu=Object.keys(freq).filter(id=>songById[id]&&firstSeen[id]&&firstSeen[id].slice(0,4)===y).map(id=>songById[id].name).sort((a,b)=>a.localeCompare(b,'de'));
+  const cap=Object.entries(anwesenheit||{}).filter(([k,v])=>v&&v.erfasst&&inY(probeDatumById(k)));
+  const n=(mitglieder||[]).length;
+  let quote=null, best=null, voices=[], ehren=[];
+  if(cap.length && n){
+    let sum=0;
+    cap.forEach(([k,v])=>{
+      const fehlt=v.fehlt?Object.keys(v.fehlt).filter(x=>v.fehlt[x]).length:0;
+      const pct=(n-fehlt)/n; sum+=pct;
+      if(!best||pct>best.pct) best={pct,datum:probeDatumById(k),da:n-fehlt};
+    });
+    quote=Math.round(sum/cap.length*100);
+    voices=SATB_VOICES.map(v=>{
+      const ms=mitglieder.filter(m=>m.stimme===v); if(!ms.length) return null;
+      let s=0,c=0; cap.forEach(([,rec])=>ms.forEach(m=>{ s+=(rec.fehlt&&rec.fehlt[memberKey(m)])?0:1; c++; }));
+      return {label:v,value:c?Math.round(s/c*100):0};
+    }).filter(Boolean);
+    if(cap.length>=3){
+      ehren=mitglieder.map(m=>{ const k=memberKey(m); let f=0; cap.forEach(([,rec])=>{ if(rec.fehlt&&rec.fehlt[k]) f++; }); return {name:memberName(m),da:cap.length-f,quote:Math.round((cap.length-f)/cap.length*100)}; })
+        .sort((a,b)=>b.quote-a.quote||a.name.localeCompare(b.name,'de')).slice(0,5);
+    }
+  }
+  const tv=(termine||[]).filter(t=>t.typ!=='probe' && inY(t.datum_ende||t.datum)).sort((a,b)=>a.datum.localeCompare(b.datum));
+  const auftritte=tv.filter(t=>RB_AUFTRITT.includes(t.typ));
+  return {y,proben:proben.length,songsCount:Object.keys(freq).length,top,neu,capN:cap.length,quote,best,voices,ehren,termine:tv,auftritte,hasData:!!(proben.length||tv.length)};
+}
+function rueckblickYears(){
+  const ys=new Set([String(new Date().getFullYear())]);
+  ((D&&D.proben)||[]).forEach(p=>{ if(p.datum) ys.add(String(p.datum).slice(0,4)); });
+  (termine||[]).forEach(t=>{ if(t.datum) ys.add(String(t.datum).slice(0,4)); });
+  return [...ys].filter(y=>/^\d{4}$/.test(y)).sort().reverse();
+}
+function rueckblickHtml(year, full){
+  const r=rueckblickData(year);
+  if(!r.hasData) return `<div class="empty" style="padding:24px">Für ${esc(String(year))} gibt es noch keine Daten.</div>`;
+  const TI={konzert:'🎵',fest:'🎪',chorlager:'🏕️',gottesdienst:'⛪',sonstiges:'📌'};
+  const tile=(n,l,c)=>`<div class="stat"><div class="stat-n" style="color:${c}">${n}</div><div class="stat-l">${l}</div></div>`;
+  let h=`<div style="background:linear-gradient(135deg,#1b3a6b,#2563b5);color:#fff;border-radius:14px;padding:18px 16px;margin-bottom:12px;text-align:center">
+    <div style="font-size:.8rem;opacity:.85;letter-spacing:.06em;text-transform:uppercase">Dö Laudate</div>
+    <div style="font-size:1.5rem;font-weight:800;margin-top:2px">🎊 Unser Chorjahr ${esc(r.y)}</div></div>`;
+  h+=`<div class="stats" style="margin-bottom:12px">${tile(r.proben,'Proben','#2563b5')}${tile(r.auftritte.length,r.auftritte.length===1?'Auftritt':'Auftritte','#e67e22')}${tile(r.songsCount,'Lieder gesungen','#27ae60')}${r.quote!=null?tile(r.quote+'%','Ø Anwesenheit','#8e44ad'):''}</div>`;
+  if(r.termine.length){
+    h+=`<div class="card" style="margin-bottom:12px"><div class="card-title">🎤 Auftritte &amp; Termine</div>${r.termine.map(t=>`<div style="display:flex;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:.88rem"><span>${TI[t.typ]||'📌'}</span><span style="flex:1;font-weight:600">${esc(t.titel||'Termin')}</span><span style="color:#888;white-space:nowrap">${fmt(t.datum)}</span></div>`).join('')}</div>`;
+  }
+  if(r.top.length){
+    h+=`<div class="card" style="margin-bottom:12px"><div class="card-title">🎵 Unsere meistgeprobten Lieder</div>${_statBars(r.top.slice(0,8).map(s=>({label:s.name,value:s.c,sub:s.c+'×'})),'#27ae60')}`
+      +(r.neu.length?`<div style="font-size:.76rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.04em;margin:12px 0 5px">✨ Neu in diesem Jahr (${r.neu.length})</div><div style="display:flex;flex-wrap:wrap;gap:5px">${r.neu.map(n=>`<span style="background:#eef3fa;color:#1b3a6b;border-radius:14px;padding:3px 10px;font-size:.78rem">${esc(n)}</span>`).join('')}</div>`:'')+`</div>`;
+  }
+  if(r.quote!=null){
+    h+=`<div class="card" style="margin-bottom:12px"><div class="card-title">✅ Anwesenheit</div>
+      <div style="font-size:.88rem;margin-bottom:8px">Im Schnitt waren bei den ${r.capN} erfassten Proben <strong>${r.quote}%</strong> von uns dabei.${r.best&&r.best.datum?` Beste Probe: <strong>${fmt(r.best.datum)}</strong> mit ${r.best.da} Sänger*innen.`:''}</div>
+      ${r.voices.length?_statBars(r.voices.map(v=>({label:v.label,value:v.value,sub:v.value+'%'})),'#e67e22'):''}</div>`;
+  }
+  if(full && r.ehren.length){
+    h+=`<div class="card" style="margin-bottom:12px"><div class="card-title">🏅 Ehrenliste <span style="font-size:.7rem;font-weight:500;color:#999">(nur für die Chorleitung sichtbar)</span></div>${r.ehren.map((e,i)=>`<div style="display:flex;gap:8px;padding:4px 0;font-size:.88rem"><span style="width:22px">${['🥇','🥈','🥉'][i]||'🎖️'}</span><span style="flex:1;font-weight:600">${esc(e.name)}</span><span style="color:#888">${e.da}/${r.capN} · ${e.quote}%</span></div>`).join('')}</div>`;
+  }
+  h+=`<div style="text-align:center;font-size:.9rem;color:#1b3a6b;font-weight:600;padding:8px 0 2px">Danke für ein tolles Chorjahr! 🎶</div>`;
+  return h;
+}
+function rueckblickText(year){
+  const r=rueckblickData(year);
+  if(!r.hasData) return '';
+  const L=['🎊 Unser Chorjahr '+r.y+' – Dö Laudate',''];
+  L.push('🎹 '+r.proben+' Proben · 🎤 '+r.auftritte.length+(r.auftritte.length===1?' Auftritt':' Auftritte')+' · 🎵 '+r.songsCount+' Lieder'+(r.quote!=null?' · ✅ Ø Anwesenheit '+r.quote+'%':''));
+  if(r.termine.length){ L.push('','Auftritte & Termine:'); r.termine.forEach(t=>L.push('• '+fmt(t.datum)+' – '+(t.titel||'Termin'))); }
+  if(r.top.length){ L.push('','Meistgeprobt:'); r.top.slice(0,5).forEach(s=>L.push('• '+s.name+' ('+s.c+'×)')); }
+  if(r.neu.length) L.push('','Neu im Repertoire: '+r.neu.join(', '));
+  L.push('','Danke für ein tolles Chorjahr! 🎶');
+  return L.join('\n');
+}
+function renderRueckblickAdmin(){
+  const sel=document.getElementById('rb-jahr'); if(!sel) return;
+  const cur=sel.value; const ys=rueckblickYears();
+  sel.innerHTML=ys.map(y=>`<option value="${y}">${y}</option>`).join('');
+  sel.value=ys.includes(cur)?cur:ys[0];
+  document.getElementById('rb-content').innerHTML=D?rueckblickHtml(sel.value,true):'<div class="empty" style="padding:20px">Daten werden geladen…</div>';
+  const st=document.getElementById('rb-status'), un=document.getElementById('rb-unpublish');
+  const pub=rueckblickSetting&&rueckblickSetting.jahr;
+  if(st) st.textContent=pub?'📣 Für Mitglieder sichtbar: Rückblick '+pub+' (auf der Startseite, seit '+new Date(rueckblickSetting.ts).toLocaleDateString('de-DE')+').':'Noch nicht für Mitglieder veröffentlicht. Mitglieder sehen später nur die Gesamtzahlen — keine Einzelwerte (die Ehrenliste bleibt bei dir).';
+  if(un) un.style.display=pub?'':'none';
+}
+async function copyRueckblickText(){
+  const y=document.getElementById('rb-jahr').value; const txt=rueckblickText(y);
+  if(!txt){ alert('Für dieses Jahr gibt es noch keine Daten.'); return; }
+  try{ await navigator.clipboard.writeText(txt); showToast('Text kopiert – jetzt z. B. in WhatsApp einfügen','ok'); }
+  catch(e){ prompt('Text kopieren:',txt); }
+}
+async function publishRueckblick(){
+  if(!(adminMode || (currentUserProfile&&currentUserProfile.isAdmin))) return;
+  const y=document.getElementById('rb-jahr').value;
+  if(!rueckblickData(y).hasData){ alert('Für dieses Jahr gibt es noch keine Daten.'); return; }
+  if(!confirm('Jahresrückblick '+y+' für alle Mitglieder auf der Startseite zeigen?\n(Ohne Ehrenliste und ohne Einzelwerte.)')) return;
+  const s={jahr:y,ts:Date.now()};
+  await dbPut('settings/rueckblick', s).catch(e=>console.warn(e));
+  rueckblickSetting=s;
+  renderRueckblickAdmin(); renderRueckblickCard();
+  if(confirm('Zusätzlich eine Push-Nachricht an alle senden?')) await notifyPush('pinnwand','🎊 Unser Chorjahr '+y,'Der Jahresrückblick ist da – schau auf der Startseite rein!');
+}
+async function unpublishRueckblick(){
+  if(!confirm('Jahresrückblick wieder von der Startseite nehmen?')) return;
+  await dbPut('settings/rueckblick', null).catch(e=>console.warn(e));
+  rueckblickSetting=null; renderRueckblickAdmin(); renderRueckblickCard();
+}
+function renderRueckblickCard(){
+  const el=document.getElementById('rueckblick-card'); if(!el) return;
+  el.innerHTML='';
+  const s=rueckblickSetting; if(!s||!s.jahr||!currentUser) return;
+  if(Date.now()-(s.ts||0)>90*24*3600*1000) return;
+  try{ if(localStorage.getItem('chor_rb_dismissed')===s.jahr+'_'+s.ts) return; }catch(e){}
+  el.innerHTML=`<div class="card" style="background:linear-gradient(135deg,#1b3a6b,#2563b5);color:#fff;border:none;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="openRueckblick('${esc(String(s.jahr))}')">
+    <div style="flex:1"><div style="font-weight:800;font-size:1rem">🎊 Unser Chorjahr ${esc(String(s.jahr))}</div><div style="font-size:.82rem;opacity:.9;margin-top:2px">Der Jahresrückblick ist da – antippen ›</div></div>
+    <button class="btn btn-sm" style="background:rgba(255,255,255,.18);color:#fff;flex-shrink:0" onclick="event.stopPropagation();dismissRueckblick()" aria-label="Ausblenden">✕</button></div>`;
+}
+function dismissRueckblick(){
+  const s=rueckblickSetting; if(s){ try{ localStorage.setItem('chor_rb_dismissed',s.jahr+'_'+s.ts); }catch(e){} }
+  const el=document.getElementById('rueckblick-card'); if(el) el.innerHTML='';
+}
+function openRueckblick(year){
+  document.getElementById('rb-modal-content').innerHTML=rueckblickHtml(year,false);
+  document.getElementById('modal-rueckblick').classList.add('open');
 }
 // Auswertung-Filter: Zeitraum-Presets + Zurücksetzen
 function setStatPreset(kind){
@@ -3610,6 +3771,8 @@ function rueckmeldungenHtml(t, bd){
   const tally=(bd.ja.length||bd.nein.length||bd.vl.length)?`<div class="tally">${bd.ja.length?`<span style="color:#27ae60">✅ ${bd.ja.length}: ${esc(bd.ja.join(', '))}</span><br>`:''}${bd.nein.length?`<span style="color:#e74c3c">❌ ${bd.nein.length}: ${esc(bd.nein.join(', '))}</span><br>`:''}${bd.vl.length?`<span style="color:#f39c12">❓ ${bd.vl.length}: ${esc(bd.vl.join(', '))}</span>`:''}</div>`:'';
   const offen=bd.notVoted.length
     ? `<div style="font-size:.78rem;color:#7d6608;margin-top:8px"><strong>⏳ Noch nicht abgestimmt (${bd.notVoted.length}):</strong> ${esc(bd.notVoted.map(m=>shortName(m.vorname,m.nachname)||memberName(m)||('Nr. '+(m.nr||'?'))).join(', '))}</div>`
+      + ((uiEdit('termine') && (t.datum_ende||t.datum)>=localToday())
+        ? `<div style="margin-top:7px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button class="btn btn-sm btn-primary" style="font-size:.76rem" onclick="remindOpenVotes('${esc(t.id)}')">🔔 Unentschiedene erinnern</button>${t.erinnert?`<span style="font-size:.72rem;color:#999">zuletzt erinnert: ${new Date(t.erinnert).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} Uhr</span>`:''}</div>`:'')
     : `<div style="font-size:.78rem;color:#22a559;margin-top:8px">✅ Alle haben abgestimmt.</div>`;
   // Admin: einzelne Stimm-Einträge (roh) verwalten/löschen
   const abs=t.abstimmungen||{};
@@ -3620,6 +3783,42 @@ function rueckmeldungenHtml(t, bd){
       ${absKeys.map(k=>{const pn=prettyName(k); const raw=(_norm(pn)!==_norm(k))?` <span style="color:#bbb">(${esc(k)})</span>`:''; return `<div style="display:flex;align-items:center;gap:8px;justify-content:space-between;padding:3px 0;font-size:.81rem"><span>${ICON[abs[k]]||'•'} ${esc(pn)}${raw}</span><button class="btn btn-danger btn-sm" title="Diese Stimme löschen" onclick="deleteVote('${esc(t.id)}', decodeURIComponent('${encodeURIComponent(k)}'))">✕</button></div>`;}).join('')}
     </div>` : '';
   return `<details class="t-coll"><summary>📊 Rückmeldungen · <span style="color:#22a559">✅${bd.ja.length}</span> <span style="color:#e74c3c">❌${bd.nein.length}</span> <span style="color:#f39c12">❓${bd.vl.length}</span> · ${bd.notVoted.length} offen</summary><div><div class="satb-grid">${cells}</div>${tally}${offen}${manage}</div></details>`;
+}
+// Nachfass-Push: erinnert nur die Mitglieder, die zu diesem Termin noch nichts geantwortet haben (und nicht
+// als abwesend eingetragen sind) — und nur die, die Push aktiviert haben. Den Rest nennt die Rückfrage namentlich,
+// damit du sie persönlich ansprechen kannst.
+async function remindOpenVotes(terminId){
+  if(!uiEdit('termine')) return;
+  const t=(termine||[]).find(x=>x.id===terminId); if(!t) return;
+  const open=terminVoteBreakdown(t).notVoted;
+  if(!open.length){ alert('Alle haben schon geantwortet.'); return; }
+  let profiles={}, subs={};
+  try{
+    profiles=await loadUserProfiles();
+    const r=await dbFetch(DB+'/pushsubs.json?shallow=true'); subs=(r.ok?await r.json():null)||{};
+  }catch(e){ alert('Konnte die Push-Daten nicht laden – bitte später erneut versuchen.'); return; }
+  const profList=Object.entries(profiles).map(([uid,p])=>({uid,u:_norm(p&&p.username||''),e:String(p&&p.email||'').toLowerCase()}));
+  const uidOf=m=>{
+    if(m.uid && profiles[m.uid]) return m.uid;
+    const un=_norm(m.username||''); const em=String(m.email||'').toLowerCase();
+    const f=profList.find(p=>(un&&p.u===un)||(em&&p.e===em));
+    return f?f.uid:null;
+  };
+  const nm=m=>shortName(m.vorname,m.nachname)||memberName(m)||('Nr. '+(m.nr||'?'));
+  const reach=[], noPush=[];
+  open.forEach(m=>{ const u=uidOf(m); if(u && subs[u]) reach.push({u,n:nm(m)}); else noPush.push(nm(m)); });
+  if(!reach.length){ alert('Keiner der '+open.length+' Unentschiedenen hat Push aktiviert:\n'+noPush.join(', ')+'\n\nBitte persönlich ansprechen.'); return; }
+  let msg='Erinnerung zu „'+(t.titel||'Termin')+'" ('+fmt(t.datum)+') senden an '+reach.length+' Mitglied'+(reach.length===1?'':'er')+':\n'+reach.map(x=>x.n).join(', ');
+  if(noPush.length) msg+='\n\nNicht per Push erreichbar ('+noPush.length+'): '+noPush.join(', ');
+  if(t.erinnert && Date.now()-t.erinnert<6*3600*1000) msg+='\n\n⚠️ Du hast vor weniger als 6 Stunden schon erinnert.';
+  if(!confirm(msg)) return;
+  const body='„'+(t.titel||'Termin')+'" am '+fmt(t.datum)+(t.frist?' – Rückmeldung bitte bis '+fmt(t.frist):'')+': Kommst du? Bitte kurz zu- oder absagen.';
+  const res=await pushSend('⏳ Deine Rückmeldung fehlt noch', body, false, 'termin', reach.map(x=>x.u));
+  if(!res||!res.ok){ alert('❌ Senden hat nicht geklappt – bitte später erneut versuchen.'); return; }
+  t.erinnert=Date.now();
+  dbPut('termine/'+termine.indexOf(t)+'/erinnert', t.erinnert).catch(e=>console.warn(e));
+  showToast('🔔 Erinnerung an '+res.sent+' Mitglied'+(res.sent===1?'':'er')+' gesendet','ok');
+  renderTermine();
 }
 async function deleteVote(terminId, key){
   if(!(adminMode || uiEdit('termine'))) return;
@@ -3647,6 +3846,7 @@ function terminHtml(t,past=false){
     ${infoOnly&&t.beschreibung?`<div style="font-size:.85rem;color:#555;margin:2px 0 4px">${esc(t.beschreibung)}</div>`:''}
     ${setlisteHtml(t)}
     ${ablaufplanBlock(t)}
+    ${checklisteBlock(t)}
     ${!past?fahrtenBlock(t):''}
     ${!past?aufgabenBlock(t):''}
     ${showRueck?rueckmeldungenHtml(t, bd):''}
@@ -6812,15 +7012,18 @@ async function sendBroadcast(){
 // Sofort-Versand über die Cloud-Function pushNow; bei Fehler zurück in die Warteschlange (Cron holt es nach)
 // eventKey (optional): Kategorie (termin/probe/liedwunsch/kommentar/umfrage/pinnwand) — damit Server/Warteschlange
 // die persönliche Kategorien-Auswahl jedes Mitglieds (pushsubs/<uid>/prefs) berücksichtigen können.
-async function pushSend(title, body, adminsOnly, eventKey){
+// uids (optional): nur an diese Konten senden. Ohne Warteschlangen-Fallback — die Queue kennt keine Empfängerliste
+// und würde sonst an ALLE gehen; stattdessen liefert der Rückgabewert {ok,sent}.
+async function pushSend(title, body, adminsOnly, eventKey, uids){
   try{
     const u = window._fbAuth && window._fbAuth.currentUser;
     if(u){
       const idToken = await u.getIdToken();
-      const r = await fetch(window.PUSH_NOW_URL, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken, title, body, adminsOnly:!!adminsOnly, eventKey:eventKey||null})});
-      if(r.ok) return true;
+      const r = await fetch(window.PUSH_NOW_URL, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken, title, body, adminsOnly:!!adminsOnly, eventKey:eventKey||null, uids:Array.isArray(uids)?uids:undefined})});
+      if(r.ok){ if(Array.isArray(uids)){ const j=await r.json().catch(()=>({})); return {ok:true,sent:j.sent||0}; } return true; }
     }
   }catch(e){ console.warn('pushNow fehlgeschlagen, nutze Warteschlange', e); }
+  if(Array.isArray(uids)) return {ok:false,sent:0};
   // Fallback: Warteschlange
   try{
     const payload = {title, body, ts:Date.now()};
@@ -7167,6 +7370,62 @@ async function moveAblaufplanPunkt(terminId, itemId, dir){
   renderTermine();
 }
 
+// ===== CHECKLISTE PRO TERMIN (Treffpunkt, Treffzeit, Kleidung, Mappe, Mitbringen) =====
+// Liegt am Termin (t.checkliste = {treffpunkt,treffzeit,kleidung,mappe,extra:[Text,…]}); nur Bearbeiter schreiben.
+// Das Abhaken der „Mitbringen"-Punkte ist persönlich und liegt nur auf dem eigenen Gerät (localStorage).
+function ckDone(tid){ try{ return new Set(JSON.parse(localStorage.getItem('chor_chk_'+tid)||'[]')); }catch(e){ return new Set(); } }
+function ckToggle(tid, i){
+  const t=termine.find(x=>x.id===tid); const txt=t&&t.checkliste&&(t.checkliste.extra||[])[i]; if(txt==null) return;
+  const s=ckDone(tid); if(s.has(txt)) s.delete(txt); else s.add(txt);
+  try{ localStorage.setItem('chor_chk_'+tid, JSON.stringify([...s])); }catch(e){}
+  renderTermine();
+}
+function checklisteBlock(t){
+  const canEdit=uiEdit('termine');
+  const c=t.checkliste||{};
+  const extra=Array.isArray(c.extra)?c.extra:[];
+  const has=!!(c.treffpunkt||c.treffzeit||c.kleidung||c.mappe||extra.length);
+  if(!has && !canEdit) return '';
+  const row=(ic,l,v)=>v?`<div style="display:flex;gap:8px;padding:4px 0;font-size:.86rem"><span style="width:22px;text-align:center">${ic}</span><span style="color:#888;min-width:74px">${l}</span><span style="flex:1;font-weight:600;color:#222">${esc(v)}</span></div>`:'';
+  const done=ckDone(t.id);
+  const items=extra.map((x,i)=>`<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:.86rem;cursor:pointer;${done.has(x)?'color:#999;text-decoration:line-through':''}"><input type="checkbox" ${done.has(x)?'checked':''} onchange="ckToggle('${esc(t.id)}',${i})" style="accent-color:#27ae60;width:17px;height:17px"> ${esc(x)}</label>`).join('');
+  const sum=[c.treffzeit?'Treffen '+c.treffzeit:'', c.treffpunkt||''].filter(Boolean).join(' · ');
+  const form=canEdit?`<details style="margin-top:8px"><summary style="cursor:pointer;font-size:.8rem;color:#1d4e96;font-weight:600">✏️ Checkliste bearbeiten</summary>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><input class="fl-input" id="ck-zeit-${esc(t.id)}" placeholder="Treffzeit (z. B. 17:30)" value="${esc(c.treffzeit||'')}" style="flex:1;min-width:110px;margin-bottom:0;font-size:.82rem" maxlength="40"><input class="fl-input" id="ck-treff-${esc(t.id)}" placeholder="Treffpunkt" value="${esc(c.treffpunkt||'')}" style="flex:2;min-width:150px;margin-bottom:0;font-size:.82rem" maxlength="120"></div>
+      <input class="fl-input" id="ck-kleid-${esc(t.id)}" placeholder="Kleidung (z. B. schwarz, Chorschal)" value="${esc(c.kleidung||'')}" style="margin-bottom:0;font-size:.82rem" maxlength="120">
+      <input class="fl-input" id="ck-mappe-${esc(t.id)}" placeholder="Mappe / Noten (z. B. rote Mappe, Heft 2)" value="${esc(c.mappe||'')}" style="margin-bottom:0;font-size:.82rem" maxlength="120">
+      <textarea class="fl-input" id="ck-extra-${esc(t.id)}" placeholder="Mitbringen – ein Punkt pro Zeile (z. B. Wasserflasche, Bleistift)" style="min-height:70px;margin-bottom:0;font-size:.82rem">${esc(extra.join('\n'))}</textarea>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm btn-primary" onclick="saveCheckliste('${esc(t.id)}')">💾 Speichern</button>${has?`<button class="btn btn-sm" style="background:#25d366;color:#fff" onclick="informCheckliste('${esc(t.id)}')">📣 Mitglieder informieren</button>`:''}</div>
+    </div></details>`:'';
+  return `<details class="t-coll"${has?' open':''}><summary>🎒 Checkliste${sum?` · <span style="font-weight:500;color:#555">${esc(sum)}</span>`:''}</summary><div>
+    ${row('🕐','Treffzeit',c.treffzeit)}${row('📍','Treffpunkt',c.treffpunkt)}${row('👔','Kleidung',c.kleidung)}${row('📁','Mappe',c.mappe)}
+    ${extra.length?`<div style="font-size:.74rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.04em;margin:8px 0 2px">Mitbringen</div>${items}`:''}
+    ${!has?'<div style="font-size:.8rem;color:#aaa">Noch nichts eingetragen.</div>':''}
+    ${form}
+  </div></details>`;
+}
+async function saveCheckliste(tid){
+  if(!uiEdit('termine')) return;
+  const t=termine.find(x=>x.id===tid); if(!t) return;
+  const g=id=>((document.getElementById(id+tid)||{}).value||'').trim();
+  const extra=g('ck-extra-').split('\n').map(s=>s.trim()).filter(Boolean).slice(0,40);
+  const c={treffpunkt:g('ck-treff-'),treffzeit:g('ck-zeit-'),kleidung:g('ck-kleid-'),mappe:g('ck-mappe-'),extra};
+  const empty=!(c.treffpunkt||c.treffzeit||c.kleidung||c.mappe||extra.length);
+  t.checkliste=empty?undefined:c;
+  await dbPut('termine/'+termine.indexOf(t)+'/checkliste', empty?null:c).catch(e=>console.warn(e));
+  showToast('Checkliste gespeichert','ok');
+  renderTermine();
+}
+async function informCheckliste(tid){
+  if(!uiEdit('termine')) return;
+  const t=termine.find(x=>x.id===tid); const c=t&&t.checkliste; if(!c) { alert('Bitte erst speichern.'); return; }
+  const parts=[c.treffzeit?'Treffen '+c.treffzeit:'', c.treffpunkt?'📍 '+c.treffpunkt:'', c.kleidung?'👔 '+c.kleidung:'', c.mappe?'📁 '+c.mappe:''].filter(Boolean);
+  if(!confirm('Alle Mitglieder per Push informieren?\n\n'+(t.titel||'Termin')+' ('+fmt(t.datum)+')\n'+parts.join('\n'))) return;
+  await notifyPush('termin','🎒 Infos zu „'+(t.titel||'Termin')+'" ('+fmt(t.datum)+')', parts.join(' · '));
+  showToast('Mitglieder informiert','ok');
+}
+
 // ===== TERMINFINDUNG (Doodle-Stil) =====
 async function loadTerminfindungen(){ const d=await dbGet('terminfindungen',{}); if(d!==undefined) terminfindungen=d; }
 function addTfOption(d='',z='',d2=''){
@@ -7358,6 +7617,7 @@ async function _loadAllImpl(){
     loadFahrten(),
     loadAufgaben(),
     loadTerminfindungen(),
+    dbGet('settings/rueckblick',null).then(s=>{ if(s!==undefined) rueckblickSetting=s; }),
     loadUserProfiles().then(p=>{ userprofilesCache=p||{}; }).catch(()=>{})
   ]);
   try{
