@@ -90,7 +90,7 @@ async function sendReminders(){
   const termine = await jget('/termine');
   if (Array.isArray(termine)) termine.forEach(t=>{ if(t && t.datum===target) events.push({ id:'t-'+t.id, eventKey:'termin', title:'🔔 Erinnerung: '+(t.titel||'Termin'), body:wann+' ('+fmtDE(target)+')'+(t.uhrzeit?' um '+t.uhrzeit+' Uhr':'') }); });
   const plan = await jget('/probenplan');
-  if (Array.isArray(plan)) plan.forEach(p=>{ if(p && p.datum===target) events.push({ id:'p-'+p.id, eventKey:'probe', title:'🔔 Erinnerung: Probe', body:wann+' ('+fmtDE(target)+')' }); });
+  if (Array.isArray(plan)) plan.forEach(p=>{ if(p && p.datum===target && !p.abgesagt) events.push({ id:'p-'+p.id, eventKey:'probe', title:'🔔 Erinnerung: Probe', body:wann+' ('+fmtDE(target)+')' }); });
   for (const ev of events){
     if (sent[ev.id]) continue;
     await sendToSubs(filterByPrefs(allSubs, ev.eventKey), payload(ev.title, ev.body));

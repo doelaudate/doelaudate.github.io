@@ -430,6 +430,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   window.USERNAME_AUTH_URL = 'https://europe-west1-chor-doelau.cloudfunctions.net/usernameAuth';
   window.PUSH_NOW_URL = 'https://europe-west1-chor-doelau.cloudfunctions.net/pushNow';
   window.BACKUP_NOW_URL = 'https://europe-west1-chor-doelau.cloudfunctions.net/backupNow';
+  window.LIEDERHEFT_URL = 'https://europe-west1-chor-doelau.cloudfunctions.net/liederheft';
   _auth.onAuthStateChanged((user) => {
     if(window.onAuthChange) window.onAuthChange(user);
   });
@@ -1453,6 +1454,54 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   </div>
 </div>
 
+<!-- Erzwungener Passwortwechsel (bewusst KEIN .modal-overlay: closeModal() darf ihn nicht schließen) -->
+<div id="force-pw-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,30,60,.82);z-index:100001;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:14px;padding:22px;max-width:380px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+    <div style="font-size:1.1rem;font-weight:800;color:#1b3a6b;margin-bottom:4px">🔐 Bitte neues Passwort wählen</div>
+    <div style="font-size:.84rem;color:#666;margin-bottom:12px">Dein Startpasswort ist leicht zu erraten. Vergib jetzt ein eigenes Passwort (mindestens 8 Zeichen) – danach geht es direkt weiter.</div>
+    <input type="password" id="fpw-1" class="fl-input" placeholder="Neues Passwort" autocomplete="new-password">
+    <input type="password" id="fpw-2" class="fl-input" placeholder="Neues Passwort wiederholen" autocomplete="new-password" onkeydown="if(event.key==='Enter')submitForcePw()">
+    <div id="fpw-err" style="font-size:.82rem;min-height:18px;margin-bottom:8px"></div>
+    <button id="fpw-btn" class="btn btn-primary" style="width:100%" onclick="submitForcePw()">Passwort speichern</button>
+    <button class="btn btn-gray btn-sm" style="width:100%;margin-top:8px" onclick="document.getElementById('force-pw-overlay').style.display='none';doLogout()">Abmelden</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-meinjahr">
+  <div class="modal" style="max-width:520px">
+    <div id="mj-content"></div>
+    <div class="modal-actions"><button class="btn btn-gray" onclick="closeModal()">Schließen</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-meinestimme">
+  <div class="modal" style="max-width:560px">
+    <div id="ms-content"></div>
+    <div class="modal-actions"><button class="btn btn-gray" onclick="closeModal()">Schließen</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-starttone">
+  <div class="modal" style="max-width:420px">
+    <h3>🎼 Starttöne – <span id="st-songname"></span></h3>
+    <div id="st-body"></div>
+    <div class="modal-actions"><button class="btn btn-gray" onclick="closeModal()">Schließen</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-zugang">
+  <div class="modal" style="max-width:480px">
+    <h3>📨 Zugangsdaten – <span id="zg-name"></span></h3>
+    <div id="zg-warn" style="font-size:.8rem;color:#8a6d3b;background:#fff8e7;border-radius:8px;margin-bottom:8px"></div>
+    <textarea id="zg-text" class="fl-input" style="min-height:230px;font-size:.84rem"></textarea>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+      <button class="btn btn-primary btn-sm" onclick="copyZugang()">📋 Kopieren</button>
+      <button id="zg-wa" class="btn btn-sm" style="background:#25d366;color:#fff" onclick="waZugang()">💬 Per WhatsApp senden</button>
+    </div>
+    <div class="modal-actions"><button class="btn btn-gray" onclick="closeModal()">Schließen</button></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-rueckblick">
   <div class="modal" style="max-width:560px">
     <div id="rb-modal-content"></div>
@@ -1648,6 +1697,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
         <option value="Bass">Bass</option>
       </select>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.84rem;margin:2px 0 10px;cursor:pointer"><input type="checkbox" id="edit-m-stimmfuehrer" style="accent-color:#2563b5;width:16px;height:16px"> 🎚️ Stimmführer*in (sieht Anwesenheit &amp; Übe-Stand der eigenen Stimme)</label>
     <div class="form-row" style="align-items:center">
       <input class="fl-input" type="text" id="edit-m-username" placeholder="Benutzername (für Login)" style="margin-bottom:0">
       <button class="btn btn-gray btn-sm" type="button" style="white-space:nowrap" onclick="fillUsernameSuggestion('edit-m')">🎲 Vorschlag</button>
@@ -1889,7 +1939,7 @@ function openAbwesenheit(){
 function openAbmelden(){
   if(!currentUser){ alert('Bitte zuerst anmelden.'); return; }
   const today=localToday();
-  const nextProbe=(probenplan||[]).filter(p=>p.datum>=today).sort((a,b)=>a.datum.localeCompare(b.datum))[0];
+  const nextProbe=(probenplan||[]).filter(p=>p.datum>=today&&!p.abgesagt).sort((a,b)=>a.datum.localeCompare(b.datum))[0];
   const box=document.getElementById('abmelden-body'); if(!box) return;
   let h='';
   if(nextProbe){
@@ -2178,15 +2228,22 @@ function renderStart(){
   const _qa=[
     `<button class="qa" onclick="openZusagen()"><span class="qa-ic">📆</span>Zu-/Absagen</button>`,
     `<button class="qa" onclick="openAbmelden()"><span class="qa-ic">🙋</span>Abmelden</button>`,
-    `<button class="qa" onclick="showPageByName('lieder')"><span class="qa-ic">🎵</span>Lieder</button>`
+    `<button class="qa" onclick="showPageByName('lieder')"><span class="qa-ic">🎵</span>Lieder</button>`,
+    `<button class="qa" onclick="openMeinJahr()"><span class="qa-ic">📊</span>Mein Jahr</button>`
   ];
+  if(isStimmfuehrer()) _qa.push(`<button class="qa" onclick="openMeineStimme()"><span class="qa-ic">🎚️</span>Meine Stimme</button>`);
   if(canPin()) _qa.push(`<button class="qa qa-adm" onclick="document.getElementById('pw-text')&&document.getElementById('pw-text').focus();window.scrollTo({top:0,behavior:'smooth'})"><span class="qa-ic">📌</span>Ankündigen</button>`);
   html+=`<div class="qa-row">${_qa.join('')}</div>`;
 
   html+=probeRueckblickCard();
 
+  // ❌ Abgesagte Probe (nächste, die ausfällt) — rot hervorgehoben, solange sie nicht vorbei ist
+  const _canc=(probenplan||[]).filter(p=>p.datum>=today&&p.abgesagt).sort((a,b)=>a.datum.localeCompare(b.datum))[0]
+    || ((D&&D.proben)||[]).filter(p=>p.datum>=today&&p.abgesagt).sort((a,b)=>a.datum.localeCompare(b.datum))[0];
+  if(_canc) html+=`<div class="card" style="margin-bottom:12px;background:#fdf2f2;border-left:4px solid #e74c3c"><div style="font-weight:800;color:#c0392b">❌ Probe am ${esc(new Date(_canc.datum+'T12:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'2-digit'}))} fällt aus</div>${_canc.abgesagt.grund?`<div style="font-size:.88rem;color:#922b21;margin-top:3px">${esc(_canc.abgesagt.grund)}</div>`:''}</div>`;
+
   // Nächste Probe (mit Abmelde-Möglichkeit direkt hier)
-  const nextProbe=(probenplan||[]).filter(p=>p.datum>=today).sort((a,b)=>a.datum.localeCompare(b.datum))[0];
+  const nextProbe=(probenplan||[]).filter(p=>p.datum>=today&&!p.abgesagt).sort((a,b)=>a.datum.localeCompare(b.datum))[0];
   html+='<div class="card">';
   html+='<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="showPageByName(\'proben\')"><span class="card-title" style="margin-bottom:0">🎹 Nächste Probe</span><span style="font-size:.76rem;color:#2563b5">Alle ›</span></div>';
   if(nextProbe){
@@ -2482,7 +2539,7 @@ function renderLieder(){
   else songs.sort((a,b)=>a.count-b.count);
   const el=document.getElementById('lieder-list');if(!el)return;
   if(!songs.length){el.innerHTML='<div class="empty">'+(liederView==='archiv'?'Archiv ist leer.':'Keine Lieder vorhanden.')+'</div>';return;}
-  let html=uebenSummaryHtml();
+  let html=uebenSummaryHtml()+liederheftButtonHtml(songs);
   // Admin: ganze Saison ins Archiv / zurück (nur wenn eine konkrete, echte Saison gewählt ist — nicht bei
   // den virtuellen Sammel-Tabs "Alle"/"Aktuell", die keine einzelne Saison sind)
   if(admin && aktiveSaison!=='__all__' && aktiveSaison!=='__current__'){
@@ -2508,7 +2565,8 @@ function buildTbl(songs){
       ? `<button onclick="toggleSongArchived('${s.id}',false)" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:0 2px" title="Aus Archiv wiederherstellen">↩️</button>`
       : `<button onclick="toggleSongArchived('${s.id}',true)" style="background:none;border:none;cursor:pointer;font-size:1rem;opacity:.5;padding:0 2px" title="Ins Archiv verschieben">🗄️</button>`):'';
     const moveBtn = (canEdit && (D.seasons||[]).length>1)?`<button onclick="moveSong('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:1rem;opacity:.5;padding:0 2px" title="In andere Saison verschieben">↔️</button>`:'';
-    const cell = (openLink||uebenLink||hoerBtn||editBtn||archBtn||moveBtn) ? [openLink,uebenLink,hoerBtn,editBtn,moveBtn,archBtn].filter(Boolean).join(' ') : '—';
+    const startBtn = ((s.start&&Object.keys(s.start).length)||canEdit)?`<button onclick="openStartTone('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:1.05rem;padding:0 1px;${(s.start&&Object.keys(s.start).length)?'':'opacity:.4'}" title="Starttöne anhören">🎼</button>`:'';
+    const cell = (openLink||uebenLink||hoerBtn||startBtn||editBtn||archBtn||moveBtn) ? [openLink,uebenLink,hoerBtn,startBtn,editBtn,moveBtn,archBtn].filter(Boolean).join(' ') : '—';
     const dragAttr = canEdit?` draggable="true" ondragstart="dragSong(event,'${s.id}')" style="cursor:grab"`:'';
     return `<tr${dragAttr}><td><strong>${esc(s.name)}</strong>${uebenRowHtml(s)}</td><td>${fmt(s.last)}</td><td style="text-align:center;color:#666">${s.count}×</td><td><span class="dot" style="background:${dotC(s.last)}"></span><span class="badge" style="${bdgS(s.last)}">${bdgT(s.last)}</span></td><td style="text-align:center;white-space:nowrap">${cell}</td></tr>`;
   }).join('')+'</tbody></table>';
@@ -2555,6 +2613,93 @@ async function saveSongUebe(){
   if(u && !/^https?:\/\//i.test(u)){ alert('Bitte einen vollständigen Link eingeben (muss mit https:// beginnen).'); return; }
   await setSongUebe(id, u);
   closeModal();
+}
+
+// ===== LIEDERHEFT (PDF): die Noten der gerade angezeigten Lieder zu einem Heft zusammenfügen =====
+// Die Cloud Function "liederheft" baut Deckblatt + Inhaltsverzeichnis + Seitenzahlen (der Browser darf die Noten-PDFs nicht selbst laden).
+let _heftIds=[], _heftBusy=false;
+function liederheftButtonHtml(songs){
+  _heftIds=[];
+  if(!currentUser || liederView==='archiv') return '';
+  const seen=new Set();
+  songs.forEach(s=>{ if(s&&s.pdf&&!s.archived&&!seen.has(s.pdf)){ seen.add(s.pdf); _heftIds.push(s.id); } });
+  if(!_heftIds.length) return '';
+  return `<div style="margin-bottom:12px"><button class="btn btn-sm" style="background:#1b3a6b;color:#fff" onclick="makeLiederheft()">📖 Liederheft als PDF (${_heftIds.length} Lieder)</button> <span id="heft-msg" style="font-size:.78rem;color:#888;margin-left:6px"></span></div>`;
+}
+async function makeLiederheft(){
+  if(_heftBusy || !_heftIds.length) return;
+  const msg=document.getElementById('heft-msg'); const set=(t,c)=>{ if(msg){ msg.style.color=c||'#888'; msg.textContent=t; } };
+  const cs=(D&&D.seasons||[]).find(s=>s.id===aktiveSaison);
+  const title=cs?cs.name:'Liederheft';
+  _heftBusy=true; set('⏳ Heft wird erstellt … das kann bis zu einer Minute dauern','#2563b5');
+  try{
+    const u=window._fbAuth&&window._fbAuth.currentUser; if(!u) throw new Error('nicht angemeldet');
+    const r=await fetch(window.LIEDERHEFT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:await u.getIdToken(),ids:_heftIds,title})});
+    if(!r.ok) throw new Error(r.status===404?'Keines der Lieder konnte eingelesen werden':'Fehler '+r.status);
+    const skipped=decodeURIComponent(r.headers.get('X-Skipped')||'').split('|').filter(Boolean);
+    const blob=await r.blob();
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='Liederheft-'+title.replace(/[^A-Za-z0-9ÄÖÜäöüß_-]+/g,'_')+'.pdf'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),30000);
+    set('✅ Fertig – '+(_heftIds.length-skipped.length)+' Lieder im Heft','#27ae60');
+    if(skipped.length) alert('Nicht im Heft (zu groß oder PDF nicht lesbar):\n\n'+skipped.join('\n')+'\n\nDiese Lieder bitte einzeln über 📄 öffnen.');
+  }catch(e){ set('❌ '+(e.message||e),'#e74c3c'); }
+  _heftBusy=false;
+}
+
+// ===== STARTTÖNE: pro Lied je Stimme ein Anfangston, per Antippen als Ton hörbar (Web Audio) =====
+// Daten: song.start = {S:'C4',A:'G3',T:'E3',B:'C3'} (Notenname + Oktave, # für Kreuz). Nur die Leitung trägt ein.
+const START_NOTES=(()=>{ const n=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; const o=[]; for(let oc=2;oc<=5;oc++) n.forEach(x=>o.push(x+oc)); return o; })();
+const START_VOICES=[['S','Sopran','#e67e22','C4','C6'],['A','Alt','#2563b5','G3','D5'],['T','Tenor','#27ae60','C3','G4'],['B','Bass','#8e44ad','E2','C4']];
+let _startCtx=null;
+function noteFreq(name){
+  const m=/^([A-G])(#?)(\d)$/.exec(String(name||'')); if(!m) return null;
+  const semi={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]?1:0);
+  const midi=12*(parseInt(m[3])+1)+semi;
+  return 440*Math.pow(2,(midi-69)/12);
+}
+function playTone(name, delay){
+  const f=name==='A4'?440:noteFreq(name); if(!f) return;
+  try{
+    _startCtx=_startCtx||new (window.AudioContext||window.webkitAudioContext)();
+    if(_startCtx.state==='suspended') _startCtx.resume();
+    const t0=_startCtx.currentTime+(delay||0), dur=2.2;
+    const g=_startCtx.createGain(); g.connect(_startCtx.destination);
+    g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.28,t0+0.04); g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    [[1,1],[2,0.18],[3,0.06]].forEach(([mul,amp])=>{ const o=_startCtx.createOscillator(); const og=_startCtx.createGain(); o.type='sine'; o.frequency.value=f*mul; og.gain.value=amp; o.connect(og); og.connect(g); o.start(t0); o.stop(t0+dur+0.05); });
+  }catch(e){ console.warn('Ton nicht abspielbar',e); }
+}
+function openStartTone(id){
+  const song=findSongById(id); if(!song) return;
+  const canEdit=hasPermission('lieder'); const mine=myVoiceCode(); const st=song.start||{};
+  const rows=START_VOICES.map(([k,name,color,lo,hi])=>{
+    const cur=st[k]||'';
+    const isMine=(k===mine);
+    const sel=canEdit?`<select id="st-${k}" class="fl-input" style="width:auto;margin:0;padding:4px 6px;font-size:.85rem"><option value="">–</option>${START_NOTES.map(n=>`<option value="${n}" ${n===cur?'selected':''}>${n}</option>`).join('')}</select>`:`<strong style="font-size:1rem;min-width:36px;display:inline-block">${esc(cur||'–')}</strong>`;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px ${isMine?'8px':'0'};border-bottom:1px solid #f0f0f0;${isMine?'background:#eef5ff;border-radius:8px':''}">
+      <span style="min-width:62px;font-weight:700;color:${color}">${name}</span>${sel}
+      <button class="btn btn-sm btn-primary" style="margin-left:auto" onclick="startToneFor('${k}')">▶ Ton</button>${isMine?'<span style="font-size:.66rem;color:#1d4e96">⭐</span>':''}</div>`;
+  }).join('');
+  document.getElementById('st-body').innerHTML=`<input type="hidden" id="st-songid" value="${esc(id)}">${rows}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn btn-sm" style="background:#8e44ad;color:#fff" onclick="startToneAll()">▶▶ Akkord (alle Stimmen)</button>
+      <button class="btn btn-sm btn-gray" onclick="playTone('A4')">a′ (Kammerton 440 Hz)</button>
+      ${canEdit?'<button class="btn btn-sm btn-success" onclick="saveStartTones()">💾 Speichern</button>':''}
+    </div><div id="st-msg" style="font-size:.8rem;min-height:16px;margin-top:6px"></div>`;
+  document.getElementById('st-songname').textContent=song.name;
+  document.getElementById('modal-starttone').classList.add('open');
+}
+function _stValue(k){ const el=document.getElementById('st-'+k); if(el) return el.value; const s=findSongById(document.getElementById('st-songid').value); return (s&&s.start&&s.start[k])||''; }
+function startToneFor(k){ const v=_stValue(k); if(!v){ const m=document.getElementById('st-msg'); if(m){ m.style.color='#999'; m.textContent='Für diese Stimme ist noch kein Ton eingetragen.'; } return; } playTone(v); }
+function startToneAll(){ START_VOICES.forEach(([k],i)=>{ const v=_stValue(k); if(v) playTone(v,i*0.04); }); }
+async function saveStartTones(){
+  if(!hasPermission('lieder')) return;
+  const id=document.getElementById('st-songid').value; const p=songPos(id); if(!p) return;
+  const song=D.seasons[p[0]].songs[p[1]];
+  const o={}; START_VOICES.forEach(([k])=>{ const v=_stValue(k); if(v) o[k]=v; });
+  if(Object.keys(o).length) song.start=o; else delete song.start;
+  await dbFetch(DB+'/chorproben/seasons/'+p[0]+'/songs/'+p[1]+'/start.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.keys(o).length?o:null)}).catch(e=>console.warn(e));
+  const m=document.getElementById('st-msg'); if(m){ m.style.color='#27ae60'; m.textContent='✅ Gespeichert'; }
+  renderLieder();
 }
 
 // ===== ÜBE-TRACKER: jedes Mitglied markiert pro Lied „kann ich" oder „brauche Hilfe" =====
@@ -2920,6 +3065,50 @@ async function deleteProbe(id,geplant=false){
   renderProben(); renderLieder();
 }
 
+// ===== PROBE FÄLLT AUS: markiert eine kommende Probe als abgesagt und informiert alle per Push =====
+// Die Probe bleibt mit p.abgesagt={grund,ts} im Plan (sichtbar als „fällt aus"), zählt aber nirgends mehr als Probe
+// (Anwesenheit, Statistik, Kalender, Erinnerungen, Kalender-Abo).
+function _probeRef(id, geplant){
+  const arr = geplant ? probenplan : ((D&&D.proben)||[]);
+  const i=arr.findIndex(x=>x.id===id);
+  return i<0?null:{p:arr[i], path:(geplant?'probenplan/':'chorproben/proben/')+i};
+}
+function _probeTag(datum){ return new Date(datum+'T12:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'2-digit'}); }
+async function cancelProbe(id, geplant){
+  if(!hasPermission('proben')) return;
+  const ref=_probeRef(id,geplant); if(!ref){ alert('Probe nicht gefunden.'); return; }
+  const grund=prompt('Probe am '+fmt(ref.p.datum)+' absagen.\n\nGrund (wird allen mitgeteilt, optional):','');
+  if(grund===null) return;
+  const g=grund.trim().slice(0,150);
+  const push=confirm('Alle Mitglieder per Push informieren, dass die Probe ausfällt?');
+  ref.p.abgesagt={grund:g,ts:Date.now()};
+  await dbPut(ref.path+'/abgesagt', ref.p.abgesagt).catch(e=>console.warn(e));
+  renderProben(); renderStart(); try{ renderKalender(); }catch(e){}
+  showToast('Probe abgesagt','ok');
+  if(push){
+    const title='❌ Probe fällt aus';
+    const body='Die Probe am '+_probeTag(ref.p.datum)+' fällt aus.'+(g?' Grund: '+g:'');
+    logNotification(title, body);
+    await pushSend(title, body, false, 'probe');
+  }
+}
+async function reinstateProbe(id, geplant){
+  if(!hasPermission('proben')) return;
+  const ref=_probeRef(id,geplant); if(!ref) return;
+  if(!confirm('Probe am '+fmt(ref.p.datum)+' findet doch statt?')) return;
+  const push=confirm('Alle Mitglieder per Push informieren, dass die Probe doch stattfindet?');
+  delete ref.p.abgesagt;
+  await dbDel(ref.path+'/abgesagt').catch(e=>console.warn(e));
+  renderProben(); renderStart(); try{ renderKalender(); }catch(e){}
+  showToast('Probe findet wieder statt','ok');
+  if(push){
+    const title='✅ Probe findet doch statt';
+    const body='Die Probe am '+_probeTag(ref.p.datum)+' findet wie geplant statt.';
+    logNotification(title, body);
+    await pushSend(title, body, false, 'probe');
+  }
+}
+
 // Lieder-Auswahl (Chips) in einen beliebigen Container bauen, vorausgewählte Lieder ankreuzen
 function buildSongPickerInto(containerEl, selectedIds){
   if(!D || !containerEl) return;
@@ -2995,7 +3184,7 @@ async function migrateVergangeneProben(){
   if(!past.length) return;
   if(!Array.isArray(D.proben)) D.proben=[];
   const have=new Set(D.proben.map(p=>p.id));
-  past.forEach(p=>{ if(!have.has(p.id)) D.proben.push({id:p.id,datum:p.datum,songIds:p.songIds||[],notiz:p.notiz||''}); });
+  past.forEach(p=>{ if(!have.has(p.id) && !p.abgesagt) D.proben.push({id:p.id,datum:p.datum,songIds:p.songIds||[],notiz:p.notiz||''}); });
   const neuerPlan=(probenplan||[]).filter(p=>p.datum>=today);
   try{
     await dbFetch(DB+'/chorproben.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seasons:D.seasons,proben:D.proben})});
@@ -3261,7 +3450,7 @@ async function deleteKasse(id){
 async function loadAnwesenheit(){ const d=await dbGet('anwesenheit',{}); if(d!==undefined) anwesenheit=d; }
 function allProbenSorted(){
   if(!D) return [];
-  const alle=[...(probenplan||[]).map(p=>({...p,_src:'plan'})), ...((D.proben)||[]).map(p=>({...p,_src:'proben'}))];
+  const alle=[...(probenplan||[]).map(p=>({...p,_src:'plan'})), ...((D.proben)||[]).map(p=>({...p,_src:'proben'}))].filter(p=>!p.abgesagt);
   return alle.filter(p=>p.datum).sort((a,b)=>b.datum.localeCompare(a.datum));
 }
 function memberKey(m){ return String(m.id||m.nr); }
@@ -3514,6 +3703,83 @@ function setAuswertungTab(t){
   document.getElementById('atab-rueckblick').classList.toggle('active', t==='rueckblick');
   document.getElementById('atab-besetzung').classList.toggle('active', t==='besetzung');
   if(t==='anwesenheit') renderAnwesenheitPage(); else if(t==='rueckblick') renderRueckblickAdmin(); else if(t==='besetzung') renderBesetzung(); else renderStatistik();
+}
+
+// ===== MEIN CHORJAHR: persönliche Übersicht (eigene Anwesenheit, Auftritte, Lern-Stand) =====
+function _activeSongsNow(){
+  const out=[]; const hasCur=(D&&D.seasons||[]).some(isCurrentYearSeason);
+  (D&&D.seasons||[]).forEach(s=>{ if(!hasCur||isCurrentYearSeason(s)||s.type==='repertoire') (s.songs||[]).forEach(x=>{ if(!x.archived) out.push(x); }); });
+  return out;
+}
+function openMeinJahr(){
+  if(!currentUser){ alert('Bitte zuerst anmelden.'); return; }
+  document.getElementById('mj-content').innerHTML=meinJahrHtml();
+  document.getElementById('modal-meinjahr').classList.add('open');
+}
+function _mjGo(fn,arg){ closeModal(); setTimeout(()=>{ if(fn==='hoer') openHoer(arg); else if(fn==='start') openStartTone(arg); else showPageByName('lieder'); },30); }
+function meinJahrHtml(){
+  const y=String(new Date().getFullYear()), today=localToday(), uid=currentUser.uid;
+  const head=`<div style="background:linear-gradient(135deg,#1b3a6b,#2563b5);color:#fff;border-radius:14px;padding:14px;margin-bottom:12px;text-align:center"><div style="font-size:1.25rem;font-weight:800">📊 Mein Chorjahr ${y}</div></div>`;
+  const m=_matchMemberByProfile(uid,'');
+  if(!m) return head+'<div class="empty" style="padding:16px">Dein Konto ist noch keinem Chormitglied zugeordnet – bitte kurz bei der Chorleitung melden.</div>';
+  const key=memberKey(m);
+  const cap=Object.entries(anwesenheit||{}).filter(([,v])=>v&&v.erfasst).map(([k,v])=>({d:probeDatumById(k),v})).filter(x=>x.d&&x.d.slice(0,4)===y&&x.d<=today).sort((a,b)=>a.d.localeCompare(b.d));
+  let da=0,streak=0,best=0; cap.forEach(x=>{ if(x.v.fehlt&&x.v.fehlt[key]) streak=0; else { da++; streak++; best=Math.max(best,streak); } });
+  const quote=cap.length?Math.round(da/cap.length*100):null;
+  const al=getUserAliases();
+  const auf=(termine||[]).filter(t=>RB_AUFTRITT.includes(t.typ)&&t.datum&&t.datum.slice(0,4)===y&&(t.datum_ende||t.datum)<=today);
+  const mit=auf.filter(t=>Object.entries(t.abstimmungen||{}).some(([k,v])=>v==='ja'&&al.has(_norm(k))));
+  const tile=(n,l,c)=>`<div class="stat"><div class="stat-n" style="color:${c}">${n}</div><div class="stat-l">${l}</div></div>`;
+  let h=head+`<div class="stats" style="margin-bottom:12px">${tile(cap.length?da+'/'+cap.length:'–','Proben dabei','#2563b5')}${tile(quote!=null?quote+'%':'–','Anwesenheit',quote==null?'#aaa':quote>=80?'#27ae60':quote>=50?'#f39c12':'#e74c3c')}${tile(auf.length?mit.length+'/'+auf.length:'–','Auftritte','#e67e22')}${tile(best||'–','Längste Serie','#8e44ad')}</div>`;
+  if(!cap.length) h+=`<div style="font-size:.8rem;color:#999;margin:-4px 0 10px">Anwesenheit wird von der Chorleitung nach den Proben erfasst – dieses Jahr gibt es noch keine Einträge.</div>`;
+  const songs=_activeSongsNow();
+  const st=s=>(uebenStatus[s.id]||{})[uid]||'';
+  const kann=songs.filter(s=>st(s)==='kann'), hilfe=songs.filter(s=>st(s)==='hilfe'), offen=songs.filter(s=>!st(s));
+  const pct=songs.length?Math.round(kann.length/songs.length*100):0;
+  h+=`<div class="card" style="margin-bottom:12px"><div class="card-title">🎵 Mein Lern-Stand</div>
+    <div style="font-size:.86rem;margin-bottom:6px">Du kannst <strong>${kann.length}</strong> von ${songs.length} aktuellen Liedern.</div>
+    <div style="background:#eef1f5;border-radius:6px;height:12px;overflow:hidden;margin-bottom:10px"><div style="height:100%;width:${pct}%;background:#27ae60"></div></div>`;
+  if(hilfe.length) h+=`<div style="font-size:.76rem;font-weight:700;color:#c0620f;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">🆘 Hier brauchst du noch Hilfe</div>`+hilfe.map(s=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:.88rem"><span style="flex:1;font-weight:600">${esc(s.name)}</span>${_hoerHasAny(s)?`<button class="btn btn-sm btn-gray" onclick="_mjGo('hoer','${esc(s.id)}')">🎧 Anhören</button>`:''}${s.start&&Object.keys(s.start).length?`<button class="btn btn-sm btn-gray" onclick="_mjGo('start','${esc(s.id)}')">🎼</button>`:''}</div>`).join('');
+  else h+=`<div style="font-size:.84rem;color:#27ae60">🎉 Keine offenen Hilfe-Wünsche.</div>`;
+  if(offen.length) h+=`<div style="font-size:.78rem;color:#888;margin-top:10px">${offen.length} Lied${offen.length===1?'':'er'} noch nicht eingeschätzt – <a href="#" onclick="_mjGo('lieder');return false" style="color:#2563b5">in der Liederliste markieren (✅ / 🆘)</a>.</div>`;
+  return h+'</div>';
+}
+
+// ===== MEINE STIMME (Stimmführer*in): Anwesenheit + Übe-Stand der eigenen Stimmgruppe =====
+function _memberUid(m){
+  if(m.uid) return m.uid;
+  const un=_norm(m.username||''); if(!un) return null;
+  return Object.keys(userprofilesCache||{}).find(u=>userprofilesCache[u]&&_norm(userprofilesCache[u].username||'')===un)||null;
+}
+function isStimmfuehrer(){
+  try{ const m=currentUser&&_matchMemberByProfile(currentUser.uid,''); return !!(m&&m.stimmfuehrer&&SATB_VOICES.includes(m.stimme)); }catch(e){ return false; }
+}
+function openMeineStimme(){
+  if(!isStimmfuehrer()){ return; }
+  document.getElementById('ms-content').innerHTML=meineStimmeHtml();
+  document.getElementById('modal-meinestimme').classList.add('open');
+}
+function meineStimmeHtml(){
+  const me=_matchMemberByProfile(currentUser.uid,''); const voice=me.stimme;
+  const today=localToday(); const from=new Date(); from.setFullYear(from.getFullYear()-1); const fromIso=from.toISOString().slice(0,10);
+  const cap=Object.entries(anwesenheit||{}).filter(([,v])=>v&&v.erfasst).map(([k,v])=>({d:probeDatumById(k),v})).filter(x=>x.d&&x.d>=fromIso&&x.d<=today).sort((a,b)=>a.d.localeCompare(b.d));
+  const ms=mitglieder.filter(m=>m.stimme===voice).sort((a,b)=>memberName(a).localeCompare(memberName(b),'de'));
+  const songs=_activeSongsNow();
+  const rows=ms.map(m=>{
+    const k=memberKey(m); let da=0; const last=[];
+    cap.forEach(x=>{ const f=!!(x.v.fehlt&&x.v.fehlt[k]); if(!f) da++; last.push(f); });
+    const q=cap.length?Math.round(da/cap.length*100):null;
+    const u=_memberUid(m); let kann=0,hilfe=0;
+    songs.forEach(s=>{ const v=u?((uebenStatus[s.id]||{})[u]||''):''; if(v==='kann')kann++; else if(v==='hilfe')hilfe++; });
+    const c=q==null?'#aaa':q>=80?'#27ae60':q>=50?'#f39c12':'#e74c3c';
+    const dots=last.slice(-5).map(f=>f?'❌':'✅').join('');
+    return `<tr><td>${esc(shortName(m.vorname,m.nachname)||memberName(m))}${m.stimmfuehrer?' <span title="Stimmführer*in">🎚️</span>':''}</td><td style="text-align:center"><strong style="color:${c}">${q==null?'–':q+'%'}</strong></td><td style="text-align:center;font-size:.7rem;white-space:nowrap">${dots||'–'}</td><td style="text-align:center">${u?`<span style="color:#27ae60">✅${kann}</span>${hilfe?` <b style="color:#e67e22">🆘${hilfe}</b>`:''}`:'<span style="color:#ccc">–</span>'}</td></tr>`;
+  }).join('');
+  const hilfeSongs=songs.map(s=>({n:s.name,who:ms.filter(m=>{ const u=_memberUid(m); return u&&(uebenStatus[s.id]||{})[u]==='hilfe'; }).map(m=>shortName(m.vorname,m.nachname)||memberName(m))})).filter(x=>x.who.length).sort((a,b)=>b.who.length-a.who.length);
+  return `<div style="background:linear-gradient(135deg,#1b3a6b,#2563b5);color:#fff;border-radius:14px;padding:14px;margin-bottom:12px;text-align:center"><div style="font-size:1.2rem;font-weight:800">🎚️ Meine Stimme: ${esc(voice)}</div><div style="font-size:.78rem;opacity:.85;margin-top:2px">${ms.length} Mitglieder · nur für Stimmführer*innen und Chorleitung sichtbar</div></div>
+    <div class="card" style="margin-bottom:12px"><div class="card-title">✅ Anwesenheit (letzte 12 Monate, ${cap.length} erfasste Proben)</div>
+      <div style="overflow-x:auto"><table class="overview-table" style="width:100%"><thead><tr><th>Name</th><th style="text-align:center">Quote</th><th style="text-align:center">Letzte 5</th><th style="text-align:center">Lieder</th></tr></thead><tbody>${rows||'<tr><td colspan="4">Keine Mitglieder in dieser Stimme.</td></tr>'}</tbody></table></div></div>
+    <div class="card"><div class="card-title">🆘 Wo braucht die Stimme Hilfe?</div>${hilfeSongs.length?hilfeSongs.map(x=>`<div style="padding:5px 0;border-top:1px solid var(--line);font-size:.86rem"><strong>${esc(x.n)}</strong> <span style="color:#888">– ${esc(x.who.join(', '))}</span></div>`).join(''):'<div style="font-size:.84rem;color:#27ae60">Aktuell hat niemand aus deiner Stimme „Hilfe" markiert.</div>'}</div>`;
 }
 
 // ===== CLOUD-BACKUP (Status + Knopf; die Sicherung selbst macht die Cloud Function) =====
@@ -3839,7 +4105,10 @@ function renderProben(){
     else planEl.innerHTML=upcoming.map(p=>{
       const songs=(p.songIds||[]).map(id=>{const s=allS.find(x=>x.id===id);return s?s.name:'?'}).join(', ');
       const isGeplant=p._src==='plan';
-      return`<div class="plan-item"><div style="font-weight:600;color:#1e8449;margin-bottom:2px">🎹 ${fmt(p.datum)}</div>${p.ort?`<div style="font-size:.8rem;color:#c0620f;font-weight:600">📍 ${esc(p.ort)}</div>`:''}${songs?`<div style="font-size:.8rem;color:#555">🎵 ${esc(songs)}</div>`:''}${p.notiz?`<div style="font-size:.8rem;color:#888;font-style:italic">💬 ${esc(p.notiz)}</div>`:''}${buildProbeAttendance(p)}${uiEdit('proben')?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editProbe('${p.id}',${isGeplant})">✏️ Bearbeiten</button><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',${isGeplant})">🗑️ Löschen</button></div>`:''}</div>`;
+      if(p.abgesagt){
+        return`<div class="plan-item" style="background:#fdf2f2;border-left-color:#e74c3c"><div style="font-weight:700;color:#c0392b;margin-bottom:2px">❌ ${fmt(p.datum)} – Probe fällt aus</div>${p.abgesagt.grund?`<div style="font-size:.84rem;color:#922b21">Grund: ${esc(p.abgesagt.grund)}</div>`:''}${uiEdit('proben')?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" style="background:#d5f5e3;color:#1a7a40" onclick="reinstateProbe('${p.id}',${isGeplant})">↩ Findet doch statt</button><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',${isGeplant})">🗑️ Löschen</button></div>`:''}</div>`;
+      }
+      return`<div class="plan-item"><div style="font-weight:600;color:#1e8449;margin-bottom:2px">🎹 ${fmt(p.datum)}</div>${p.ort?`<div style="font-size:.8rem;color:#c0620f;font-weight:600">📍 ${esc(p.ort)}</div>`:''}${songs?`<div style="font-size:.8rem;color:#555">🎵 ${esc(songs)}</div>`:''}${p.notiz?`<div style="font-size:.8rem;color:#888;font-style:italic">💬 ${esc(p.notiz)}</div>`:''}${buildProbeAttendance(p)}${uiEdit('proben')?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editProbe('${p.id}',${isGeplant})">✏️ Bearbeiten</button><button class="btn btn-sm" style="background:#fdecea;color:#c0392b" onclick="cancelProbe('${p.id}',${isGeplant})">❌ Absagen</button><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',${isGeplant})">🗑️ Löschen</button></div>`:''}</div>`;
     }).join('');
   }
 
@@ -4304,7 +4573,7 @@ function renderKalender(){
     while(d<=end){const k=d.toISOString().split('T')[0];if(!evMap[k])evMap[k]={ev:[],pr:[]};evMap[k].ev.push(t);d.setDate(d.getDate()+1);}
   });
   // Add proben (geplant + vergangen)
-  const allProben=[...(D?.proben||[]),...(probenplan||[])];
+  const allProben=[...(D?.proben||[]),...(probenplan||[])].filter(p=>!p.abgesagt);
   allProben.forEach(p=>{
     if(!evMap[p.datum]) evMap[p.datum]={ev:[],pr:[]};
     evMap[p.datum].pr.push(p);
@@ -4432,6 +4701,7 @@ function openEditMitglied(id){
   const m=mitglieder.find(x=>(x.nr||x.id)==id);if(!m)return;
   document.getElementById('edit-m-id').value=id;
   ['nachname','vorname','handy','telefon','email','geburtstag','adresse','plz','stimme','username'].forEach(f=>{const el=document.getElementById('edit-m-'+f);if(el)el.value=m[f]||'';});
+  const sfEl=document.getElementById('edit-m-stimmfuehrer'); if(sfEl) sfEl.checked=!!m.stimmfuehrer;
   const unEl=document.getElementById('edit-m-username'), hint=document.getElementById('edit-m-username-hint');
   const hasAccount=!!m.uid;
   if(unEl) unEl.readOnly=hasAccount;
@@ -4453,6 +4723,7 @@ async function saveMitglied(){
   }
   const alteAdresse=m.adresse||'';
   fields.forEach(f=>{const el=document.getElementById('edit-m-'+f);if(el)m[f]=el.value.trim();});
+  const sf=document.getElementById('edit-m-stimmfuehrer'); if(sf){ if(sf.checked) m.stimmfuehrer=true; else delete m.stimmfuehrer; }
   await saveMitgliederToFB();
   closeModal();
   renderMitglieder();
@@ -4836,6 +5107,8 @@ async function loadUserProfile(uid, email) {
         return;
       }
     }
+    // Startpasswort (= Benutzername) muss beim ersten Login geändert werden — blockierende Abfrage
+    if(profile && profile.mustChangePw) showForcePw();
     const displayName = profile?.anzeigename || profile?.username || email.split('@')[0];
     document.getElementById('user-display').textContent = '👤 ' + displayName;
     document.getElementById('user-chip').style.display = 'flex';
@@ -5037,7 +5310,7 @@ async function adminResetPassword(username){
     const r=await fetch(window.USERNAME_AUTH_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'adminreset', idToken, target:username})});
     if(r.ok){
       showToast('Passwort zurückgesetzt','ok');
-      alert('✅ Passwort von „'+username+'" wurde zurückgesetzt.\n\nNeues Passwort = Benutzername:\n  '+username+'\n\nBitte dem Mitglied mitteilen. Es kann das Passwort danach in den Einstellungen selbst ändern.');
+      alert('✅ Passwort von „'+username+'" wurde zurückgesetzt.\n\nNeues Passwort = Benutzername:\n  '+username+'\n\nBitte dem Mitglied mitteilen (Tipp: Benutzerverwaltung → „📨 Zugangsdaten"). Beim nächsten Login muss es ein neues Passwort wählen.');
     } else if(r.status===403){ showToast('Keine Admin-Berechtigung','err'); }
     else if(r.status===404){ showToast('Kein Konto für dieses Mitglied vorhanden','err'); }
     else if(r.status===401){ showToast('Sitzung abgelaufen – bitte neu anmelden','err'); }
@@ -5069,11 +5342,95 @@ async function changeUserPw() {
   if(!newPw || newPw.length < 6) { alert('Passwort muss mindestens 6 Zeichen haben.'); return; }
   try {
     await window._fbUpdatePassword(currentUser, newPw);
+    markPwChanged();
     alert('✅ Passwort geändert!');
     document.getElementById('new-user-pw').value = '';
   } catch(e) {
     alert('Fehler: '+e.message);
   }
+}
+// Merkt sich am Profil, dass das Mitglied ein eigenes Passwort vergeben hat (Startpasswort gilt nicht mehr)
+function markPwChanged(){
+  if(!currentUser) return;
+  const p='userprofiles/'+currentUser.uid;
+  dbPut(p+'/pwChanged', Date.now()).catch(e=>console.warn(e));
+  dbDel(p+'/mustChangePw').catch(e=>console.warn(e));
+  if(currentUserProfile){ currentUserProfile.pwChanged=Date.now(); delete currentUserProfile.mustChangePw; }
+}
+// ===== Erzwungener Passwortwechsel (Startpasswort = Benutzername ist ratbar) =====
+function showForcePw(){
+  const o=document.getElementById('force-pw-overlay'); if(!o) return;
+  document.getElementById('fpw-err').textContent=''; document.getElementById('fpw-1').value=''; document.getElementById('fpw-2').value='';
+  o.style.display='flex';
+}
+async function submitForcePw(){
+  const p1=document.getElementById('fpw-1').value, p2=document.getElementById('fpw-2').value, err=document.getElementById('fpw-err');
+  err.style.color='#c0392b';
+  const un=String((currentUserProfile&&currentUserProfile.username)||'').toLowerCase();
+  const em=String((currentUser&&currentUser.email)||'').toLowerCase();
+  if(p1.length<8){ err.textContent='Bitte mindestens 8 Zeichen.'; return; }
+  if(p1!==p2){ err.textContent='Die beiden Passwörter stimmen nicht überein.'; return; }
+  if(p1.toLowerCase()===un || p1.toLowerCase()===em.split('@')[0] || p1.toLowerCase()===em){ err.textContent='Das Passwort darf nicht dein Benutzername oder deine E-Mail sein.'; return; }
+  const btn=document.getElementById('fpw-btn'); btn.disabled=true; btn.textContent='⏳';
+  try{
+    await window._fbUpdatePassword(currentUser, p1);
+    markPwChanged();
+    document.getElementById('force-pw-overlay').style.display='none';
+    showToast('Passwort geändert – danke!','ok');
+  }catch(e){
+    err.textContent = e.code==='auth/requires-recent-login' ? 'Bitte melde dich einmal ab und neu an, dann klappt es.' : (e.code==='auth/weak-password' ? 'Das Passwort ist zu schwach.' : 'Fehler: '+(e.message||e));
+  }
+  btn.disabled=false; btn.textContent='Passwort speichern';
+}
+// Admin: Passwortwechsel beim nächsten Login anordnen (einzeln / für alle ohne eigenes Passwort)
+async function requirePwChange(uid){
+  if(!(currentUserProfile&&currentUserProfile.isAdmin)) return;
+  if(!confirm('Dieses Mitglied muss beim nächsten Login ein neues Passwort vergeben. Fortfahren?')) return;
+  await dbPut('userprofiles/'+uid+'/mustChangePw', true).catch(e=>console.warn(e));
+  showToast('Wird beim nächsten Login abgefragt','ok'); renderUserVerwaltung();
+}
+async function requirePwChangeAll(){
+  if(!(currentUserProfile&&currentUserProfile.isAdmin)) return;
+  const profiles=await loadUserProfiles();
+  const todo=Object.entries(profiles).filter(([uid,p])=>p&&!p.pwChanged&&!p.mustChangePw&&uid!==(currentUser&&currentUser.uid));
+  if(!todo.length){ alert('Alle haben bereits ein eigenes Passwort gesetzt oder müssen noch wechseln.'); return; }
+  if(!confirm(todo.length+' Mitglieder haben noch nie selbst ein Passwort gesetzt (oder es ist unbekannt).\n\nSie müssen beim nächsten Login einmalig ein neues Passwort vergeben. Fortfahren?')) return;
+  const patch={}; todo.forEach(([uid])=>{ patch[uid+'/mustChangePw']=true; });
+  const r=await dbPatch('userprofiles', patch).catch(()=>null);
+  showToast(r&&r.ok?todo.length+' Mitglieder werden beim nächsten Login nach einem neuen Passwort gefragt':'Fehler beim Speichern', r&&r.ok?'ok':'err');
+  renderUserVerwaltung();
+}
+
+// ===== Zugangsdaten-Nachricht (WhatsApp-Text) =====
+let _zugangUid=null;
+function openZugang(uid){
+  const u=_zugangProfiles&&_zugangProfiles[uid]; if(!u) return;
+  _zugangUid=uid;
+  const gewechselt=!!u.pwChanged;
+  const m=findMemberForUser(u);
+  const link=location.origin+'/';
+  const un=u.username||'';
+  const L=['Hallo '+(u.vorname||'')+',','hier ist dein Zugang zur Chor-App von Dö Laudate:','',
+    '🔗 '+link,'👤 Benutzername: '+un,
+    gewechselt?'🔑 Passwort: das, das du selbst gewählt hast':'🔑 Startpasswort: '+un+' (die App fragt dich beim ersten Anmelden nach einem neuen Passwort)'];
+  if(u.pendingVerify) L.push('','📧 Beim ersten Anmelden schicken wir dir eine Bestätigungsmail an '+(u.email||'deine Adresse')+' – bitte den Link darin anklicken (auch im Spam-Ordner nachsehen) und danach noch einmal anmelden.');
+  L.push('','📱 Als App installieren:','• iPhone: in Safari öffnen → Teilen-Symbol → „Zum Home-Bildschirm"','• Android: in Chrome öffnen → Menü ⋮ → „App installieren"','','🔔 Danach unter Einstellungen gern Benachrichtigungen aktivieren, dann verpasst du keine Termine.');
+  document.getElementById('zg-text').value=L.join('\n');
+  document.getElementById('zg-name').textContent=((u.vorname||'')+' '+(u.nachname||'')).trim()||un;
+  document.getElementById('zg-warn').innerHTML=gewechselt?'⚠️ Dieses Mitglied hat sein Passwort schon selbst geändert – das Startpasswort gilt nicht mehr. Falls es das Passwort vergessen hat, erst „Passwort zurücksetzen" nutzen.':'';
+  const hy=String((m&&(m.handy||m.telefon))||'').replace(/\D/g,'');
+  _zugangPhone=hy?(hy.startsWith('00')?hy.slice(2):hy.startsWith('0')?'49'+hy.slice(1):hy):'';
+  document.getElementById('zg-wa').style.display='';
+  document.getElementById('modal-zugang').classList.add('open');
+}
+let _zugangPhone='', _zugangProfiles=null;
+function copyZugang(){
+  const t=document.getElementById('zg-text'); t.select();
+  (navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).then(()=>showToast('Text kopiert','ok')).catch(()=>{ try{ document.execCommand('copy'); showToast('Text kopiert','ok'); }catch(e){} });
+}
+function waZugang(){
+  const t=document.getElementById('zg-text').value;
+  window.open('https://wa.me/'+(_zugangPhone||'')+'?text='+encodeURIComponent(t),'_blank','noopener');
 }
 
 // Admin-Modus wird durch das eigene Konto bestimmt (isAdmin). Der Schalter erlaubt echten Admins nur,
@@ -5109,6 +5466,7 @@ async function createUserAccount(mitglied) {
       nachname: mitglied.nachname,
       geburtstag: mitglied.geburtstag || '',
       isAdmin: false,
+      mustChangePw: true, // Startpasswort = Benutzername -> beim ersten Login ändern
       erstellt: new Date().toISOString()
     };
 
@@ -5174,6 +5532,7 @@ async function renderUserVerwaltung() {
   el.innerHTML = '<div style="color:#aaa;font-size:.85rem">Lade Nutzer…</div>';
 
   const profiles = await loadUserProfiles();
+  _zugangProfiles = profiles;
   const allUsers = Object.values(profiles).sort((a,b) => a.nachname?.localeCompare(b.nachname||'')||0);
 
   if(!allUsers.length) {
@@ -5205,7 +5564,10 @@ async function renderUserVerwaltung() {
   const banner = q ? '' : `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;padding:10px 14px;background:#fff8f0;border:1.5px solid #f39c12;border-radius:8px">
     <div style="font-size:.84rem;color:#7d6608">📧 Passwort-Reset-Mail an alle ${allEmails.length} Nutzer senden</div>
     <button class="btn btn-sm" style="background:#f39c12;color:white;font-weight:600" onclick="sendResetAll()">📧 Allen senden</button>
-  </div>`;
+  </div>`
+  + (q ? '' : (()=>{ const n=allUsers.filter(u=>!u.pwChanged&&!u.mustChangePw).length; return n?`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;padding:10px 14px;background:#fdf2f2;border:1.5px solid #e6a5a0;border-radius:8px">
+    <div style="font-size:.84rem;color:#922b21">🔐 ${n} Mitglied${n===1?'':'er'} ohne bekanntes eigenes Passwort (evtl. noch das Startpasswort)</div>
+    <button class="btn btn-sm" style="background:#c0392b;color:white;font-weight:600" onclick="requirePwChangeAll()">🔐 Passwortwechsel anordnen</button></div>`:''; })());
   const memberOptions = mitglieder.map((m,i)=>({m,i})).sort((a,b)=>memberName(a.m).localeCompare(memberName(b.m)))
     .map(({m,i})=>`<option value="${i}">${esc(memberName(m)||('Nr. '+m.nr))}</option>`).join('');
   const permLabels = {proben:'📅 Proben',termine:'📆 Termine',mitglieder:'👥 Mitglieder',kommentare:'💬 Kommentare',lieder:'🎵 Lieder',plakate:'📋 Plakate'};
@@ -5257,7 +5619,9 @@ async function renderUserVerwaltung() {
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <button class="btn btn-success btn-sm" onclick="saveUserPerms('${uid}')">💾 Speichern</button>
+          <button class="btn btn-sm" style="background:#25d366;color:white" onclick="openZugang('${uid}')">📨 Zugangsdaten</button>
           <button class="btn btn-sm" style="background:#f39c12;color:white" onclick="sendResetForUser('${esc(u.email||'')}','${uid}')">📧 Reset-Mail</button>
+          ${u.mustChangePw?'<span style="font-size:.74rem;color:#c0392b">🔐 muss Passwort ändern</span>':`<button class="btn btn-sm" style="background:#eef1f5;color:#c0392b" onclick="requirePwChange('${uid}')">🔐 Passwortwechsel anordnen</button>`}
           <button class="btn btn-danger btn-sm" onclick="deleteUserAccount('${uid}','${esc(u.username||'')}')">✕ Konto löschen</button>
           <span id="perm-result-${uid}" style="font-size:.8rem"></span>
         </div>
@@ -6440,7 +6804,7 @@ function renderGeburtstage(){
   // Find next rehearsal date
   const todayStr = today.toISOString().split('T')[0];
   const nextProbe = (probenplan||[])
-    .filter(p => p.datum >= todayStr)
+    .filter(p => p.datum >= todayStr && !p.abgesagt)
     .sort((a,b) => a.datum.localeCompare(b.datum))[0];
   const nextProbeDate = nextProbe ? new Date(nextProbe.datum+'T00:00:00') : null;
 
@@ -7227,7 +7591,7 @@ async function showOpenNotification(){
     const today = (typeof localToday==='function') ? localToday() : new Date().toISOString().split('T')[0];
     let next=null;
     (termine||[]).filter(t=>(t.datum_ende||t.datum)>=today).forEach(t=>{ if(!next||t.datum<next.d) next={d:t.datum, txt:'🗓️ '+t.titel}; });
-    (probenplan||[]).filter(p=>p.datum>=today).forEach(p=>{ if(!next||p.datum<next.d) next={d:p.datum, txt:'🎹 Probe'}; });
+    (probenplan||[]).filter(p=>p.datum>=today&&!p.abgesagt).forEach(p=>{ if(!next||p.datum<next.d) next={d:p.datum, txt:'🎹 Probe'}; });
     const body = next ? ('Nächstes: '+next.txt+' am '+fmt(next.d)) : 'Schön, dass du da bist! 🎵';
     await reg.showNotification('🎵 Chor Dölau', { body, icon:'/icon-192.png', badge:'/icon-192.png', tag:'open' });
   }catch(e){ /* still */ }
