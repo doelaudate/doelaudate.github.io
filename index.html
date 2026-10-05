@@ -5624,6 +5624,7 @@ async function renderUserVerwaltung() {
           <button class="btn btn-success btn-sm" onclick="saveUserPerms('${uid}')">💾 Speichern</button>
           <button class="btn btn-sm" style="background:#25d366;color:white" onclick="openZugang('${uid}')">📨 Zugangsdaten</button>
           <button class="btn btn-sm" style="background:#f39c12;color:white" onclick="sendResetForUser('${esc(u.email||'')}','${uid}')">📧 Reset-Mail</button>
+          <button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="adminSetEmail('${uid}')">✉️ E-Mail ändern</button>
           ${u.mustChangePw?'<span style="font-size:.74rem;color:#c0392b">🔐 muss Passwort ändern</span>':`<button class="btn btn-sm" style="background:#eef1f5;color:#c0392b" onclick="requirePwChange('${uid}')">🔐 Passwortwechsel anordnen</button>`}
           <button class="btn btn-danger btn-sm" onclick="deleteUserAccount('${uid}','${esc(u.username||'')}')">✕ Konto löschen</button>
           <span id="perm-result-${uid}" style="font-size:.8rem"></span>
@@ -5661,6 +5662,25 @@ async function deleteUserAccount(uid, username) {
     showToast('Konto gelöscht','ok');
   }catch(e){ showToast('Netzwerkfehler beim Löschen','err'); return; }
   renderUserVerwaltung(); try{ renderMitglieder(); }catch(e){}
+}
+// Admin: E-Mail-Adresse eines Kontos korrigieren (z. B. Tippfehler bei der Anlage). Die neue Adresse muss beim
+// nächsten Login bestätigt werden.
+async function adminSetEmail(uid){
+  if(!(currentUserProfile&&currentUserProfile.isAdmin)){ showToast('Nur Admins dürfen das','err'); return; }
+  const p=(_zugangProfiles||{})[uid]||{};
+  const neu=prompt('Neue E-Mail-Adresse für „'+(((p.vorname||'')+' '+(p.nachname||'')).trim()||p.username||'?')+'" (aktuell: '+(p.email||'–')+'):','');
+  if(neu===null) return;
+  const mail=neu.trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mail)){ alert('Das ist keine gültige E-Mail-Adresse.'); return; }
+  if(!confirm('E-Mail dieses Kontos ändern auf\n'+mail+'\n\nDie Person muss die Adresse beim nächsten Anmelden per Bestätigungsmail bestätigen.')) return;
+  try{
+    const u=window._fbAuth&&window._fbAuth.currentUser; if(!u){ showToast('Bitte neu anmelden','err'); return; }
+    const r=await fetch(window.USERNAME_AUTH_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'setemail',idToken:await u.getIdToken(),targetUid:uid,email:mail})});
+    if(r.status===409){ const j=await r.json().catch(()=>({})); const o=(_zugangProfiles||{})[j.uid]||{}; alert('Diese Adresse gehört noch zu einem anderen Konto'+(o.username?' („'+o.username+'")':'')+'.\n\nIst das ein Duplikat, zuerst dieses Konto löschen und dann die Adresse hier ändern.'); return; }
+    if(!r.ok){ showToast('Ändern fehlgeschlagen ('+r.status+')','err'); return; }
+    showToast('E-Mail geändert','ok');
+  }catch(e){ showToast('Netzwerkfehler','err'); return; }
+  renderUserVerwaltung();
 }
 // Mögliche Doppelungen in der Benutzerverwaltung erkennen: gleiche E-Mail, gleicher Name oder dasselbe Mitglied.
 // Namenlose Selbstregistrierungen (nur Anzeigename) werden über den eindeutigen Vornamen eines Mitglieds zugeordnet.
