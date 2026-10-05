@@ -381,6 +381,90 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   .qa{min-height:64px}
 }
 
+/* ============================================================
+   EINSTELLUNGEN + HANDY-FEINSCHLIFF (2026-10)
+   ============================================================ */
+/* Einstellungen: Profilkopf, Reiter, Zeilen mit Schaltern */
+.set-hero{display:flex;gap:14px;align-items:center;max-width:520px}
+.set-avatar{flex:0 0 56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#1b3a6b,#2563b5);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;letter-spacing:.02em}
+.set-name{font-weight:800;font-size:1.1rem;color:var(--navy);line-height:1.2}
+.set-sub{font-size:.8rem;color:var(--muted);margin-top:2px;word-break:break-all}
+.set-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.set-chip{background:var(--primary-50);color:var(--primary-dark);border-radius:10px;padding:2px 9px;font-size:.7rem;font-weight:700}
+.set-chip.adm{background:#fdecea;color:#c0392b}
+.set-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-bottom:12px;max-width:520px;padding-bottom:2px}
+.set-tabs::-webkit-scrollbar{display:none}
+.set-tabs .stab{white-space:nowrap;flex-shrink:0}
+.set-pane{display:none;max-width:520px}.set-pane.active{display:block}
+.set-pane .card{max-width:520px}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.set-row:first-of-type{border-top:none}
+.set-row .set-lbl{font-size:.9rem;font-weight:600;color:var(--ink)}
+.set-row .set-desc{font-size:.76rem;color:var(--muted);margin-top:1px;font-weight:400}
+.sw{position:relative;flex:0 0 50px;height:30px;cursor:pointer}
+.sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
+.sw i{position:absolute;inset:0;background:#cfd6df;border-radius:30px;transition:background .18s}
+.sw i::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .18s}
+.sw input:checked+i{background:#27ae60}
+.sw input:checked+i::after{transform:translateX(20px)}
+.sw input:focus-visible+i{outline:3px solid rgba(37,99,181,.45);outline-offset:2px}
+.set-seg{display:flex;gap:6px;flex-wrap:wrap}
+.set-btnrow{display:flex;gap:8px;flex-wrap:wrap}
+details.set-faq{border-top:1px solid var(--line);padding:10px 0}
+details.set-faq summary{cursor:pointer;font-weight:600;font-size:.88rem;color:var(--navy)}
+details.set-faq div{font-size:.84rem;color:#555;line-height:1.5;margin-top:6px}
+/* Persönliche Anzeige-Optionen */
+html.compact .card{padding:11px 13px;margin-bottom:9px}
+html.compact .termin-card{padding:10px 12px}
+html.compact .hero{margin-bottom:6px}
+html.compact th,html.compact td{padding:5px 6px}
+html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+/* Lieder als Karten (Handy) */
+.song-list{display:flex;flex-direction:column;gap:8px}
+.song-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+.song-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.song-name{font-weight:700;font-size:.98rem;color:var(--ink);line-height:1.25;word-break:break-word}
+.song-meta{font-size:.76rem;color:var(--muted);margin-top:3px}
+.song-actions{display:flex;flex-wrap:wrap;gap:2px;margin-top:6px}
+.song-actions a,.song-actions button{min-width:42px;min-height:42px;display:inline-flex;align-items:center;justify-content:center;font-size:1.25rem!important;border-radius:10px;text-decoration:none;background:#f3f6fa!important;border:none;margin:2px 3px 2px 0;padding:0!important}
+.ueb-pill{border-radius:14px;padding:5px 11px;font-size:.78rem;cursor:pointer;font-weight:600}
+@media(max-width:640px){
+  /* Kopf: eine kompakte Zeile; „Stand" wandert in Einstellungen → Hilfe */
+  .header{flex-wrap:nowrap;padding:8px 12px}
+  #stand{display:none}
+  .header img{height:32px}
+  .header-right button,.header-right .user-chip{min-height:38px}
+  .admin-badge{padding:3px 8px;font-size:.68rem}
+  .notice{padding:6px 12px;font-size:.74rem}
+  /* Kennzahlen kompakt in einer Reihe */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(68px,1fr));gap:6px;margin-bottom:10px}
+  .stat{min-width:0;padding:9px 4px}
+  .stat-n{font-size:1.2rem}
+  .stat-l{font-size:.64rem}
+  /* Tippflächen in Listen */
+  .vbtn{min-height:44px}
+  .stab{padding:9px 14px}
+  select.fl-input,select{min-height:44px}
+  /* Modale als Bottom-Sheet */
+  .modal-overlay{align-items:flex-end}
+  .modal{width:100%!important;max-width:100%!important;border-radius:20px 20px 0 0;max-height:92vh;padding-bottom:calc(18px + env(safe-area-inset-bottom));animation:sheetUp .22s ease}
+  .set-hero{padding:14px}
+  .set-row{padding:14px 0}
+}
+@keyframes sheetUp{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
+/* Konsole-Menü auf dem Handy: alle Bereiche als umbrechende Chips sichtbar (vorher: ein Knopf auf voller Breite) */
+@media(max-width:680px){
+  .konsole-menu{flex-wrap:wrap;overflow:visible;gap:6px}
+  .konsole-menu .km{width:auto;flex:1 1 auto;justify-content:center;min-height:40px}
+}
+/* Mindest-Tippfläche für alle Knöpfe im Inhalt (Handy) — sonst wirken Chips/Kleinstknöpfe wie 26 px hohe Streifen */
+@media(max-width:640px){
+  .content button,.modal button,.sheet button{min-height:36px}
+  .song-actions button,.song-actions a{min-height:42px}
+}
+.ueb-pill{min-height:30px}
+@media(max-width:640px){.ueb-pill{min-height:36px;padding:6px 12px}}
+
 /* Neue Elemente im Dunkelmodus: Filter-Invert zieht sie mit (nur Fokus-Ring dezenter) */
 html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,170,240,.5)}
 </style>
@@ -557,7 +641,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     </div>
   </div>
 </div>
-<div class="notice" id="notice-bar">ℹ️ Diese Seite wird von der Chorleitung gepflegt und lädt Änderungen automatisch.</div>
+<div class="notice" id="notice-bar" data-default="1" style="display:none">ℹ️ Diese Seite wird von der Chorleitung gepflegt und lädt Änderungen automatisch.</div>
 <div id="offline-bar" style="display:none;background:#5d4037;color:#fff;text-align:center;padding:7px 12px;font-size:.82rem;font-weight:600">📴 Keine Internetverbindung — Anzeige ist evtl. nicht aktuell, Änderungen sind gerade nicht möglich.</div>
 
 <div class="main-tabs">
@@ -1272,109 +1356,202 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
 </div>
 
 <div class="page" id="p-einstellungen">
-  <div class="card" id="editmode-card" style="max-width:480px;margin-bottom:12px;display:none;border-left:4px solid #27ae60">
-    <div class="card-title">✏️ Bearbeiten-Modus</div>
-    <div style="font-size:.83rem;color:#666;margin-bottom:10px">Wenn <strong>aus</strong>, siehst du die App wie ein normales Mitglied. Zum Anlegen oder Bearbeiten hier einschalten.</div>
-    <button class="editmode-btn btn btn-sm" onclick="setEditMode(!editMode)">✏️ Bearbeiten-Modus einschalten</button>
-  </div>
-  <div class="card" style="max-width:480px;margin-bottom:12px">
-    <div class="card-title">⚙️ Mein Konto</div>
-    <div id="einst-info" style="background:#f4f6f8;border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:.88rem;line-height:1.8">
-      <div>👤 <strong id="einst-username"></strong></div>
-      <div>✉️ <span id="einst-email" style="color:#666"></span></div>
-      <div id="einst-perms" style="margin-top:4px;font-size:.8rem;color:#888"></div>
-    </div>
-
-    <div class="card-title" style="margin-bottom:6px">📛 Anzeigename</div>
-    <div style="font-size:.82rem;color:#888;margin-bottom:10px">Wird bei Terminabstimmungen und Kommentaren angezeigt.</div>
-    <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:4px">
-      <div style="flex:1">
-        <label style="display:block;font-size:.82rem;font-weight:500;margin-bottom:4px;color:#444">Anzeigename</label>
-        <input type="text" id="einst-anzeigename" class="fl-input" placeholder="z.B. Maria M." maxlength="50" autocomplete="nickname">
-      </div>
-      <button class="btn btn-primary" style="flex-shrink:0" onclick="saveAnzeigename()">💾 Speichern</button>
-    </div>
-    <div id="einst-name-result" style="font-size:.82rem;min-height:16px;margin-bottom:16px"></div>
-
-    <div class="card-title" style="margin-bottom:10px">🔒 Passwort ändern</div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div>
-        <label style="display:block;font-size:.82rem;font-weight:500;margin-bottom:4px;color:#444">Neues Passwort</label>
-        <input type="password" id="einst-pw1" class="fl-input" placeholder="Neues Passwort (min. 6 Zeichen)" autocomplete="new-password">
-      </div>
-      <div>
-        <label style="display:block;font-size:.82rem;font-weight:500;margin-bottom:4px;color:#444">Passwort wiederholen</label>
-        <input type="password" id="einst-pw2" class="fl-input" placeholder="Passwort wiederholen" autocomplete="new-password">
-      </div>
-      <div>
-        <button class="btn btn-primary" onclick="saveEinstellungenPw()">💾 Passwort speichern</button>
-      </div>
-      <div id="einst-result" style="font-size:.83rem;min-height:18px"></div>
+  <div class="card set-hero" id="set-hero">
+    <div class="set-avatar" id="set-avatar">?</div>
+    <div style="min-width:0">
+      <div class="set-name" id="set-name">Einstellungen</div>
+      <div class="set-sub" id="set-sub"></div>
+      <div class="set-chips" id="set-chips"></div>
     </div>
   </div>
 
-  <div class="card" style="max-width:480px" id="meine-kontaktdaten-card">
-    <div class="card-title">📇 Meine Kontaktdaten</div>
-    <div style="font-size:.83rem;color:#666;margin-bottom:12px">Halte deine eigenen Daten aktuell – nur du kannst deinen Eintrag ändern.</div>
-    <div id="kd-hinweis" style="font-size:.82rem;color:#888;margin-bottom:10px"></div>
-    <div id="kd-felder" style="display:none">
-      <div class="form-row">
-        <div style="flex:1;min-width:130px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Handy</label><input class="fl-input" type="tel" id="kd-handy" autocomplete="tel"></div>
-        <div style="flex:1;min-width:130px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Telefon (Festnetz)</label><input class="fl-input" type="tel" id="kd-telefon"></div>
+  <div class="sub-tabs set-tabs" id="set-tabs">
+    <button class="stab active" data-es="konto" onclick="esNav('konto')">👤 Konto</button>
+    <button class="stab" data-es="darstellung" onclick="esNav('darstellung')">🎨 Darstellung</button>
+    <button class="stab" data-es="mitteilungen" onclick="esNav('mitteilungen')">🔔 Mitteilungen</button>
+    <button class="stab" data-es="startseite" onclick="esNav('startseite')">🏠 Startseite</button>
+    <button class="stab" data-es="hilfe" onclick="esNav('hilfe')">❓ Hilfe</button>
+  </div>
+
+  <!-- ===== KONTO ===== -->
+  <div class="set-pane active" id="es-konto">
+    <div class="card" id="editmode-card" style="margin-bottom:12px;display:none;border-left:4px solid #27ae60">
+      <div class="card-title">✏️ Bearbeiten-Modus</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:10px">Wenn <strong>aus</strong>, siehst du die App wie ein normales Mitglied. Zum Anlegen oder Bearbeiten hier einschalten.</div>
+      <button class="editmode-btn btn btn-sm" onclick="setEditMode(!editMode)">✏️ Bearbeiten-Modus einschalten</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📛 Anzeigename</div>
+      <div style="font-size:.82rem;color:#888;margin-bottom:10px">Wird bei Terminabstimmungen und Kommentaren angezeigt.</div>
+      <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:4px">
+        <div style="flex:1">
+          <label style="display:block;font-size:.82rem;font-weight:500;margin-bottom:4px;color:#444">Anzeigename</label>
+          <input type="text" id="einst-anzeigename" class="fl-input" placeholder="z.B. Maria M." maxlength="50" autocomplete="nickname">
+        </div>
+        <button class="btn btn-primary" style="flex-shrink:0" onclick="saveAnzeigename()">💾 Speichern</button>
       </div>
-      <div class="form-row">
-        <div style="flex:2;min-width:150px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Adresse</label><input class="fl-input" type="text" id="kd-adresse" placeholder="Straße & Hausnummer, Ort" autocomplete="street-address"></div>
-        <div style="flex:0 0 100px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">PLZ</label><input class="fl-input" type="text" id="kd-plz" maxlength="5" autocomplete="postal-code"></div>
+      <div id="einst-name-result" style="font-size:.82rem;min-height:16px"></div>
+    </div>
+
+    <div class="card" id="meine-kontaktdaten-card">
+      <div class="card-title">📇 Meine Kontaktdaten</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:12px">Halte deine eigenen Daten aktuell – nur du kannst deinen Eintrag ändern.</div>
+      <div id="kd-hinweis" style="font-size:.82rem;color:#888;margin-bottom:10px"></div>
+      <div id="kd-felder" style="display:none">
+        <div class="form-row">
+          <div style="flex:1;min-width:130px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Handy</label><input class="fl-input" type="tel" id="kd-handy" autocomplete="tel"></div>
+          <div style="flex:1;min-width:130px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Telefon (Festnetz)</label><input class="fl-input" type="tel" id="kd-telefon"></div>
+        </div>
+        <div class="form-row">
+          <div style="flex:2;min-width:150px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">Adresse</label><input class="fl-input" type="text" id="kd-adresse" placeholder="Straße & Hausnummer, Ort" autocomplete="street-address"></div>
+          <div style="flex:0 0 100px"><label style="display:block;font-size:.78rem;font-weight:500;margin-bottom:3px;color:#444">PLZ</label><input class="fl-input" type="text" id="kd-plz" maxlength="5" autocomplete="postal-code"></div>
+        </div>
+        <button class="btn btn-primary" onclick="saveMeineKontaktdaten()">💾 Speichern</button>
+        <div id="kd-result" style="font-size:.82rem;min-height:16px;margin-top:8px"></div>
       </div>
-      <button class="btn btn-primary" onclick="saveMeineKontaktdaten()">💾 Speichern</button>
-      <div id="kd-result" style="font-size:.82rem;min-height:16px;margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔒 Passwort ändern</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <label style="display:block;font-size:.82rem;font-weight:500;margin-bottom:4px;color:#444">Neues Passwort</label>
+          <input type="password" id="einst-pw1" class="fl-input" placeholder="Neues Passwort (min. 8 Zeichen)" autocomplete="new-password">
+        </div>
+        <div>
+          <label style="display:block;font-size:.82rem;font-weight:500;margin-bottom:4px;color:#444">Passwort wiederholen</label>
+          <input type="password" id="einst-pw2" class="fl-input" placeholder="Passwort wiederholen" autocomplete="new-password">
+        </div>
+        <div><button class="btn btn-primary" onclick="saveEinstellungenPw()">💾 Passwort speichern</button></div>
+        <div id="einst-result" style="font-size:.83rem;min-height:18px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🛡️ Meine Daten &amp; Abmelden</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:12px">Du kannst alle Daten, die die App zu dir gespeichert hat, als Datei herunterladen.</div>
+      <div class="set-btnrow">
+        <button class="btn btn-gray" onclick="exportMyData()">⬇️ Meine Daten herunterladen</button>
+        <button class="btn btn-danger" onclick="doLogout()">⇤ Abmelden</button>
+      </div>
     </div>
   </div>
 
-  <div class="card" style="max-width:480px">
-    <div class="card-title">🔤 Schriftgröße</div>
-    <div style="font-size:.83rem;color:#666;margin-bottom:10px">Macht die ganze App größer und besser lesbar.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="fs-btn btn btn-sm" data-fs="normal" onclick="setFontSize('normal')">Normal</button>
-      <button class="fs-btn btn btn-sm" data-fs="gross" onclick="setFontSize('gross')">Groß</button>
-      <button class="fs-btn btn btn-sm" data-fs="sehrgross" onclick="setFontSize('sehrgross')">Sehr groß</button>
+  <!-- ===== DARSTELLUNG ===== -->
+  <div class="set-pane" id="es-darstellung">
+    <div class="card">
+      <div class="card-title">🎨 Design</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:10px">Hell, dunkel (schont Augen und Akku) oder passend zum Gerät.</div>
+      <div class="set-seg">
+        <button class="theme-btn btn btn-sm" data-theme="hell" onclick="setTheme('hell')">☀️ Hell</button>
+        <button class="theme-btn btn btn-sm" data-theme="dark" onclick="setTheme('dark')">🌙 Dunkel</button>
+        <button class="theme-btn btn btn-sm" data-theme="auto" onclick="setTheme('auto')">📱 Automatisch</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔤 Schriftgröße</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:10px">Macht die ganze App größer und besser lesbar.</div>
+      <div class="set-seg">
+        <button class="fs-btn btn btn-sm" data-fs="normal" onclick="setFontSize('normal')">Normal</button>
+        <button class="fs-btn btn btn-sm" data-fs="gross" onclick="setFontSize('gross')">Groß</button>
+        <button class="fs-btn btn btn-sm" data-fs="sehrgross" onclick="setFontSize('sehrgross')">Sehr groß</button>
+      </div>
+      <div style="margin-top:12px;padding:10px 12px;background:#f4f6f8;border-radius:10px;font-size:.92rem;color:#333">Beispiel: <strong>Probe am Mittwoch, 19:00 Uhr</strong> – Gemeindehaus Dölau</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🧩 Anzeige</div>
+      <div class="set-row"><div><div class="set-lbl">Kompakte Ansicht</div><div class="set-desc">Engere Abstände – mehr Inhalt auf einen Blick</div></div><label class="sw"><input type="checkbox" id="pf-compact" onchange="onPrefChange()"><i></i></label></div>
+      <div class="set-row"><div><div class="set-lbl">Weniger Bewegung</div><div class="set-desc">Schaltet Animationen und Übergänge aus</div></div><label class="sw"><input type="checkbox" id="pf-reduce" onchange="onPrefChange()"><i></i></label></div>
     </div>
   </div>
 
-  <div class="card" style="max-width:480px">
-    <div class="card-title">🎨 Darstellung</div>
-    <div style="font-size:.83rem;color:#666;margin-bottom:10px">Helles oder dunkles Design (schont Augen und Akku).</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="theme-btn btn btn-sm" data-theme="hell" onclick="setTheme('hell')">☀️ Hell</button>
-      <button class="theme-btn btn btn-sm" data-theme="dark" onclick="setTheme('dark')">🌙 Dunkel</button>
+  <!-- ===== MITTEILUNGEN ===== -->
+  <div class="set-pane" id="es-mitteilungen">
+    <div class="card">
+      <div class="card-title">🔔 Push-Benachrichtigungen</div>
+      <div style="font-size:.84rem;color:#666;margin-bottom:12px;line-height:1.5">
+        Lass dich auf diesem Gerät benachrichtigen, wenn es neue Termine, Proben oder Liedwünsche gibt – auch wenn die App geschlossen ist.
+      </div>
+      <div id="push-status" style="font-size:.84rem;margin-bottom:10px"></div>
+      <div class="set-btnrow">
+        <button class="btn btn-primary" id="push-btn" onclick="togglePush()">🔔 Benachrichtigungen aktivieren</button>
+        <button class="btn btn-gray" id="push-test-btn" style="display:none" onclick="testPushLocal()">🧪 Test an mich</button>
+      </div>
+      <div id="push-result" style="font-size:.82rem;min-height:16px;margin-top:8px"></div>
+      <div id="push-ios-hint" style="display:none;font-size:.78rem;color:#888;margin-top:10px;background:#f4f6f8;border-radius:6px;padding:8px 10px;line-height:1.4">
+        📱 <strong>iPhone:</strong> Push funktioniert nur, wenn die App über „Teilen → Zum Home-Bildschirm" installiert wurde und von dort geöffnet wird.
+      </div>
+      <div id="push-myprefs" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+        <div style="font-size:.82rem;color:#444;font-weight:600;margin-bottom:4px">Wobei möchtest du benachrichtigt werden?</div>
+        <div class="set-row"><div class="set-lbl">🗓️ Neue Termine</div><label class="sw"><input type="checkbox" id="mypush-ev-termin"><i></i></label></div>
+        <div class="set-row"><div class="set-lbl">🎹 Neue Proben &amp; Absagen</div><label class="sw"><input type="checkbox" id="mypush-ev-probe"><i></i></label></div>
+        <div class="set-row"><div class="set-lbl">🎵 Liedwünsche</div><label class="sw"><input type="checkbox" id="mypush-ev-liedwunsch"><i></i></label></div>
+        <div class="set-row"><div class="set-lbl">💬 Kommentare</div><label class="sw"><input type="checkbox" id="mypush-ev-kommentar"><i></i></label></div>
+        <div class="set-row"><div class="set-lbl">📊 Umfragen</div><label class="sw"><input type="checkbox" id="mypush-ev-umfrage"><i></i></label></div>
+        <div class="set-row"><div class="set-lbl">📌 Ankündigungen</div><label class="sw"><input type="checkbox" id="mypush-ev-pinnwand"><i></i></label></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+          <button class="btn btn-primary btn-sm" onclick="saveMyPushPrefs()">💾 Speichern</button>
+          <span id="mypush-result" style="font-size:.8rem"></span>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📅 Termine im Handy-Kalender</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:12px">Einmal einrichten – danach erscheinen alle Termine und Proben automatisch in deinem Kalender.</div>
+      <button class="btn btn-primary" onclick="openICSAbo()">🔄 Kalender abonnieren</button>
     </div>
   </div>
 
-  <div class="card" style="max-width:480px">
-    <div class="card-title">🔔 Push-Benachrichtigungen</div>
-    <div style="font-size:.84rem;color:#666;margin-bottom:12px;line-height:1.5">
-      Lass dich auf diesem Gerät benachrichtigen, wenn es neue Termine, Proben oder Liedwünsche gibt – auch wenn die App geschlossen ist.
+  <!-- ===== STARTSEITE ===== -->
+  <div class="set-pane" id="es-startseite">
+    <div class="card">
+      <div class="card-title">🏠 Beim Öffnen anzeigen</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:10px">Mit welcher Seite soll die App nach dem Anmelden starten?</div>
+      <select id="pf-home" class="fl-input" onchange="onPrefChange()" style="max-width:260px">
+        <option value="start">🏠 Start</option>
+        <option value="lieder">🎵 Lieder</option>
+        <option value="proben">📅 Proben</option>
+        <option value="termine">📆 Termine</option>
+      </select>
     </div>
-    <div id="push-status" style="font-size:.84rem;margin-bottom:10px"></div>
-    <button class="btn btn-primary" id="push-btn" onclick="togglePush()">🔔 Benachrichtigungen aktivieren</button>
-    <div id="push-result" style="font-size:.82rem;min-height:16px;margin-top:8px"></div>
-    <div id="push-ios-hint" style="display:none;font-size:.78rem;color:#888;margin-top:10px;background:#f4f6f8;border-radius:6px;padding:8px 10px;line-height:1.4">
-      📱 <strong>iPhone:</strong> Push funktioniert nur, wenn die App über „Teilen → Zum Home-Bildschirm" installiert wurde und von dort geöffnet wird.
+    <div class="card">
+      <div class="card-title">🧱 Auf der Startseite zeigen</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:4px">Blende aus, was du nicht brauchst.</div>
+      <div class="set-row"><div class="set-lbl">🎹 Nächste Probe</div><label class="sw"><input type="checkbox" id="pf-card-probe" onchange="onPrefChange()"><i></i></label></div>
+      <div class="set-row"><div class="set-lbl">📆 Nächste Termine</div><label class="sw"><input type="checkbox" id="pf-card-termine" onchange="onPrefChange()"><i></i></label></div>
+      <div class="set-row"><div class="set-lbl">📊 Offene Umfragen</div><label class="sw"><input type="checkbox" id="pf-card-umfragen" onchange="onPrefChange()"><i></i></label></div>
+      <div class="set-row"><div class="set-lbl">🎂 Geburtstage der Woche</div><label class="sw"><input type="checkbox" id="pf-card-geburtstage" onchange="onPrefChange()"><i></i></label></div>
+      <div class="set-row"><div class="set-lbl">📍 Plakat-Standorte in der Nähe</div><label class="sw"><input type="checkbox" id="pf-card-plakate" onchange="onPrefChange()"><i></i></label></div>
+      <div class="set-row"><div class="set-lbl">📊 Kachel „Mein Jahr"</div><label class="sw"><input type="checkbox" id="pf-card-meinjahr" onchange="onPrefChange()"><i></i></label></div>
+      <div style="margin-top:8px"><button class="btn btn-gray btn-sm" onclick="resetPrefs()">↺ Alles zurücksetzen</button></div>
     </div>
-    <div id="push-myprefs" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
-      <div style="font-size:.82rem;color:#444;font-weight:600;margin-bottom:8px">Wobei möchtest du benachrichtigt werden?</div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <label style="display:flex;align-items:center;gap:8px;font-size:.86rem;cursor:pointer"><input type="checkbox" id="mypush-ev-termin" style="accent-color:#2563b5;width:16px;height:16px"> 🗓️ Neue Termine</label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:.86rem;cursor:pointer"><input type="checkbox" id="mypush-ev-probe" style="accent-color:#2563b5;width:16px;height:16px"> 🎹 Neue Proben</label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:.86rem;cursor:pointer"><input type="checkbox" id="mypush-ev-liedwunsch" style="accent-color:#2563b5;width:16px;height:16px"> 🎵 Liedwünsche</label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:.86rem;cursor:pointer"><input type="checkbox" id="mypush-ev-kommentar" style="accent-color:#2563b5;width:16px;height:16px"> 💬 Kommentare</label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:.86rem;cursor:pointer"><input type="checkbox" id="mypush-ev-umfrage" style="accent-color:#2563b5;width:16px;height:16px"> 📊 Umfragen</label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:.86rem;cursor:pointer"><input type="checkbox" id="mypush-ev-pinnwand" style="accent-color:#2563b5;width:16px;height:16px"> 📌 Ankündigungen</label>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
-        <button class="btn btn-primary btn-sm" onclick="saveMyPushPrefs()">💾 Speichern</button>
-        <span id="mypush-result" style="font-size:.8rem"></span>
-      </div>
+  </div>
+
+  <!-- ===== HILFE ===== -->
+  <div class="set-pane" id="es-hilfe">
+    <div class="card">
+      <div class="card-title">📱 App installieren</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:12px">Als App auf dem Startbildschirm startet sie schneller, läuft im Vollbild und kann Push-Nachrichten zuverlässig empfangen.</div>
+      <button class="btn btn-primary" onclick="installPWA()">📲 Installieren / Anleitung</button>
+      <div id="es-installed" style="font-size:.8rem;color:#27ae60;margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">💡 Kurz erklärt</div>
+      <details class="set-faq"><summary>Wie sage ich zu einem Termin zu oder ab?</summary><div>Auf der Startseite bei „Nächste Termine" oder unter <strong>Termine</strong> auf ✅ Komme, ❌ Komme nicht oder ❓ Vielleicht tippen. Du kannst deine Antwort jederzeit ändern.</div></details>
+      <details class="set-faq"><summary>Wie melde ich mich von einer Probe ab?</summary><div>Startseite → <strong>Abmelden</strong> (oder bei „Nächste Probe"). Für Urlaub trägst du unter „Abwesenheit" einen Zeitraum ein – dann zählst du automatisch als abwesend.</div></details>
+      <details class="set-faq"><summary>Was bedeuten ✅ „kann ich" und 🆘 „Hilfe" bei den Liedern?</summary><div>Damit zeigst du der Chorleitung, welche Lieder du sicher singst und wo du noch Unterstützung brauchst. Unter „Mein Jahr" siehst du deinen Lern-Stand.</div></details>
+      <details class="set-faq"><summary>Ich bekomme keine Benachrichtigungen</summary><div>Prüfe unter „Mitteilungen", ob sie aktiv sind. Auf dem iPhone muss die App zuerst über „Teilen → Zum Home-Bildschirm" installiert sein. Wurde die Erlaubnis einmal abgelehnt, hilft nur die Einstellung im Browser bzw. Gerät – die Anleitung steht dort.</div></details>
+      <details class="set-faq"><summary>Ich habe mein Passwort vergessen</summary><div>Auf der Anmeldeseite „Passwort vergessen?" antippen – du bekommst einen Link per E-Mail. Alternativ meldet sich die Chorleitung bei dir.</div></details>
+    </div>
+    <div class="card">
+      <div class="card-title">🛠️ Probleme?</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:12px">Wenn etwas nicht aktuell wirkt oder hakt: App neu laden. Dabei wird der Zwischenspeicher geleert – du bleibst angemeldet.</div>
+      <button class="btn btn-gray" onclick="resetAppCache()">🔄 App neu laden &amp; Speicher leeren</button>
+    </div>
+    <div class="card">
+      <div class="card-title">ℹ️ Über die App</div>
+      <div id="es-about" style="font-size:.83rem;color:#555;line-height:1.8"></div>
     </div>
   </div>
 </div>
@@ -1834,7 +2011,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     </div>
     <div style="border-top:1px solid #eee;padding-top:12px">
       <div style="font-size:.82rem;font-weight:600;color:#555;margin-bottom:8px">Passwort ändern</div>
-      <input type="password" id="new-user-pw" class="fl-input" placeholder="Neues Passwort (min. 6 Zeichen)">
+      <input type="password" id="new-user-pw" class="fl-input" placeholder="Neues Passwort (min. 8 Zeichen)">
       <button class="btn btn-primary btn-sm" onclick="changeUserPw()" style="margin-bottom:12px">Passwort ändern</button>
     </div>
     <div id="admin-toggle-section" style="border-top:1px solid #eee;padding-top:12px;margin-bottom:12px;display:none">
@@ -1915,15 +2092,101 @@ function applyFontSize(){
   document.querySelectorAll('.fs-btn').forEach(b=>{ const on=b.getAttribute('data-fs')===fs; b.style.background=on?'#2563b5':'#ecf0f1'; b.style.color=on?'#fff':'#555'; });
 }
 function setFontSize(fs){ localStorage.setItem('chor_fontsize',fs); applyFontSize(); }
+// Design: 'hell' | 'dark' | 'auto' (folgt der Geräteeinstellung)
+function themeMode(){ const m=localStorage.getItem('chor_theme'); return (m==='dark'||m==='auto')?m:'hell'; }
 function applyTheme(){
-  const dark = localStorage.getItem('chor_theme')==='dark';
+  const mode=themeMode();
+  const dark = mode==='dark' || (mode==='auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.classList.toggle('dark', dark);
   document.querySelectorAll('.theme-btn').forEach(b=>{
-    const on=(b.getAttribute('data-theme')===(dark?'dark':'hell'));
+    const on=(b.getAttribute('data-theme')===mode);
     b.style.background=on?'#2563b5':'#ecf0f1'; b.style.color=on?'#fff':'#555';
   });
 }
-function setTheme(mode){ localStorage.setItem('chor_theme', mode==='dark'?'dark':'hell'); applyTheme(); }
+function setTheme(mode){ try{ localStorage.setItem('chor_theme', (mode==='dark'||mode==='auto')?mode:'hell'); }catch(e){} applyTheme(); }
+try{ if(window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{ if(themeMode()==='auto') applyTheme(); }); }catch(e){}
+
+// ===== PERSÖNLICHE EINSTELLUNGEN (nur auf diesem Gerät, localStorage) =====
+const PREF_KEY='chor_prefs';
+const PREF_CARDS=['probe','termine','umfragen','geburtstage','plakate','meinjahr'];
+function getPrefs(){
+  let p={}; try{ p=JSON.parse(localStorage.getItem(PREF_KEY)||'{}')||{}; }catch(e){}
+  const cards={}; PREF_CARDS.forEach(k=>{ cards[k]=!(p.cards&&p.cards[k]===false); });
+  return {home:['start','lieder','proben','termine'].includes(p.home)?p.home:'start', cards, compact:!!p.compact, reduce:!!p.reduce};
+}
+function savePrefs(p){ try{ localStorage.setItem(PREF_KEY,JSON.stringify(p)); }catch(e){} }
+function prefCard(k){ return getPrefs().cards[k]!==false; }
+function applyPrefs(){
+  const p=getPrefs(); const h=document.documentElement;
+  h.classList.toggle('compact',p.compact);
+  h.classList.toggle('reduce-motion', p.reduce || (window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches));
+}
+function renderPrefControls(){
+  const p=getPrefs(); const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.checked=!!v; };
+  set('pf-compact',p.compact); set('pf-reduce',p.reduce);
+  PREF_CARDS.forEach(k=>set('pf-card-'+k,p.cards[k]));
+  const hs=document.getElementById('pf-home'); if(hs) hs.value=p.home;
+}
+function onPrefChange(){
+  const g=id=>{ const el=document.getElementById(id); return el?el.checked:undefined; };
+  const cards={}; PREF_CARDS.forEach(k=>{ const v=g('pf-card-'+k); cards[k]=v===undefined?true:v; });
+  savePrefs({home:(document.getElementById('pf-home')||{}).value||'start', cards, compact:!!g('pf-compact'), reduce:!!g('pf-reduce')});
+  applyPrefs(); try{ renderStart(); }catch(e){}
+  showToast('Gespeichert','ok');
+}
+function resetPrefs(){ if(!confirm('Alle Anzeige-Einstellungen auf diesem Gerät zurücksetzen?')) return; try{ localStorage.removeItem(PREF_KEY); localStorage.removeItem('chor_theme'); localStorage.removeItem('chor_fontsize'); }catch(e){} applyPrefs(); applyTheme(); applyFontSize(); renderPrefControls(); try{ renderStart(); }catch(e){} showToast('Zurückgesetzt','ok'); }
+// Startseite beim Öffnen: einmal pro Sitzung nach dem Anmelden zur gewählten Seite springen
+function applyHomePref(){
+  try{ if(sessionStorage.getItem('chor_home_done')) return; sessionStorage.setItem('chor_home_done','1'); }catch(e){}
+  const h=getPrefs().home; if(h && h!=='start') showPageByName(h);
+}
+function esNav(id){
+  document.querySelectorAll('#set-tabs .stab').forEach(b=>b.classList.toggle('active', b.getAttribute('data-es')===id));
+  document.querySelectorAll('#p-einstellungen .set-pane').forEach(p=>p.classList.toggle('active', p.id==='es-'+id));
+  try{ sessionStorage.setItem('chor_es_tab',id); }catch(e){}
+  if(id==='hilfe') renderEsHilfe();
+  try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(e){}
+}
+const APP_BUILD='05.10.2026';
+function renderEsHilfe(){
+  const a=document.getElementById('es-about'); if(!a) return;
+  const standalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone;
+  const inst=document.getElementById('es-installed'); if(inst) inst.textContent=standalone?'✅ Du nutzt die App bereits als installierte App.':'';
+  const st=(document.getElementById('stand')||{}).textContent||'';
+  a.innerHTML='<div>🎵 <strong>Chor Dölau – Dö Laudate</strong></div><div>Version vom '+APP_BUILD+'</div><div>'+esc(st)+'</div><div>'+(navigator.onLine?'🟢 Online':'🔴 Offline')+(_offlineTs?' – Stand von '+new Date(_offlineTs).toLocaleString('de-DE'):'')+'</div>';
+}
+// Alle Zwischenspeicher leeren (Service-Worker-Cache, Offline-Lesecache) und neu laden — Login bleibt erhalten
+async function resetAppCache(){
+  if(!confirm('App neu laden und den Zwischenspeicher leeren? Du bleibst angemeldet.')) return;
+  try{ clearOfflineCache(); }catch(e){}
+  try{ if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(e){}
+  try{ if(navigator.serviceWorker){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.update().catch(()=>{}))); } }catch(e){}
+  location.reload();
+}
+// Lokale Test-Benachrichtigung (zeigt, dass Mitteilungen auf diesem Gerät ankommen)
+async function testPushLocal(){
+  const r=document.getElementById('push-result');
+  try{
+    const reg=await Promise.race([navigator.serviceWorker.ready,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Zeitüberschreitung')),4000))]);
+    await reg.showNotification('🎵 Chor Dölau',{body:'✅ Test: Mitteilungen funktionieren auf diesem Gerät.',icon:'/icon-192.png',badge:'/icon-192.png',tag:'test'});
+    if(r){ r.style.color='#27ae60'; r.textContent='✅ Test gesendet – siehst du die Mitteilung?'; }
+  }catch(e){ if(r){ r.style.color='#e74c3c'; r.textContent='❌ '+(e.message||e); } }
+}
+// DSGVO: alle zu mir gespeicherten Daten als Datei herunterladen
+function exportMyData(){
+  if(!currentUser){ alert('Bitte zuerst anmelden.'); return; }
+  const uid=currentUser.uid, al=getUserAliases();
+  const mi=myMemberIndex(); const m=mi>=0?mitglieder[mi]:null;
+  const votes=[]; (termine||[]).forEach(t=>{ Object.entries(t.abstimmungen||{}).forEach(([k,v])=>{ if(al.has(_norm(k))) votes.push({termin:t.titel,datum:t.datum,antwort:v}); }); });
+  const probenAbm=[]; Object.entries(probenstatus||{}).forEach(([pid,by])=>{ if(by&&by[uid]) probenAbm.push({probe:probeDatumById(pid)||pid,status:by[uid].status}); });
+  const ueb={}; Object.entries(uebenStatus||{}).forEach(([sid,by])=>{ if(by&&by[uid]){ const s=findSongById(sid); ueb[s?s.name:sid]=by[uid]; } });
+  const p=currentUserProfile||{};
+  const data={erstellt:new Date().toISOString(),konto:{benutzername:p.username,email:p.email||currentUser.email,vorname:p.vorname,nachname:p.nachname,anzeigename:p.anzeigename,erstellt:p.erstellt},mitgliedseintrag:m,terminZusagen:votes,probenAbmeldungen:probenAbm,abwesenheit:(abwesenheiten||{})[uid]||null,liederStand:ueb,anzeigeEinstellungen:getPrefs()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='meine-daten-'+(p.username||'chor')+'.json'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),20000);
+  showToast('Datei heruntergeladen','ok');
+}
 
 function showPageByName(id){
   const tab=[...document.querySelectorAll('.mtab')].find(t=>{const o=t.getAttribute('onclick');return o&&o.indexOf("showPage('"+id+"'")>=0;});
@@ -2028,6 +2291,7 @@ function showToast(msg, type){
 }
 applyFontSize();
 applyTheme();
+applyPrefs();
 // Admin-Rechte kommen ausschließlich aus dem Nutzerprofil (isAdmin/permissions) — kein geteiltes Passwort mehr.
 const TYP_LABEL={"konzert": "🎵 Konzert", "fest": "🎪 Fest", "chorlager": "🏕️ Chorlager", "gottesdienst": "⛪ Gottesdienst", "probe": "🎹 Probe", "sonstiges": "📌 Sonstiges"};
 const TYP_COLOR={"konzert": "#2563b5", "fest": "#e67e22", "chorlager": "#27ae60", "gottesdienst": "#8e44ad", "probe": "#c0392b", "sonstiges": "#7f8c8d"};
@@ -2130,7 +2394,7 @@ function applyAdminMode(){
   // Falls die gerade aktive Seite ausgeblendet wurde (z. B. Admin-Modus verlassen): zurück zu Liedern
   if(!document.querySelector('.page.active')) showPage('start');
   const _b=document.getElementById('admin-badge');if(_b)_b.style.display=(adminMode&&editMode)?'':'none';
-  const _n=document.getElementById('notice-bar');if(_n)_n.style.display=adminMode?'none':'block';
+  const _n=document.getElementById('notice-bar');if(_n)_n.style.display=(adminMode||_n.dataset.default==='1')?'none':'block';
   if(uiEdit('proben')){renderSongPicker();}
   if(adminMode){renderKonsole();}
   renderProben();
@@ -2229,7 +2493,7 @@ function renderStart(){
     `<button class="qa" onclick="openZusagen()"><span class="qa-ic">📆</span>Zu-/Absagen</button>`,
     `<button class="qa" onclick="openAbmelden()"><span class="qa-ic">🙋</span>Abmelden</button>`,
     `<button class="qa" onclick="showPageByName('lieder')"><span class="qa-ic">🎵</span>Lieder</button>`,
-    `<button class="qa" onclick="openMeinJahr()"><span class="qa-ic">📊</span>Mein Jahr</button>`
+    ...(prefCard('meinjahr')?[`<button class="qa" onclick="openMeinJahr()"><span class="qa-ic">📊</span>Mein Jahr</button>`]:[])
   ];
   if(isStimmfuehrer()) _qa.push(`<button class="qa" onclick="openMeineStimme()"><span class="qa-ic">🎚️</span>Meine Stimme</button>`);
   if(canPin()) _qa.push(`<button class="qa qa-adm" onclick="document.getElementById('pw-text')&&document.getElementById('pw-text').focus();window.scrollTo({top:0,behavior:'smooth'})"><span class="qa-ic">📌</span>Ankündigen</button>`);
@@ -2243,6 +2507,7 @@ function renderStart(){
   if(_canc) html+=`<div class="card" style="margin-bottom:12px;background:#fdf2f2;border-left:4px solid #e74c3c"><div style="font-weight:800;color:#c0392b">❌ Probe am ${esc(new Date(_canc.datum+'T12:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'2-digit'}))} fällt aus</div>${_canc.abgesagt.grund?`<div style="font-size:.88rem;color:#922b21;margin-top:3px">${esc(_canc.abgesagt.grund)}</div>`:''}</div>`;
 
   // Nächste Probe (mit Abmelde-Möglichkeit direkt hier)
+  const _m0=html.length;
   const nextProbe=(probenplan||[]).filter(p=>p.datum>=today&&!p.abgesagt).sort((a,b)=>a.datum.localeCompare(b.datum))[0];
   html+='<div class="card">';
   html+='<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="showPageByName(\'proben\')"><span class="card-title" style="margin-bottom:0">🎹 Nächste Probe</span><span style="font-size:.76rem;color:#2563b5">Alle ›</span></div>';
@@ -2256,7 +2521,10 @@ function renderStart(){
   } else html+='<div class="empty" style="padding:12px 0 4px">Keine Probe geplant.</div>';
   html+='</div>';
 
+  if(!prefCard('probe')) html=html.slice(0,_m0);
+
   // Nächste Termine (max 3) mit Abstimm-Status + Schnell-Abstimmung
+  const _m1=html.length;
   const myName=getUserVoteName();
   const nextTermine=(termine||[]).filter(t=>((t.datum_ende||t.datum)>=today) && t.startseite!==false).sort((a,b)=>a.datum.localeCompare(b.datum)).slice(0,3);
   html+='<div class="card" style="margin-top:12px">';
@@ -2285,7 +2553,10 @@ function renderStart(){
   } else html+='<div class="empty" style="padding:12px 0 4px">Keine anstehenden Termine.</div>';
   html+='</div>';
 
+  if(!prefCard('termine')) html=html.slice(0,_m1);
+
   // Offene Umfragen
+  const _m2=html.length;
   const offene=Object.entries(umfragen||{}).filter(([id,u])=>u&&!u.geschlossen);
   if(offene.length){
     html+='<div class="card" style="margin-top:12px;cursor:pointer" onclick="showPageByName(\'umfragen\')">';
@@ -2300,7 +2571,10 @@ function renderStart(){
     html+='</div>';
   }
 
+  if(!prefCard('umfragen')) html=html.slice(0,_m2);
+
   // 🎂 Geburtstage der nächsten 7 Tage
+  const _m3=html.length;
   const gToday=new Date(); gToday.setHours(0,0,0,0);
   const gebs=(mitglieder||[]).filter(m=>m.geburtstag).map(m=>{
     const parts=String(m.geburtstag).split('.'); if(parts.length<2) return null;
@@ -2318,7 +2592,10 @@ function renderStart(){
     html+='</div>';
   }
 
+  if(!prefCard('geburtstage')) html=html.slice(0,_m3);
+
   // 📍 Plakat-Standorte in der Nähe (nur wenn eigener Wohnort geocodiert ist & es offene Standorte gibt)
+  const _m4=html.length;
   const nearbyPlakate=(typeof nearestOpenPlakate==='function')?nearestOpenPlakate(3):[];
   if(nearbyPlakate.length){
     html+=`<div class="card" style="margin-top:12px;cursor:pointer" onclick="showPageByName('plakate')">
@@ -2329,6 +2606,7 @@ function renderStart(){
       </div>`).join('');
     html+='</div>';
   }
+  if(!prefCard('plakate')) html=html.slice(0,_m4);
 
   el.innerHTML=html;
 }
@@ -2554,7 +2832,8 @@ function renderLieder(){
 }
 function buildTbl(songs){
   const canEdit = uiEdit('lieder');
-  return '<table><thead><tr><th>Lied</th><th>Letzte Probe</th><th style="text-align:center">Anzahl</th><th>Status</th><th style="text-align:center">Noten</th></tr></thead><tbody>'+songs.map(s=>{
+  const _mob=isMobileView();
+  const _rows=songs.map(s=>{
     const openLink = s.pdf?`<a href="${esc(s.pdf)}" target="_blank" rel="noopener" style="text-decoration:none;font-size:1.15rem" title="Noten öffnen">📄</a>`:'';
     const uebenLink = s.uebe?`<a href="${esc(s.uebe)}" target="_blank" rel="noopener" style="text-decoration:none;font-size:1.1rem" title="Stimmcoach – Üben">🎤</a>`:'';
     const hasHoer = _hoerHasAny(s);
@@ -2567,10 +2846,18 @@ function buildTbl(songs){
     const moveBtn = (canEdit && (D.seasons||[]).length>1)?`<button onclick="moveSong('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:1rem;opacity:.5;padding:0 2px" title="In andere Saison verschieben">↔️</button>`:'';
     const startBtn = ((s.start&&Object.keys(s.start).length)||canEdit)?`<button onclick="openStartTone('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:1.05rem;padding:0 1px;${(s.start&&Object.keys(s.start).length)?'':'opacity:.4'}" title="Starttöne anhören">🎼</button>`:'';
     const cell = (openLink||uebenLink||hoerBtn||startBtn||editBtn||archBtn||moveBtn) ? [openLink,uebenLink,hoerBtn,startBtn,editBtn,moveBtn,archBtn].filter(Boolean).join(' ') : '—';
+    if(_mob){
+      return `<div class="song-card"><div class="song-top"><div class="song-name">${esc(s.name)}</div><span style="white-space:nowrap;flex-shrink:0"><span class="dot" style="background:${dotC(s.last)}"></span><span class="badge" style="${bdgS(s.last)}">${bdgT(s.last)}</span></span></div><div class="song-meta">${s.last?'Zuletzt '+fmt(s.last)+' · ':''}${s.count}× geprobt</div>${uebenRowHtml(s)}${cell!=='—'?`<div class="song-actions">${cell}</div>`:''}</div>`;
+    }
     const dragAttr = canEdit?` draggable="true" ondragstart="dragSong(event,'${s.id}')" style="cursor:grab"`:'';
     return `<tr${dragAttr}><td><strong>${esc(s.name)}</strong>${uebenRowHtml(s)}</td><td>${fmt(s.last)}</td><td style="text-align:center;color:#666">${s.count}×</td><td><span class="dot" style="background:${dotC(s.last)}"></span><span class="badge" style="${bdgS(s.last)}">${bdgT(s.last)}</span></td><td style="text-align:center;white-space:nowrap">${cell}</td></tr>`;
-  }).join('')+'</tbody></table>';
+  }).join('');
+  return _mob ? '<div class="song-list">'+_rows+'</div>'
+    : '<table><thead><tr><th>Lied</th><th>Letzte Probe</th><th style="text-align:center">Anzahl</th><th>Status</th><th style="text-align:center">Noten</th></tr></thead><tbody>'+_rows+'</tbody></table>';
 }
+// Handy-Ansicht (Karten statt Tabelle) — beim Wechsel über die Breitengrenze neu zeichnen
+function isMobileView(){ return !!(window.matchMedia && matchMedia('(max-width:640px)').matches); }
+try{ if(window.matchMedia) matchMedia('(max-width:640px)').addEventListener('change',()=>{ try{ if(D) renderLieder(); }catch(e){} }); }catch(e){}
 function findSongById(id){
   for(const s of (D.seasons||[])){ const f=(s.songs||[]).find(x=>x.id===id); if(f) return f; }
   return null;
@@ -2715,7 +3002,7 @@ function uebenCounts(id){
 function uebenRowHtml(s){
   if(!currentUser || liederView==='archiv' || s.archived) return '';
   const my=(uebenStatus[s.id]||{})[currentUser.uid]||'';
-  const btn=(val,label,on,off)=>`<button onclick="setUeben('${esc(s.id)}','${val}')" style="border:1px solid ${my===val?on:'#d5dbe3'};background:${my===val?on:'transparent'};color:${my===val?'#fff':'#777'};border-radius:11px;padding:1px 8px;font-size:.68rem;cursor:pointer;font-weight:${my===val?'700':'500'}">${label}</button>`;
+  const btn=(val,label,on,off)=>`<button class="ueb-pill" onclick="setUeben('${esc(s.id)}','${val}')" style="border:1px solid ${my===val?on:'#d5dbe3'};background:${my===val?on:'transparent'};color:${my===val?'#fff':'#777'};font-weight:${my===val?'700':'500'}">${label}</button>`;
   let h=`<div style="display:flex;gap:5px;margin-top:4px;align-items:center;flex-wrap:wrap">${btn('kann','✅ kann ich','#27ae60')}${btn('hilfe','🆘 Hilfe','#e67e22')}`;
   if(uebenLeitung()){ const c=uebenCounts(s.id); if(c.kann||c.hilfe) h+=`<span onclick="showUebenDetail('${esc(s.id)}')" style="font-size:.68rem;color:#888;cursor:pointer;text-decoration:underline dotted" title="Wer? (antippen)">${c.kann?'✅ '+c.kann:''}${c.kann&&c.hilfe?' · ':''}${c.hilfe?'<b style="color:#e67e22">🆘 '+c.hilfe+'</b>':''}</span>`; }
   return h+'</div>';
@@ -4939,17 +5226,24 @@ async function deleteGastLink(k){
   try{ await dbFetch(DB+'/gastlinks/'+k+'.json',{method:'DELETE'}); loadGastLinks(); }catch(e){ showToast('Fehler beim Löschen','err'); }
 }
 const NOTICE_DEFAULT='ℹ️ Diese Seite wird von der Chorleitung gepflegt und lädt Änderungen automatisch.';
+// Hinweisleiste: der Standardtext ist nur Füllmaterial und kostet auf dem Handy Platz — nur ein eigener Hinweis der Chorleitung wird gezeigt
+function setNoticeBar(t){
+  const nb=document.getElementById('notice-bar'); if(!nb) return;
+  nb.textContent = t || NOTICE_DEFAULT;
+  nb.dataset.default = t ? '0' : '1';
+  nb.style.display = (adminMode || !t) ? 'none' : 'block';
+}
 async function loadNotice(){
   try{
     const r=await dbFetch(DB+'/settings/notice.json'); const t=r.ok?await r.json():null;
-    const nb=document.getElementById('notice-bar'); if(nb) nb.textContent = t || NOTICE_DEFAULT;
+    setNoticeBar(t);
     const ta=document.getElementById('notice-text'); if(ta) ta.value = (t!=null?t:'');
   }catch(e){}
 }
 async function saveNotice(){
   const ta=document.getElementById('notice-text'); const t=ta.value.trim();
   await dbFetch(DB+'/settings/notice.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(t||null)});
-  const nb=document.getElementById('notice-bar'); if(nb) nb.textContent = t || NOTICE_DEFAULT;
+  setNoticeBar(t);
   const r=document.getElementById('notice-result'); if(r){ r.style.color='#27ae60'; r.textContent='✅ Gespeichert'; setTimeout(()=>{if(r)r.textContent='';},2500); }
 }
 function resetNotice(){ const ta=document.getElementById('notice-text'); if(ta) ta.value=''; saveNotice(); }
@@ -5125,6 +5419,7 @@ async function loadUserProfile(uid, email) {
     }
     applyAdminMode();
     loadAll();
+    try{ applyHomePref(); }catch(_){}
   } catch(e) {
     document.getElementById('user-display').textContent = '👤 ' + email.split('@')[0];
     document.getElementById('user-chip').style.display = 'flex';
@@ -5339,7 +5634,7 @@ function showUserMenu() {
 
 async function changeUserPw() {
   const newPw = document.getElementById('new-user-pw').value;
-  if(!newPw || newPw.length < 6) { alert('Passwort muss mindestens 6 Zeichen haben.'); return; }
+  if(!newPw || newPw.length < 8) { alert('Passwort muss mindestens 8 Zeichen haben.'); return; }
   try {
     await window._fbUpdatePassword(currentUser, newPw);
     markPwChanged();
@@ -7184,20 +7479,30 @@ async function sendResetEmail(email){
 // ===== EINSTELLUNGEN =====
 function renderEinstellungen(){
   const p = currentUserProfile;
-  const el_u = document.getElementById('einst-username');
-  const el_e = document.getElementById('einst-email');
-  const el_p = document.getElementById('einst-perms');
   const el_an = document.getElementById('einst-anzeigename');
-  if(el_u) el_u.textContent = p?.username || currentUser?.email?.split('@')[0] || '–';
-  if(el_e) el_e.textContent = p?.email || currentUser?.email || '–';
   if(el_an) el_an.value = p?.anzeigename || '';
-  if(el_p){
-    const perms = p?.permissions||[];
-    const labels = {proben:'Proben',termine:'Termine',mitglieder:'Mitglieder',kommentare:'Kommentare löschen',lieder:'Lieder',plakate:'Plakate'};
-    if(p?.isAdmin) el_p.textContent = '🔑 Admin';
-    else if(perms.length) el_p.textContent = '🛡️ Berechtigungen: '+perms.map(x=>labels[x]||x).join(', ');
-    else el_p.textContent = '';
-  }
+  // Profilkopf: Avatar mit Initialen, Name, Benutzername/E-Mail, Rollen
+  try{
+    const mi=myMemberIndex(); const m=mi>=0?mitglieder[mi]:null;
+    const full=((p?.vorname||'')+' '+(p?.nachname||'')).trim() || (m?memberName(m):'');
+    const name=p?.anzeigename || full || p?.username || currentUser?.email?.split('@')[0] || 'Einstellungen';
+    const ini=(full||name).split(/\s+/).filter(Boolean).slice(0,2).map(x=>x.charAt(0).toUpperCase()).join('') || '?';
+    const q=id=>document.getElementById(id);
+    if(q('set-avatar')) q('set-avatar').textContent=ini;
+    if(q('set-name')) q('set-name').textContent=name;
+    if(q('set-sub')) q('set-sub').textContent=[p?.username, p?.email||currentUser?.email].filter(Boolean).join(' · ');
+    const perms=p?.permissions||[];
+    const labels={proben:'Proben',termine:'Termine',mitglieder:'Mitglieder',kommentare:'Kommentare löschen',lieder:'Lieder',plakate:'Plakate'};
+    const chips=[];
+    if(p?.isAdmin) chips.push('<span class="set-chip adm">🔑 Admin</span>');
+    else perms.forEach(x=>chips.push('<span class="set-chip">🛡️ '+esc(labels[x]||x)+'</span>'));
+    if(m&&m.stimme) chips.push('<span class="set-chip">🎤 '+esc(m.stimme)+'</span>');
+    if(m&&m.stimmfuehrer) chips.push('<span class="set-chip">🎚️ Stimmführer*in</span>');
+    if(q('set-chips')) q('set-chips').innerHTML=chips.join('');
+  }catch(e){ console.warn('Profilkopf',e); }
+  renderPrefControls();
+  let tab='konto'; try{ tab=sessionStorage.getItem('chor_es_tab')||'konto'; }catch(e){}
+  esNav(['konto','darstellung','mitteilungen','startseite','hilfe'].includes(tab)?tab:'konto');
   const r = document.getElementById('einst-result');
   if(r) r.textContent='';
   const nr = document.getElementById('einst-name-result');
@@ -7314,10 +7619,13 @@ async function saveEinstellungenPw(){
   const pw1 = document.getElementById('einst-pw1').value;
   const pw2 = document.getElementById('einst-pw2').value;
   const res = document.getElementById('einst-result');
-  if(!pw1||pw1.length<6){res.style.color='#e74c3c';res.textContent='❌ Passwort muss mind. 6 Zeichen haben.';return;}
+  if(!pw1||pw1.length<8){res.style.color='#e74c3c';res.textContent='❌ Passwort muss mind. 8 Zeichen haben.';return;}
   if(pw1!==pw2){res.style.color='#e74c3c';res.textContent='❌ Passwörter stimmen nicht überein.';return;}
+  const un=String(currentUserProfile&&currentUserProfile.username||'').toLowerCase();
+  if(un && pw1.toLowerCase()===un){res.style.color='#e74c3c';res.textContent='❌ Das Passwort darf nicht dein Benutzername sein.';return;}
   try{
     await window._fbUpdatePassword(window._fbAuth.currentUser, pw1);
+    markPwChanged();
     res.style.color='#27ae60';
     res.textContent='✅ Passwort erfolgreich geändert!';
     document.getElementById('einst-pw1').value='';
@@ -7356,6 +7664,7 @@ async function renderPushStatus(){
     st.innerHTML=`<span style="color:#c0620f">🔕 Blockiert.</span> <span style="color:#666">${esc(pushBlockedInstructionsHtml())}</span>`;
     if(btn) btn.style.display='none';
     if(prefsBox) prefsBox.style.display='none';
+    const tb0=document.getElementById('push-test-btn'); if(tb0) tb0.style.display='none';
     return;
   }
   if(btn) btn.style.display='';
@@ -7365,7 +7674,9 @@ async function renderPushStatus(){
     if(sub){
       st.innerHTML='<span style="color:#27ae60">✅ Auf diesem Gerät aktiviert</span>'; if(btn){btn.textContent='🔕 Benachrichtigungen ausschalten'; btn.className='btn btn-gray';}
       if(prefsBox){ prefsBox.style.display='block'; loadMyPushPrefs(); }
+      const tb=document.getElementById('push-test-btn'); if(tb) tb.style.display='';
     } else {
+      const tb=document.getElementById('push-test-btn'); if(tb) tb.style.display='none';
       st.innerHTML='<span style="color:#888">Nicht aktiviert</span>'; if(btn){btn.textContent='🔔 Benachrichtigungen aktivieren'; btn.className='btn btn-primary';}
       if(prefsBox) prefsBox.style.display='none';
     }
