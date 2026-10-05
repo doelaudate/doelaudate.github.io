@@ -463,6 +463,8 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
   .song-actions button,.song-actions a{min-height:42px}
 }
 .ueb-pill{min-height:30px}
+.fl-field{display:flex;flex-direction:column;gap:3px}
+.fl-cap{font-size:.72rem;font-weight:600;color:#667;margin-left:2px;line-height:1.1}
 @media(max-width:640px){.ueb-pill{min-height:36px;padding:6px 12px}}
 /* Module ausgeblendet (Chorleitung → Module & Regeln) */
 html.mod-off-plakate [onclick*="showPage('plakate'"],html.mod-off-plakate [onclick*="bnavMore('plakate')"],html.mod-off-plakate [onclick*="showPageByName('plakate')"],
@@ -2377,6 +2379,37 @@ function showToast(msg, type){
 applyFontSize();
 applyTheme();
 applyPrefs();
+// Sichtbare Feldbezeichnungen: In Formularzeilen (.form-row) verschwindet der graue Platzhaltertext, sobald ein Feld gefüllt ist.
+// Darum bekommt jedes Feld ohne eigene Beschriftung eine kleine Überschrift (Text = Platzhalter bzw. erste Auswahlzeile).
+function addFieldLabels(root){
+  (root||document).querySelectorAll('.form-row > input.fl-input, .form-row > select.fl-input, .form-row > input:not([type]), .form-row > input[type=text], .form-row > input[type=tel], .form-row > input[type=email], .form-row > select').forEach(el=>{
+    if(el.dataset.fieldLabeled || el.closest('.fl-field')) return;
+    if(['hidden','checkbox','radio','date','time','file','button'].includes((el.type||'').toLowerCase())) return;
+    let txt = el.tagName==='SELECT' ? ((el.options[0]&&el.options[0].value==='')?el.options[0].textContent:'') : (el.getAttribute('placeholder')||'');
+    txt=String(txt||'').trim(); if(!txt || txt.length>34) return;
+    el.dataset.fieldLabeled='1';
+    const wrap=document.createElement('div'); wrap.className='fl-field';
+    // Breite/Wachstum des Feldes geht auf den Rahmen über, das Feld selbst füllt ihn
+    const st=el.style; wrap.style.flex=st.flex||'1'; wrap.style.minWidth=st.minWidth||'130px'; if(st.maxWidth) wrap.style.maxWidth=st.maxWidth;
+    st.flex=''; st.minWidth='0'; st.maxWidth=''; st.width='100%'; st.marginBottom='0';
+    const lab=document.createElement('label'); lab.className='fl-cap'; lab.textContent=txt;
+    if(el.id){ lab.htmlFor=el.id; } el.setAttribute('aria-label',txt);
+    el.parentNode.insertBefore(wrap,el); wrap.appendChild(lab); wrap.appendChild(el);
+  });
+}
+// Einzelfelder direkt in Dialogen/Admin-Formularen (außerhalb von Formularzeilen): Beschriftung darüber, falls noch keine da ist
+function addSingleFieldLabels(){
+  document.querySelectorAll('.modal > input.fl-input, .modal > textarea.fl-input, .modal > select.fl-input, .admin-section > input.fl-input, .admin-section > textarea.fl-input, .admin-section > select.fl-input').forEach(el=>{
+    if(el.dataset.fieldLabeled || ['hidden','checkbox','radio','date','time','file','button'].includes((el.type||'').toLowerCase())) return;
+    const prev=el.previousElementSibling; if(prev && prev.tagName==='LABEL') return;
+    let txt = el.tagName==='SELECT' ? ((el.options[0]&&el.options[0].value==='')?el.options[0].textContent:'') : (el.getAttribute('placeholder')||'');
+    txt=String(txt||'').trim(); if(!txt || txt.length>34) return;
+    el.dataset.fieldLabeled='1'; el.setAttribute('aria-label',txt);
+    const lab=document.createElement('label'); lab.className='fl-cap'; lab.style.cssText='display:block;margin:0 0 3px 2px'; lab.textContent=txt; if(el.id) lab.htmlFor=el.id;
+    el.parentNode.insertBefore(lab,el);
+  });
+}
+try{ addFieldLabels(); addSingleFieldLabels(); }catch(e){ console.warn('addFieldLabels',e); }
 // Admin-Rechte kommen ausschließlich aus dem Nutzerprofil (isAdmin/permissions) — kein geteiltes Passwort mehr.
 const TYP_LABEL={"konzert": "🎵 Konzert", "fest": "🎪 Fest", "chorlager": "🏕️ Chorlager", "gottesdienst": "⛪ Gottesdienst", "probe": "🎹 Probe", "sonstiges": "📌 Sonstiges"};
 const TYP_COLOR={"konzert": "#2563b5", "fest": "#e67e22", "chorlager": "#27ae60", "gottesdienst": "#8e44ad", "probe": "#c0392b", "sonstiges": "#7f8c8d"};
