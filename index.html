@@ -5534,6 +5534,7 @@ async function renderUserVerwaltung() {
   const profiles = await loadUserProfiles();
   _zugangProfiles = profiles;
   const allUsers = Object.values(profiles).sort((a,b) => a.nachname?.localeCompare(b.nachname||'')||0);
+  const dupHints = findDuplicateHints(allUsers);
 
   if(!allUsers.length) {
     el.innerHTML = '<div class="empty">Noch keine Nutzerkonten erstellt.</div>';
@@ -5549,9 +5550,10 @@ async function renderUserVerwaltung() {
   if(cnt){
     const adminCount=allUsers.filter(u=>u.isAdmin).length;
     const unlinkedCount=allUsers.filter(u=>!findMemberForUser(u)).length;
+    const dupCount=Object.keys(dupHints).length;
     cnt.textContent = q
       ? `${users.length} von ${allUsers.length} Nutzern (Suche aktiv)`
-      : `${allUsers.length} Nutzer · 🔑 ${adminCount} Admin${adminCount===1?'':'s'}${unlinkedCount?` · ⚠️ ${unlinkedCount} ohne Mitglied-Verknüpfung`:''}`;
+      : `${allUsers.length} Nutzer · 🔑 ${adminCount} Admin${adminCount===1?'':'s'}${unlinkedCount?` · ⚠️ ${unlinkedCount} ohne Mitglied-Verknüpfung`:''}${dupCount?` · 🔁 ${dupCount} mögliche Doppelungen`:''}`;
   }
 
   if(!users.length){
@@ -5582,7 +5584,8 @@ async function renderUserVerwaltung() {
       : (perms.length
           ? perms.map(p=>`<span style="background:#eef3fa;color:#1d4e96;font-size:.68rem;padding:1px 7px;border-radius:8px">${(permLabels[p]||p)}</span>`).join('')
           : '<span style="color:#bbb;font-size:.72rem">keine Sonderrechte</span>');
-    const linkDot = linkedM ? '' : '<span title="Kein Mitglied verknüpft" style="color:#f39c12;font-size:.85rem">⚠️</span>';
+    const linkDot = (linkedM ? '' : '<span title="Kein Mitglied verknüpft" style="color:#f39c12;font-size:.85rem">⚠️</span>')
+      + (dupHints[uid] ? `<span title="Möglicherweise doppelt" style="background:#fdecea;color:#c0392b;font-size:.68rem;font-weight:700;padding:1px 7px;border-radius:8px">🔁 doppelt? (${esc(dupHints[uid].join(', '))})</span>` : '');
     const linkHtml = linkedM
       ? `<div style="font-size:.78rem;color:#1a7a40;margin-bottom:8px">✅ Mitglied: <strong>${esc(memberName(linkedM)||'(ohne Name)')}</strong></div>`
       : `<div style="background:#fff8e7;border:1px solid #f9ca8b;border-radius:6px;padding:8px 10px;margin-bottom:8px">
@@ -5640,11 +5643,40 @@ async function saveUserPerms(uid) {
   renderUserVerwaltung();
 }
 
+// Löscht das Konto serverseitig vollständig (Login-Konto, Profil, Benutzername, Push-Daten). Früher blieb das
+// Login-Konto übrig — deshalb entstanden Doppelungen, sobald sich jemand neu registrierte.
 async function deleteUserAccount(uid, username) {
-  if(!confirm('Nutzerkonto wirklich löschen?')) return;
-  await dbFetch(DB+'/userprofiles/'+uid+'.json', {method:'DELETE'});
-  await dbFetch(DB+'/usernames/'+username.toLowerCase()+'.json', {method:'DELETE'});
-  renderUserVerwaltung();
+  if(!(currentUserProfile&&currentUserProfile.isAdmin)){ showToast('Nur Admins dürfen das','err'); return; }
+  if(currentUser && uid===currentUser.uid){ alert('Du kannst dein eigenes Konto hier nicht löschen.'); return; }
+  const p=(_zugangProfiles||{})[uid]||{};
+  const nm=((p.vorname||'')+' '+(p.nachname||'')).trim()||p.anzeigename||username;
+  if(!confirm('Konto von „'+nm+'" ('+(username||'?')+', '+(p.email||'ohne E-Mail')+') endgültig löschen?\n\nDas Login-Konto wird entfernt, die Person kann sich damit nicht mehr anmelden. Das Mitglied selbst (Mitgliederliste) bleibt bestehen.')) return;
+  try{
+    const u=window._fbAuth&&window._fbAuth.currentUser; if(!u){ showToast('Bitte neu anmelden','err'); return; }
+    const r=await fetch(window.USERNAME_AUTH_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'deleteuser',idToken:await u.getIdToken(),targetUid:uid})});
+    if(!r.ok){ showToast(r.status===403?'Keine Admin-Berechtigung':'Löschen fehlgeschlagen ('+r.status+')','err'); return; }
+    // Verknüpfung am Mitglied lösen
+    const mi=(mitglieder||[]).findIndex(m=>m.uid===uid);
+    if(mi>=0){ delete mitglieder[mi].uid; dbDel('mitglieder/'+mi+'/uid').catch(()=>{}); }
+    showToast('Konto gelöscht','ok');
+  }catch(e){ showToast('Netzwerkfehler beim Löschen','err'); return; }
+  renderUserVerwaltung(); try{ renderMitglieder(); }catch(e){}
+}
+// Mögliche Doppelungen in der Benutzerverwaltung erkennen: gleiche E-Mail, gleicher Name oder dasselbe Mitglied.
+// Namenlose Selbstregistrierungen (nur Anzeigename) werden über den eindeutigen Vornamen eines Mitglieds zugeordnet.
+function findDuplicateHints(allUsers){
+  const key=u=>{
+    const m=findMemberForUser(u); if(m) return 'm:'+memberKey(m);
+    const nn=_norm((u.vorname||'')+(u.nachname||'')); if(nn) return 'n:'+nn;
+    const an=_norm(u.anzeigename||''); if(an){ const c=(mitglieder||[]).filter(x=>_norm(x.vorname)===an); if(c.length===1) return 'm:'+memberKey(c[0]); }
+    return null;
+  };
+  const groups={}; allUsers.forEach(u=>{ const k=key(u); if(k) (groups[k]=groups[k]||[]).push(u); });
+  const byMail={}; allUsers.forEach(u=>{ const e=String(u.email||'').toLowerCase(); if(e) (byMail[e]=byMail[e]||[]).push(u); });
+  const hints={};
+  const mark=(list)=>{ if(list.length<2) return; list.forEach(u=>{ hints[u.uid]=list.filter(x=>x!==u).map(x=>x.username||x.email||'?'); }); };
+  Object.values(groups).forEach(mark); Object.values(byMail).forEach(mark);
+  return hints;
 }
 
 async function createAllAccounts() {
