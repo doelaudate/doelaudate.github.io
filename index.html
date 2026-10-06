@@ -1417,7 +1417,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     <div class="konsole-pane" id="kp-stimmen">
     <div class="konsole-section">
       <div class="konsole-title">🎚️ Stimmen zuweisen (S/A/T/B)</div>
-      <div style="font-size:.83rem;color:#666;margin-bottom:8px">Tippe pro Mitglied die Stimme an – wird sofort gespeichert. Nötig für die SATB-Gruppierung in der Anwesenheit.</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:8px">Tippe pro Mitglied die Stimme an – wird sofort gespeichert. Nötig für die SATB-Gruppierung in der Anwesenheit. Mit 🎚️ legst du eine <strong>Stimmführer*in</strong> fest (sieht Anwesenheit &amp; Übe-Stand der eigenen Stimme).</div>
       <div id="stimmen-summary" style="font-size:.8rem;color:#888;margin-bottom:8px"></div>
       <div id="stimmen-list"></div>
     </div>
@@ -5525,7 +5525,7 @@ function renderStimmenZuweisen(){
   el.innerHTML=sorted.map(m=>{
     const cur=m.stimme||'';
     const btns=voices.map(([v,ab,c])=>`<button onclick="setStimme('${memberKey(m)}','${v}')" title="${v}" style="border:1.5px solid ${cur===v?c:'#ddd'};background:${cur===v?c:'#fff'};color:${cur===v?'#fff':'#888'};border-radius:6px;width:30px;height:30px;font-size:.8rem;font-weight:700;cursor:pointer">${ab}</button>`).join('');
-    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0f0"><span style="flex:1;font-size:.86rem;min-width:0">${esc(memberName(m))}</span><div style="display:flex;gap:4px;flex-shrink:0">${btns}</div></div>`;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0f0"><span style="flex:1;font-size:.86rem;min-width:0">${esc(memberName(m))}${m.stimmfuehrer?' <span style="font-size:.7rem;background:#eaf1fb;color:#1d4e96;border-radius:8px;padding:1px 7px;font-weight:700;white-space:nowrap">🎚️ Stimmführer*in</span>':''}</span><div style="display:flex;gap:4px;flex-shrink:0">${btns}<button onclick="toggleStimmfuehrer('${memberKey(m)}')" title="${m.stimmfuehrer?'Stimmführer*in entfernen':'Als Stimmführer*in festlegen'}" style="border:1.5px solid ${m.stimmfuehrer?'#1d4e96':'#ddd'};background:${m.stimmfuehrer?'#1d4e96':'#fff'};color:${m.stimmfuehrer?'#fff':'#888'};border-radius:6px;width:34px;height:34px;cursor:pointer;margin-left:4px">🎚️</button></div></div>`;
   }).join('');
   const sum=document.getElementById('stimmen-summary');
   if(sum){
@@ -5539,6 +5539,18 @@ async function setStimme(key, voice){
   const neu = (mitglieder[idx].stimme===voice) ? '' : voice; // nochmal tippen = entfernen
   mitglieder[idx].stimme=neu;
   await dbFetch(DB+'/mitglieder/'+idx+'/stimme.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(neu||null)});
+  renderStimmenZuweisen();
+}
+
+// Stimmführer*in festlegen/entfernen (direkt in der Stimmen-Liste; braucht eine zugewiesene Stimme)
+async function toggleStimmfuehrer(key){
+  const idx=mitglieder.findIndex(m=>memberKey(m)===key); if(idx<0) return;
+  const m=mitglieder[idx];
+  if(!SATB_VOICES.includes(m.stimme)){ alert('Bitte zuerst eine Stimme (S/A/T/B) für '+memberName(m)+' wählen.'); return; }
+  const neu=!m.stimmfuehrer;
+  if(neu) m.stimmfuehrer=true; else delete m.stimmfuehrer;
+  try{ await dbFetch(DB+'/mitglieder/'+idx+'/stimmfuehrer.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(neu?true:null)}); showToast(neu?'Stimmführer*in gesetzt':'Stimmführer*in entfernt','ok'); }
+  catch(e){ showToast('Speichern fehlgeschlagen','err'); }
   renderStimmenZuweisen();
 }
 
