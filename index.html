@@ -469,6 +469,9 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
   .song-actions button,.song-actions a{min-height:42px}
 }
 .ueb-pill{min-height:30px}
+.pause-chip{display:inline-block;background:#fff3e0;color:#a2600f;border-radius:10px;padding:1px 8px;font-size:.7rem;font-weight:700;vertical-align:middle}
+details.pause-box{margin-top:12px;border:1.5px dashed #e0c9a8;border-radius:12px;padding:6px 10px;background:#fffaf2}
+details.pause-box>summary{cursor:pointer;font-size:.84rem;font-weight:700;color:#a2600f;padding:6px 0}
 .fl-field{display:flex;flex-direction:column;gap:3px}
 .fl-cap{font-size:.72rem;font-weight:600;color:#667;margin-left:2px;line-height:1.1}
 @media(max-width:640px){.ueb-pill{min-height:36px;padding:6px 12px}}
@@ -927,6 +930,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
       <input class="fl-input" type="text" id="m-adresse" placeholder="Adresse">
       <input class="fl-input" type="text" id="m-plz" placeholder="PLZ">
     </div>
+    <div style="margin-bottom:8px"><label class="fl-cap" for="m-beigetreten" style="display:block;margin:0 0 3px 2px">Beigetreten am (leer = heute – ab diesem Tag zählt das Mitglied bei der Anwesenheit)</label><input class="fl-input" type="date" id="m-beigetreten" style="max-width:220px"></div>
     <div class="form-row" style="align-items:center">
       <input class="fl-input" type="text" id="m-username" placeholder="Benutzername (für Login)" style="margin-bottom:0">
       <button class="btn btn-gray btn-sm" type="button" style="white-space:nowrap" onclick="fillUsernameSuggestion('m')">🎲 Vorschlag</button>
@@ -1964,6 +1968,27 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
         <option value="Tenor">Tenor</option>
         <option value="Bass">Bass</option>
       </select>
+    </div>
+    <div style="margin:2px 0 10px;padding:10px 12px;background:#f6f8fb;border-radius:10px">
+      <div style="font-size:.72rem;font-weight:700;color:#667;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Mitgliedschaft</div>
+      <label class="fl-cap" for="edit-m-beigetreten" style="display:block;margin:0 0 3px 2px">Beigetreten am</label>
+      <input class="fl-input" type="date" id="edit-m-beigetreten" style="margin-bottom:8px;max-width:220px">
+      <div id="edit-m-pause-status" style="font-size:.82rem;margin-bottom:6px"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex:1;min-width:130px"><label class="fl-cap" for="edit-m-pause-datum" style="display:block;margin:0 0 3px 2px">Ab Datum</label><input class="fl-input" type="date" id="edit-m-pause-datum" style="margin:0"></div>
+        <div style="flex:2;min-width:150px"><label class="fl-cap" for="edit-m-pause-grund" style="display:block;margin:0 0 3px 2px">Grund (optional)</label><input class="fl-input" type="text" id="edit-m-pause-grund" maxlength="60" placeholder="z. B. Elternzeit" style="margin:0"></div>
+      </div>
+      <button class="btn btn-sm" type="button" id="edit-m-pause-btn" style="margin-top:8px" onclick="togglePauseInDialog()">⏸ Länger abwesend setzen</button>
+      <div style="border-top:1px dashed #d5dbe3;margin-top:12px;padding-top:10px">
+        <div style="font-size:.72rem;font-weight:700;color:#667;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">🏖️ Abwesenheit eintragen (z. B. Urlaub, Krankheit)</div>
+        <div id="edit-m-abw-list" style="margin-bottom:6px"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
+          <div style="flex:1;min-width:120px"><label class="fl-cap" for="edit-m-abw-von" style="display:block;margin:0 0 3px 2px">Von</label><input class="fl-input" type="date" id="edit-m-abw-von" style="margin:0"></div>
+          <div style="flex:1;min-width:120px"><label class="fl-cap" for="edit-m-abw-bis" style="display:block;margin:0 0 3px 2px">Bis</label><input class="fl-input" type="date" id="edit-m-abw-bis" style="margin:0"></div>
+          <button class="btn btn-sm btn-primary" type="button" onclick="adminAddAbsence()">＋ Eintragen</button>
+        </div>
+        <div style="font-size:.72rem;color:#999;margin-top:5px">Das Mitglied zählt in diesem Zeitraum bei Proben und Terminen automatisch als „kommt nicht" – wie bei einer selbst eingetragenen Abwesenheit.</div>
+      </div>
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-size:.84rem;margin:2px 0 10px;cursor:pointer"><input type="checkbox" id="edit-m-stimmfuehrer" style="accent-color:#2563b5;width:16px;height:16px"> 🎚️ Stimmführer*in (sieht Anwesenheit &amp; Übe-Stand der eigenen Stimme)</label>
     <div class="form-row" style="align-items:center">
@@ -3867,6 +3892,22 @@ function allProbenSorted(){
   return alle.filter(p=>p.datum).sort((a,b)=>b.datum.localeCompare(a.datum));
 }
 function memberKey(m){ return String(m.id||m.nr); }
+// ===== MITGLIEDS-STATUS: beigetreten + längere Abwesenheit (Pausen) =====
+// m.beigetreten = 'YYYY-MM-DD' (ab dann zählt das Mitglied bei Anwesenheit/Besetzung/Rückmeldungen),
+// m.pausen = [{von:'YYYY-MM-DD', bis:'YYYY-MM-DD'|'' (offen), grund}] (in dieser Zeit zählt es nicht). Alte Zeiträume bleiben
+// erhalten, damit rückwirkende Statistiken stimmen.
+function memberPauseAt(m,datum){ const a=Array.isArray(m&&m.pausen)?m.pausen:[]; return a.find(p=>p&&p.von&&datum>=p.von&&(!p.bis||datum<=p.bis))||null; }
+function memberActiveOn(m,datum){ if(!datum) return true; if(m.beigetreten && datum<m.beigetreten) return false; return !memberPauseAt(m,datum); }
+function isPausedNow(m){ return !!memberPauseAt(m,localToday()); }
+function activeMembersOn(datum){ return (mitglieder||[]).filter(m=>memberActiveOn(m,datum)); }
+// Anwesenheit eines Mitglieds über erfasste Proben (list: [{d:datum, v:{fehlt}}]) — nur Proben, bei denen es dabei sein konnte
+function memberAttendance(m,list){
+  const k=memberKey(m); let da=0,tot=0;
+  list.forEach(x=>{ if(!memberActiveOn(m,x.d)) return; tot++; if(!(x.v&&x.v.fehlt&&x.v.fehlt[k])) da++; });
+  return {da,tot,fehlt:tot-da,quote:tot?Math.round(da/tot*100):null};
+}
+// Anteil Anwesender bei einer erfassten Probe (nur zu diesem Datum aktive Mitglieder)
+function probeAttendance(x){ const act=activeMembersOn(x.d); const f=act.filter(m=>x.v&&x.v.fehlt&&x.v.fehlt[memberKey(m)]).length; return {n:act.length,da:act.length-f}; }
 function memberName(m){ return ((m.vorname||'')+' '+(m.nachname||'')).trim(); }
 // Anzeige-Kurzform: „Martin Wolff" -> „Martin W."; nur ein Namensteil -> unverändert
 function shortName(vorname, nachname){
@@ -4011,28 +4052,34 @@ function renderAnwErfassen(){
 }
 function renderAnwRoster(){
   const roster=document.getElementById('anw-roster'); if(!roster||!anwWork) return;
+  // Nur Mitglieder, die an diesem Probentag dabei sein konnten (beigetreten, nicht länger abwesend)
+  const _dat=probeDatumById(anwWork.probeId);
+  const _akt=mitglieder.filter(m=>memberActiveOn(m,_dat));
+  const _ausg=mitglieder.filter(m=>!memberActiveOn(m,_dat));
   const chip=(m)=>{ const k=memberKey(m); const absent=anwWork.fehlt.has(k);
     return `<button onclick="toggleAnw('${k}')" style="border:1.5px solid ${absent?'#e74c3c':'#27ae60'};background:${absent?'#fdecea':'#eafaf1'};color:${absent?'#922b21':'#1a7a40'};border-radius:16px;padding:5px 11px;font-size:.8rem;cursor:pointer;white-space:nowrap">${absent?'❌':'✅'} ${esc(memberName(m))}</button>`; };
   const gruppen=[['Sopran','🟠','#e67e22'],['Alt','🔵','#2563b5'],['Tenor','🟢','#27ae60'],['Bass','🟣','#8e44ad']];
   let html='';
   gruppen.forEach(([stimme,icon,color])=>{
-    const ms=mitglieder.filter(m=>(m.stimme||'')===stimme).sort((a,b)=>memberName(a).localeCompare(memberName(b)));
+    const ms=_akt.filter(m=>(m.stimme||'')===stimme).sort((a,b)=>memberName(a).localeCompare(memberName(b)));
     if(!ms.length) return;
     html+=`<div style="width:100%;margin-bottom:6px"><div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:${color};margin-bottom:5px">${icon} ${stimme} (${ms.length})</div><div style="display:flex;flex-wrap:wrap;gap:6px">${ms.map(chip).join('')}</div></div>`;
   });
   // Mitglieder ohne zugeordnete Stimme
-  const ohne=mitglieder.filter(m=>!['Sopran','Alt','Tenor','Bass'].includes(m.stimme||'')).sort((a,b)=>memberName(a).localeCompare(memberName(b)));
+  const ohne=_akt.filter(m=>!['Sopran','Alt','Tenor','Bass'].includes(m.stimme||'')).sort((a,b)=>memberName(a).localeCompare(memberName(b)));
   if(ohne.length){
     html+=`<div style="width:100%;margin-bottom:6px"><div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#95a5a6;margin-bottom:5px">👤 Ohne Stimme (${ohne.length})</div><div style="display:flex;flex-wrap:wrap;gap:6px">${ohne.map(chip).join('')}</div></div>`;
   }
+  if(_ausg.length) html+=`<div style="width:100%;font-size:.76rem;color:#888;border-top:1px dashed #ddd;padding-top:6px;margin-top:4px">⏸ Nicht gezählt (länger abwesend oder an diesem Tag noch nicht dabei): ${_ausg.map(m=>esc(memberName(m))).join(', ')}</div>`;
   roster.innerHTML=html;
   updateAnwSummary();
 }
 function toggleAnw(k){ if(!anwWork) return; if(anwWork.fehlt.has(k)) anwWork.fehlt.delete(k); else anwWork.fehlt.add(k); renderAnwRoster(); }
-function updateAnwSummary(){ const el=document.getElementById('anw-summary'); if(!el||!anwWork) return; const total=mitglieder.length; const f=anwWork.fehlt.size; el.textContent='Anwesend: '+(total-f)+' · Fehlt: '+f+' (von '+total+')'; }
+function updateAnwSummary(){ const el=document.getElementById('anw-summary'); if(!el||!anwWork) return; const dat=probeDatumById(anwWork.probeId); const act=activeMembersOn(dat); const aKeys=new Set(act.map(memberKey)); const total=act.length; const f=[...anwWork.fehlt].filter(k=>aKeys.has(k)).length; el.textContent='Anwesend: '+(total-f)+' · Fehlt: '+f+' (von '+total+')'; }
 async function saveAnwesenheit(){
   if(!anwWork){ return; }
-  const fehltObj={}; anwWork.fehlt.forEach(k=>fehltObj[k]=true);
+  const _aK=new Set(activeMembersOn(probeDatumById(anwWork.probeId)).map(memberKey)); // inaktive Mitglieder nie als „fehlt" speichern
+  const fehltObj={}; anwWork.fehlt.forEach(k=>{ if(_aK.has(k)) fehltObj[k]=true; });
   const data={erfasst:new Date().toISOString(), fehlt:fehltObj};
   await dbFetch(DB+'/anwesenheit/'+anwWork.probeId+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
   anwesenheit[anwWork.probeId]=data;
@@ -4079,12 +4126,11 @@ function renderAnwStats(){
   const filterActive=von||bis||saisonId;
   if(!captured.length){ el.innerHTML='<div class="empty" style="padding:20px">'+(filterActive?'Keine erfasste Anwesenheit im gewählten Zeitraum/Saison.':'Noch keine Anwesenheit erfasst.')+'</div>'; return; }
   const total=captured.length;
+  const _cl=captured.map(([k,v])=>({d:probeDatumById(k),v}));
   const rows=mitglieder.map(m=>{
-    const k=memberKey(m); let fehlt=0;
-    captured.forEach(([,v])=>{ if(v.fehlt&&v.fehlt[k]) fehlt++; });
-    const da=total-fehlt;
-    return {name:memberName(m), da, fehlt, quote:Math.round((da/total)*100)};
-  });
+    const a=memberAttendance(m,_cl); // zählt nur Proben, bei denen das Mitglied dabei sein konnte
+    return {name:memberName(m)+(isPausedNow(m)?' ⏸':''), da:a.da, fehlt:a.fehlt, quote:a.quote, tot:a.tot};
+  }).filter(r=>r.tot>0);
   const sort=document.getElementById('anw-sort')?.value||'quote';
   if(sort==='name') rows.sort((a,b)=>a.name.localeCompare(b.name));
   else if(sort==='fehlt') rows.sort((a,b)=>b.fehlt-a.fehlt||a.name.localeCompare(b.name));
@@ -4137,7 +4183,7 @@ function meinJahrHtml(){
   const m=_matchMemberByProfile(uid,'');
   if(!m) return head+'<div class="empty" style="padding:16px">Dein Konto ist noch keinem Chormitglied zugeordnet – bitte kurz bei der Chorleitung melden.</div>';
   const key=memberKey(m);
-  const cap=Object.entries(anwesenheit||{}).filter(([,v])=>v&&v.erfasst).map(([k,v])=>({d:probeDatumById(k),v})).filter(x=>x.d&&x.d.slice(0,4)===y&&x.d<=today).sort((a,b)=>a.d.localeCompare(b.d));
+  const cap=Object.entries(anwesenheit||{}).filter(([,v])=>v&&v.erfasst).map(([k,v])=>({d:probeDatumById(k),v})).filter(x=>x.d&&x.d.slice(0,4)===y&&x.d<=today&&memberActiveOn(m,x.d)).sort((a,b)=>a.d.localeCompare(b.d));
   let da=0,streak=0,best=0; cap.forEach(x=>{ if(x.v.fehlt&&x.v.fehlt[key]) streak=0; else { da++; streak++; best=Math.max(best,streak); } });
   const quote=cap.length?Math.round(da/cap.length*100):null;
   const al=getUserAliases();
@@ -4177,12 +4223,13 @@ function meineStimmeHtml(){
   const me=_matchMemberByProfile(currentUser.uid,''); const voice=me.stimme;
   const today=localToday(); const from=new Date(); from.setFullYear(from.getFullYear()-1); const fromIso=from.toISOString().slice(0,10);
   const cap=Object.entries(anwesenheit||{}).filter(([,v])=>v&&v.erfasst).map(([k,v])=>({d:probeDatumById(k),v})).filter(x=>x.d&&x.d>=fromIso&&x.d<=today).sort((a,b)=>a.d.localeCompare(b.d));
-  const ms=mitglieder.filter(m=>m.stimme===voice).sort((a,b)=>memberName(a).localeCompare(memberName(b),'de'));
+  const ms=mitglieder.filter(m=>m.stimme===voice&&!isPausedNow(m)).sort((a,b)=>memberName(a).localeCompare(memberName(b),'de'));
+  const pausiert=mitglieder.filter(m=>m.stimme===voice&&isPausedNow(m));
   const songs=_activeSongsNow();
   const rows=ms.map(m=>{
-    const k=memberKey(m); let da=0; const last=[];
-    cap.forEach(x=>{ const f=!!(x.v.fehlt&&x.v.fehlt[k]); if(!f) da++; last.push(f); });
-    const q=cap.length?Math.round(da/cap.length*100):null;
+    const k=memberKey(m); const last=[];
+    cap.forEach(x=>{ if(!memberActiveOn(m,x.d)) return; last.push(!!(x.v.fehlt&&x.v.fehlt[k])); });
+    const a=memberAttendance(m,cap); const q=a.quote;
     const u=_memberUid(m); let kann=0,hilfe=0;
     songs.forEach(s=>{ const v=u?((uebenStatus[s.id]||{})[u]||''):''; if(v==='kann')kann++; else if(v==='hilfe')hilfe++; });
     const c=q==null?'#aaa':q>=80?'#27ae60':q>=50?'#f39c12':'#e74c3c';
@@ -4190,7 +4237,7 @@ function meineStimmeHtml(){
     return `<tr><td>${esc(shortName(m.vorname,m.nachname)||memberName(m))}${m.stimmfuehrer?' <span title="Stimmführer*in">🎚️</span>':''}</td><td style="text-align:center"><strong style="color:${c}">${q==null?'–':q+'%'}</strong></td><td style="text-align:center;font-size:.7rem;white-space:nowrap">${dots||'–'}</td><td style="text-align:center">${u?`<span style="color:#27ae60">✅${kann}</span>${hilfe?` <b style="color:#e67e22">🆘${hilfe}</b>`:''}`:'<span style="color:#ccc">–</span>'}</td></tr>`;
   }).join('');
   const hilfeSongs=songs.map(s=>({n:s.name,who:ms.filter(m=>{ const u=_memberUid(m); return u&&(uebenStatus[s.id]||{})[u]==='hilfe'; }).map(m=>shortName(m.vorname,m.nachname)||memberName(m))})).filter(x=>x.who.length).sort((a,b)=>b.who.length-a.who.length);
-  return `<div style="background:linear-gradient(135deg,#1b3a6b,#2563b5);color:#fff;border-radius:14px;padding:14px;margin-bottom:12px;text-align:center"><div style="font-size:1.2rem;font-weight:800">🎚️ Meine Stimme: ${esc(voice)}</div><div style="font-size:.78rem;opacity:.85;margin-top:2px">${ms.length} Mitglieder · nur für Stimmführer*innen und Chorleitung sichtbar</div></div>
+  return `<div style="background:linear-gradient(135deg,#1b3a6b,#2563b5);color:#fff;border-radius:14px;padding:14px;margin-bottom:12px;text-align:center"><div style="font-size:1.2rem;font-weight:800">🎚️ Meine Stimme: ${esc(voice)}</div><div style="font-size:.78rem;opacity:.85;margin-top:2px">${ms.length} aktive Mitglieder${pausiert.length?' · ⏸ '+pausiert.length+' länger abwesend':''} · nur für Stimmführer*innen und Chorleitung sichtbar</div></div>
     <div class="card" style="margin-bottom:12px"><div class="card-title">✅ Anwesenheit (letzte 12 Monate, ${cap.length} erfasste Proben)</div>
       <div style="overflow-x:auto"><table class="overview-table" style="width:100%"><thead><tr><th>Name</th><th style="text-align:center">Quote</th><th style="text-align:center">Letzte 5</th><th style="text-align:center">Lieder</th></tr></thead><tbody>${rows||'<tr><td colspan="4">Keine Mitglieder in dieser Stimme.</td></tr>'}</tbody></table></div></div>
     <div class="card"><div class="card-title">🆘 Wo braucht die Stimme Hilfe?</div>${hilfeSongs.length?hilfeSongs.map(x=>`<div style="padding:5px 0;border-top:1px solid var(--line);font-size:.86rem"><strong>${esc(x.n)}</strong> <span style="color:#888">– ${esc(x.who.join(', '))}</span></div>`).join(''):'<div style="font-size:.84rem;color:#27ae60">Aktuell hat niemand aus deiner Stimme „Hilfe" markiert.</div>'}</div>`;
@@ -4320,8 +4367,8 @@ function exportAnwesenheitCSV(){
   if(!cap.length){ alert('Es ist noch keine Anwesenheit erfasst.'); return; }
   const rows=[['Nachname','Vorname','Stimme',...cap.map(x=>fmt(x.d)),'Anwesend','Erfasste Proben','Quote %']];
   [...mitglieder].sort((a,b)=>(a.nachname||'').localeCompare(b.nachname||'','de')).forEach(m=>{
-    const k=memberKey(m); const cells=cap.map(x=>(x.v.fehlt&&x.v.fehlt[k])?0:1); const da=cells.reduce((s,x)=>s+x,0);
-    rows.push([m.nachname,m.vorname,m.stimme,...cells,da,cap.length,Math.round(da/cap.length*100)]);
+    const k=memberKey(m); const cells=cap.map(x=>!memberActiveOn(m,x.d)?'':((x.v.fehlt&&x.v.fehlt[k])?0:1)); const da=cells.reduce((s,x)=>s+(x===1?1:0),0); const tot=cells.filter(x=>x!=='').length;
+    rows.push([m.nachname,m.vorname,m.stimme,...cells,da,tot,tot?Math.round(da/tot*100):'']);
   });
   _downloadText('anwesenheit-'+localToday()+'.csv',_csv(rows)); showToast('Anwesenheit exportiert','ok');
 }
@@ -4370,10 +4417,11 @@ function renderBesetzung(){
   const probeRows=proben.map(p=>{
     const sa=selbstabmeldungen(p.id); const fehlt=sa.matchedKeys;
     const tot={},pres={}; V.forEach(v=>{tot[v]=0;pres[v]=0;});
-    mitglieder.forEach(m=>{ const v=voiceOf(m); tot[v]++; if(!fehlt.has(memberKey(m))) pres[v]++; });
-    const all=mitglieder.length-fehlt.size;
+    const actM=activeMembersOn(p.datum);
+    actM.forEach(m=>{ const v=voiceOf(m); tot[v]++; if(!fehlt.has(memberKey(m))) pres[v]++; });
+    const all=actM.filter(m=>!fehlt.has(memberKey(m))).length;
     const namen=sa.names.length?`<div style="font-size:.72rem;color:#922b21;margin:0 0 4px">❌ ${sa.names.map(n=>esc(prettyName(n)||n)).join(', ')}</div>`:'';
-    return `<tr><td style="white-space:nowrap">${fmt(p.datum)}</td>${_besCell('',all,mitglieder.length)}${SATB_VOICES.map(v=>_besCell(v,pres[v],tot[v])).join('')}${_besCell('—',pres['—'],tot['—'])}</tr>`+(namen?`<tr><td colspan="7" style="padding-top:0;border-top:none">${namen}</td></tr>`:'');
+    return `<tr><td style="white-space:nowrap">${fmt(p.datum)}</td>${_besCell('',all,actM.length)}${SATB_VOICES.map(v=>_besCell(v,pres[v],tot[v])).join('')}${_besCell('—',pres['—'],tot['—'])}</tr>`+(namen?`<tr><td colspan="7" style="padding-top:0;border-top:none">${namen}</td></tr>`:'');
   }).join('');
   // ---- Termine (mit Abstimmung) ----
   const terms=(termine||[]).filter(t=>!t.keineAbstimmung && t.typ!=='probe' && (t.datum_ende||t.datum)>=today).sort((a,b)=>a.datum.localeCompare(b.datum)).slice(0,8);
@@ -4412,20 +4460,21 @@ function rueckblickData(year){
   const n=(mitglieder||[]).length;
   let quote=null, best=null, voices=[], ehren=[];
   if(cap.length && n){
-    let sum=0;
+    let sum=0,cnt=0;
     cap.forEach(([k,v])=>{
-      const fehlt=v.fehlt?Object.keys(v.fehlt).filter(x=>v.fehlt[x]).length:0;
-      const pct=(n-fehlt)/n; sum+=pct;
-      if(!best||pct>best.pct) best={pct,datum:probeDatumById(k),da:n-fehlt};
+      const a=probeAttendance({d:probeDatumById(k),v}); if(!a.n) return;
+      const pct=a.da/a.n; sum+=pct; cnt++;
+      if(!best||pct>best.pct) best={pct,datum:probeDatumById(k),da:a.da};
     });
-    quote=Math.round(sum/cap.length*100);
+    quote=cnt?Math.round(sum/cnt*100):null;
     voices=SATB_VOICES.map(v=>{
       const ms=mitglieder.filter(m=>m.stimme===v); if(!ms.length) return null;
-      let s=0,c=0; cap.forEach(([,rec])=>ms.forEach(m=>{ s+=(rec.fehlt&&rec.fehlt[memberKey(m)])?0:1; c++; }));
+      let s=0,c=0; cap.forEach(([pk,rec])=>{ const d=probeDatumById(pk); ms.forEach(m=>{ if(!memberActiveOn(m,d)) return; s+=(rec.fehlt&&rec.fehlt[memberKey(m)])?0:1; c++; }); });
       return {label:v,value:c?Math.round(s/c*100):0};
     }).filter(Boolean);
     if(cap.length>=3){
-      ehren=mitglieder.map(m=>{ const k=memberKey(m); let f=0; cap.forEach(([,rec])=>{ if(rec.fehlt&&rec.fehlt[k]) f++; }); return {name:memberName(m),da:cap.length-f,quote:Math.round((cap.length-f)/cap.length*100)}; })
+      const _cl=cap.map(([pk,v])=>({d:probeDatumById(pk),v}));
+      ehren=mitglieder.map(m=>{ const a=memberAttendance(m,_cl); return {name:memberName(m),da:a.da,tot:a.tot,quote:a.quote}; }).filter(e=>e.tot>=3)
         .sort((a,b)=>b.quote-a.quote||a.name.localeCompare(b.name,'de')).slice(0,5);
     }
   }
@@ -4461,7 +4510,7 @@ function rueckblickHtml(year, full){
       ${r.voices.length?_statBars(r.voices.map(v=>({label:v.label,value:v.value,sub:v.value+'%'})),'#e67e22'):''}</div>`;
   }
   if(full && r.ehren.length){
-    h+=`<div class="card" style="margin-bottom:12px"><div class="card-title">🏅 Ehrenliste <span style="font-size:.7rem;font-weight:500;color:#999">(nur für die Chorleitung sichtbar)</span></div>${r.ehren.map((e,i)=>`<div style="display:flex;gap:8px;padding:4px 0;font-size:.88rem"><span style="width:22px">${['🥇','🥈','🥉'][i]||'🎖️'}</span><span style="flex:1;font-weight:600">${esc(e.name)}</span><span style="color:#888">${e.da}/${r.capN} · ${e.quote}%</span></div>`).join('')}</div>`;
+    h+=`<div class="card" style="margin-bottom:12px"><div class="card-title">🏅 Ehrenliste <span style="font-size:.7rem;font-weight:500;color:#999">(nur für die Chorleitung sichtbar)</span></div>${r.ehren.map((e,i)=>`<div style="display:flex;gap:8px;padding:4px 0;font-size:.88rem"><span style="width:22px">${['🥇','🥈','🥉'][i]||'🎖️'}</span><span style="flex:1;font-weight:600">${esc(e.name)}</span><span style="color:#888">${e.da}/${e.tot} · ${e.quote}%</span></div>`).join('')}</div>`;
   }
   h+=`<div style="text-align:center;font-size:.9rem;color:#1b3a6b;font-weight:600;padding:8px 0 2px">Danke für ein tolles Chorjahr! 🎶</div>`;
   return h;
@@ -4575,8 +4624,8 @@ function renderStatistik(){
   // Ø Anwesenheitsquote
   let quote='–';
   if(captured.length && mitglieder.length){
-    let sum=0; captured.forEach(([,v])=>{ const fehlt=v.fehlt?Object.keys(v.fehlt).filter(k=>v.fehlt[k]).length:0; sum+=(mitglieder.length-fehlt)/mitglieder.length; });
-    quote=Math.round(sum/captured.length*100)+'%';
+    let sum=0,cnt=0; captured.forEach(([k,v])=>{ const a=probeAttendance({d:probeDatumById(k),v}); if(a.n){ sum+=a.da/a.n; cnt++; } });
+    if(cnt) quote=Math.round(sum/cnt*100)+'%';
   }
   // Kacheln
   html+=`<div class="stats" style="margin-bottom:14px">
@@ -4614,7 +4663,7 @@ function renderStatistik(){
     const vItems=voices.map(v=>{
       const ms=mitglieder.filter(m=>m.stimme===v); if(!ms.length) return null;
       let sum=0,n=0;
-      captured.forEach(([,rec])=>{ ms.forEach(m=>{ const k=memberKey(m); const fehlt=rec.fehlt&&rec.fehlt[k]; sum+=fehlt?0:1; n++; }); });
+      captured.forEach(([pk,rec])=>{ const d=probeDatumById(pk); ms.forEach(m=>{ if(!memberActiveOn(m,d)) return; const k=memberKey(m); const fehlt=rec.fehlt&&rec.fehlt[k]; sum+=fehlt?0:1; n++; }); });
       return {label:v, value:n?Math.round(sum/n*100):0, sub:(n?Math.round(sum/n*100):0)+'%'};
     }).filter(Boolean);
     if(vItems.length) html+=`<div class="card" style="margin-top:12px"><div class="card-title">🎤 Anwesenheit pro Stimmgruppe</div>${_statBars(vItems,'#e67e22')}</div>`;
@@ -4731,6 +4780,7 @@ function terminVoteBreakdown(t){
     let v=null;
     for(const k of Object.keys(abs)){ if(cands.includes(_norm(k))){ v=abs[k]; usedKeys.add(_norm(k)); } }
     if(v===null && cands.some(c=>urlaubNorm.has(c))) v='nein';
+    if(v===null && !memberActiveOn(m,t.datum)) return; // länger abwesend / noch nicht beigetreten: zählt hier nicht
     const nm=shortName(m.vorname,m.nachname)||memberName(m)||('Nr. '+(m.nr||'?'));
     const voice=SATB_VOICES.includes(m.stimme)?m.stimme:'—';
     stat[voice].total++;
@@ -5170,17 +5220,18 @@ function renderMitglieder(){
     return s.includes(q);
   }).sort((a,b)=>a.nachname.localeCompare(b.nachname));
   const cnt=document.getElementById('m-count');
-  if(cnt) cnt.textContent='('+filtered.length+' von '+mitglieder.length+')';
+  const _np=filtered.filter(isPausedNow).length;
+  if(cnt) cnt.textContent='('+(filtered.length-_np)+' von '+mitglieder.filter(m=>!isPausedNow(m)).length+(_np?' · ⏸ '+_np+' länger abwesend':'')+')';
   const el=document.getElementById('mitglieder-list');if(!el)return;
   if(!filtered.length){el.innerHTML='<div class="empty">Keine Treffer.</div>';return;}
-  el.innerHTML=filtered.map(m=>{
+  const _cardOf=m=>{
     const initials=(m.vorname.charAt(0)+(m.nachname.charAt(0)||'')).toUpperCase();
     const colors=['#2563b5','#27ae60','#8e44ad','#e67e22','#c0392b','#16a085'];
     const color=colors[(m.vorname.charCodeAt(0)||0)%colors.length];
     return`<div class="mitglied-card">
       <div class="mitglied-avatar" style="background:${color}">${initials}</div>
       <div class="mitglied-info">
-        <div class="mitglied-name">${esc(m.vorname)} ${esc(m.nachname)}</div>
+        <div class="mitglied-name">${esc(m.vorname)} ${esc(m.nachname)}${isPausedNow(m)?(()=>{ const p=memberPauseAt(m,localToday()); return ` <span class="pause-chip">⏸ seit ${fmt(p.von)}${p.grund?' · '+esc(p.grund):''}</span>`; })():''}</div>
         <div class="mitglied-detail">
           ${m.stimme?`<span style="background:${{sopran:'#fdebd0',alt:'#d6eaf8',tenor:'#d5f5e3',bass:'#f9ebea'}[m.stimme.toLowerCase()]||'#f0f0f0'};color:#333;padding:1px 8px;border-radius:8px;font-size:.72rem;font-weight:600;margin-right:5px">${esc(m.stimme)}</span>`:''}
           ${m.handy&&canSeeMemberField('handy',m)?`📱 <a href="tel:${m.handy}">${esc(m.handy)}</a> `:''}
@@ -5190,9 +5241,11 @@ function renderMitglieder(){
         ${(m.adresse||m.plz)&&canSeeMemberField('adresse',m)?`<div class="mitglied-detail">📍 ${esc(m.adresse||'')} ${esc(m.plz||'')}</div>`:''}
         ${m.geburtstag&&canSeeMemberField('geburtstag',m)?`<div class="mitglied-detail">🎂 ${esc(m.geburtstag)}</div>`:''}
       </div>
-      ${(uiEdit('mitglieder')||(currentUserProfile&&currentUserProfile.isAdmin&&m.username))?`<div style="display:flex;flex-direction:column;gap:4px">${uiEdit('mitglieder')?`<button class="btn btn-gray btn-sm" onclick="openEditMitglied('${m.nr||m.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="deleteMitglied('${m.nr||m.id}')">✕</button>`:''}${(currentUserProfile&&currentUserProfile.isAdmin&&m.username)?`<button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" title="Passwort auf Benutzername zurücksetzen" onclick="adminResetPassword('${esc(m.username)}')">🔑</button>`:''}</div>`:''}
+      ${(uiEdit('mitglieder')||(currentUserProfile&&currentUserProfile.isAdmin&&m.username))?`<div style="display:flex;flex-direction:column;gap:4px">${uiEdit('mitglieder')?`<button class="btn btn-gray btn-sm" title="${isPausedNow(m)?'Wieder aktiv':'Länger abwesend setzen'}" onclick="quickPause('${memberKey(m)}')">${isPausedNow(m)?'▶':'⏸'}</button>`:''}${uiEdit('mitglieder')?`<button class="btn btn-gray btn-sm" onclick="openEditMitglied('${m.nr||m.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="deleteMitglied('${m.nr||m.id}')">✕</button>`:''}${(currentUserProfile&&currentUserProfile.isAdmin&&m.username)?`<button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" title="Passwort auf Benutzername zurücksetzen" onclick="adminResetPassword('${esc(m.username)}')">🔑</button>`:''}</div>`:''}
     </div>`;
-  }).join('');
+  };
+  const _akt=filtered.filter(m=>!isPausedNow(m)), _pau=filtered.filter(isPausedNow);
+  el.innerHTML=_akt.map(_cardOf).join('')+(_pau.length?`<details class="pause-box" ${q?'open':''}><summary>⏸ Länger abwesend (${_pau.length}) – zählen nicht bei Anwesenheit &amp; Rückmeldungen</summary>${_pau.map(_cardOf).join('')}</details>`:'');
 }
 
 // Benutzername-Vorschlag: Initialen + Geburtsdatum (TTMMJJ), wie beim ursprünglichen Verteilen (z.B. MW290498).
@@ -5226,10 +5279,10 @@ async function addMitglied(){
   let username=document.getElementById('m-username').value.trim();
   if(username && usernameTaken(username)){ alert('Dieser Benutzername ist schon vergeben. Bitte einen anderen wählen.'); return; }
   const maxNr=mitglieder.reduce((mx,x)=>Math.max(mx,parseInt(x.nr)||0),0);
-  const newM={id:uid(),nr:maxNr+1,nachname,vorname,username,handy:document.getElementById('m-handy').value.trim(),telefon:document.getElementById('m-telefon').value.trim(),email:document.getElementById('m-email').value.trim(),geburtstag:document.getElementById('m-geburtstag').value.trim(),adresse:document.getElementById('m-adresse').value.trim(),plz:document.getElementById('m-plz').value.trim(),stimme:document.getElementById('m-stimme')?.value||''};
+  const newM={id:uid(),nr:maxNr+1,beigetreten:(document.getElementById('m-beigetreten')&&document.getElementById('m-beigetreten').value)||localToday(),nachname,vorname,username,handy:document.getElementById('m-handy').value.trim(),telefon:document.getElementById('m-telefon').value.trim(),email:document.getElementById('m-email').value.trim(),geburtstag:document.getElementById('m-geburtstag').value.trim(),adresse:document.getElementById('m-adresse').value.trim(),plz:document.getElementById('m-plz').value.trim(),stimme:document.getElementById('m-stimme')?.value||''};
   mitglieder.push(newM);
   await saveMitgliederToFB();
-  ['m-nachname','m-vorname','m-handy','m-telefon','m-email','m-geburtstag','m-adresse','m-plz','m-username'].forEach(id=>document.getElementById(id).value='');
+  ['m-nachname','m-vorname','m-handy','m-telefon','m-email','m-geburtstag','m-adresse','m-plz','m-username','m-beigetreten'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
   renderMitglieder();
   if(!username) showToast('Mitglied gespeichert – bitte noch einen Benutzernamen vergeben, bevor du das Konto erstellst','info');
   else showToast('Mitglied gespeichert','ok');
@@ -5247,6 +5300,7 @@ function openEditMitglied(id){
   document.getElementById('edit-m-id').value=id;
   ['nachname','vorname','handy','telefon','email','geburtstag','adresse','plz','stimme','username'].forEach(f=>{const el=document.getElementById('edit-m-'+f);if(el)el.value=m[f]||'';});
   const sfEl=document.getElementById('edit-m-stimmfuehrer'); if(sfEl) sfEl.checked=!!m.stimmfuehrer;
+  { const be=document.getElementById('edit-m-beigetreten'); if(be) be.value=m.beigetreten||''; const pd=document.getElementById('edit-m-pause-datum'); if(pd) pd.value=localToday(); const pg=document.getElementById('edit-m-pause-grund'); if(pg) pg.value=''; renderPauseStatus(m); const av=document.getElementById('edit-m-abw-von'), ab=document.getElementById('edit-m-abw-bis'); if(av) av.value=''; if(ab) ab.value=''; renderAdminAbsences(m); }
   const unEl=document.getElementById('edit-m-username'), hint=document.getElementById('edit-m-username-hint');
   const hasAccount=!!m.uid;
   if(unEl) unEl.readOnly=hasAccount;
@@ -5269,6 +5323,7 @@ async function saveMitglied(){
   const alteAdresse=m.adresse||'';
   fields.forEach(f=>{const el=document.getElementById('edit-m-'+f);if(el)m[f]=el.value.trim();});
   const sf=document.getElementById('edit-m-stimmfuehrer'); if(sf){ if(sf.checked) m.stimmfuehrer=true; else delete m.stimmfuehrer; }
+  const _be=document.getElementById('edit-m-beigetreten'); if(_be){ if(_be.value) m.beigetreten=_be.value; else delete m.beigetreten; }
   await saveMitgliederToFB();
   closeModal();
   renderMitglieder();
@@ -5540,6 +5595,85 @@ async function setStimme(key, voice){
   mitglieder[idx].stimme=neu;
   await dbFetch(DB+'/mitglieder/'+idx+'/stimme.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(neu||null)});
   renderStimmenZuweisen();
+}
+
+// ===== Länger abwesend (Pause) setzen / beenden =====
+function _prevDay(iso){ const d=new Date(iso+'T12:00:00'); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10); }
+async function setMemberPause(m, pause, datum, grund){
+  const idx=mitglieder.indexOf(m); if(idx<0) return;
+  let a=(Array.isArray(m.pausen)?m.pausen:[]).filter(Boolean).map(p=>Object.assign({},p));
+  datum=datum||localToday();
+  if(pause){
+    if(a.find(p=>p.von<=datum&&(!p.bis||p.bis>=datum))) return;      // läuft schon
+    a=a.filter(p=>!(p.von>datum&&!p.bis));                            // spätere offene Pause ersetzen
+    a.push({von:datum,bis:'',grund:grund||''});
+  } else {
+    const o=a.find(p=>p.von<=datum&&(!p.bis||p.bis>=datum)); if(!o) return;
+    if(o.von>=datum) a=a.filter(p=>p!==o); else o.bis=_prevDay(datum); // am Starttag beendet = nie begonnen; sonst gestern als Ende
+  }
+  if(a.length) m.pausen=a; else delete m.pausen;
+  await dbPut('mitglieder/'+idx+'/pausen', a.length?a:null).catch(e=>console.warn(e));
+}
+function renderPauseStatus(m){
+  const st=document.getElementById('edit-m-pause-status'), btn=document.getElementById('edit-m-pause-btn'); if(!st||!btn) return;
+  const p=memberPauseAt(m,localToday());
+  st.innerHTML=p?'<span class="pause-chip">⏸ Länger abwesend seit '+fmt(p.von)+(p.grund?' · '+esc(p.grund):'')+'</span> – zählt nicht bei Anwesenheit, Besetzung und Rückmeldungen.':'<span style="color:#27ae60">✅ Aktiv</span>';
+  const past=(Array.isArray(m.pausen)?m.pausen:[]).filter(x=>x&&x.bis&&x.bis<localToday());
+  if(past.length) st.innerHTML+='<div style="font-size:.74rem;color:#888;margin-top:3px">Frühere Pausen: '+past.map(x=>fmt(x.von)+' – '+fmt(x.bis)).join(', ')+'</div>';
+  btn.textContent=p?'▶ Ab diesem Datum wieder aktiv':'⏸ Ab diesem Datum länger abwesend';
+  btn.className='btn btn-sm '+(p?'btn-success':'btn-gray');
+}
+async function togglePauseInDialog(){
+  const id=document.getElementById('edit-m-id').value; const m=mitglieder.find(x=>(x.nr||x.id)==id); if(!m) return;
+  const datum=document.getElementById('edit-m-pause-datum').value||localToday();
+  const grund=(document.getElementById('edit-m-pause-grund').value||'').trim();
+  await setMemberPause(m, !memberPauseAt(m,datum), datum, grund);
+  renderPauseStatus(m); renderMitglieder(); try{ renderStimmenZuweisen(); }catch(e){}
+  showToast('Gespeichert','ok');
+}
+// ===== Abwesenheit (Urlaub o. ä.) für ein Mitglied als Admin eintragen =====
+// Gleiche Datenform wie die selbst eingetragene Abwesenheit: abwesenheit/<uid> = {name, periods:[{von,bis}]}.
+// Hat das Mitglied (noch) kein Konto, wird ein Ersatzschlüssel 'adm_<Mitgliedsnummer>' genutzt und der Name über den Namen zugeordnet.
+function _absKeyFor(m){ return m.uid || _memberUid(m) || ('adm_'+memberKey(m)); }
+function _absNameFor(m){ return (m.uid||_memberUid(m)) ? (m.username||memberName(m)) : memberName(m); } // ohne Konto: Klarname, damit die Zuordnung über den Namen klappt
+function renderAdminAbsences(m){
+  const el=document.getElementById('edit-m-abw-list'); if(!el||!m) return;
+  const key=_absKeyFor(m); const rec=(abwesenheiten||{})[key];
+  const today=localToday();
+  const per=_periodsOf(rec).map((p,i)=>({p,i})).filter(x=>x.p&&x.p.von&&x.p.bis&&x.p.bis>=today).sort((a,b)=>a.p.von.localeCompare(b.p.von));
+  el.innerHTML=per.length?per.map(x=>`<div style="display:flex;align-items:center;gap:8px;font-size:.84rem;padding:3px 0">🏖️ <span style="flex:1">${fmt(x.p.von)} – ${fmt(x.p.bis)}${x.p.von<=today?' <span class="pause-chip">aktiv</span>':''}</span><button class="btn btn-danger btn-sm" type="button" style="padding:3px 9px" onclick="adminDeleteAbsence(${x.i})">✕</button></div>`).join(''):'<div style="font-size:.8rem;color:#aaa">Keine kommende oder laufende Abwesenheit eingetragen.</div>';
+}
+function _dlgMember(){ const id=document.getElementById('edit-m-id').value; return mitglieder.find(x=>(x.nr||x.id)==id); }
+async function adminAddAbsence(){
+  if(!uiEdit('mitglieder')) return;
+  const m=_dlgMember(); if(!m) return;
+  const von=document.getElementById('edit-m-abw-von').value, bis=document.getElementById('edit-m-abw-bis').value||von;
+  if(!von){ alert('Bitte mindestens das Startdatum angeben.'); return; }
+  if(bis<von){ alert('Das Enddatum liegt vor dem Startdatum.'); return; }
+  const key=_absKeyFor(m);
+  const rec=(abwesenheiten||{})[key]||{name:_absNameFor(m),periods:[]};
+  const periods=_periodsOf(rec).filter(Boolean).slice();
+  periods.push({von,bis}); rec.periods=periods; if(!rec.name) rec.name=_absNameFor(m);
+  abwesenheiten[key]=rec;
+  try{ const r=await dbPut('abwesenheit/'+key, rec); if(r&&r.ok===false) throw new Error('HTTP '+r.status); showToast('Abwesenheit eingetragen','ok'); }
+  catch(e){ showToast('Speichern fehlgeschlagen','err'); }
+  document.getElementById('edit-m-abw-von').value=''; document.getElementById('edit-m-abw-bis').value='';
+  renderAdminAbsences(m); try{ renderStart(); renderProben(); }catch(e){}
+}
+async function adminDeleteAbsence(i){
+  if(!uiEdit('mitglieder')) return;
+  const m=_dlgMember(); if(!m) return; const key=_absKeyFor(m); const rec=(abwesenheiten||{})[key]; if(!rec) return;
+  if(!confirm('Diese Abwesenheit löschen?')) return;
+  const periods=_periodsOf(rec).filter(Boolean).slice(); periods.splice(i,1); rec.periods=periods;
+  try{ await dbPut('abwesenheit/'+key, rec); showToast('Gelöscht','ok'); }catch(e){ showToast('Löschen fehlgeschlagen','err'); }
+  renderAdminAbsences(m); try{ renderStart(); renderProben(); }catch(e){}
+}
+async function quickPause(key){
+  if(!uiEdit('mitglieder')) return;
+  const m=mitglieder.find(x=>memberKey(x)===key); if(!m) return;
+  if(isPausedNow(m)){ if(!confirm(memberName(m)+' ist wieder aktiv (ab heute)?')) return; await setMemberPause(m,false,localToday()); }
+  else { const g=prompt(memberName(m)+' länger abwesend setzen (ab heute).\n\nGrund (optional, z. B. Elternzeit):',''); if(g===null) return; await setMemberPause(m,true,localToday(),g.trim().slice(0,60)); }
+  renderMitglieder(); try{ renderStimmenZuweisen(); }catch(e){}
 }
 
 // Stimmführer*in festlegen/entfernen (direkt in der Stimmen-Liste; braucht eine zugewiesene Stimme)
@@ -5821,7 +5955,7 @@ async function doRegister() {
       } else {
         const maxNr=liste.reduce((mx,x)=>Math.max(mx,parseInt(x.nr)||0),0);
         const newId='m'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-        liste.push({ id:newId, nr:maxNr+1, uid:uid, vorname, nachname, geburtstag, email, handy:'', telefon:'', adresse:'', plz:'', stimme:'', username });
+        liste.push({ id:newId, nr:maxNr+1, uid:uid, beigetreten:localToday(), vorname, nachname, geburtstag, email, handy:'', telefon:'', adresse:'', plz:'', stimme:'', username });
         await dbFetch(DB+'/mitglieder.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(liste)});
       }
     }catch(e){ console.warn('Mitglied-Anlage', e); }
@@ -6098,7 +6232,7 @@ function findMemberForUser(u){
 async function createMemberFromUser(userId){
   const r=await dbFetch(DB+'/userprofiles/'+userId+'.json'); const u=r.ok?await r.json():null; if(!u) return;
   const maxNr=mitglieder.reduce((mx,x)=>Math.max(mx,parseInt(x.nr)||0),0);
-  const newM={ id:uid(), nr:maxNr+1, uid:userId,
+  const newM={ id:uid(), nr:maxNr+1, uid:userId, beigetreten:localToday(),
     vorname:u.vorname||'', nachname:u.nachname|| (u.vorname?'':(u.username||'')),
     email:u.email||'', geburtstag:u.geburtstag||'', handy:'', telefon:'', adresse:'', plz:'', stimme:'' };
   mitglieder.push(newM);
