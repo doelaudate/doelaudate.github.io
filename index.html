@@ -3284,13 +3284,18 @@ async function startHoerRecord(voice){
   if(!hasPermission('lieder')) return;
   if(_hActive) return;
   if(!navigator.mediaDevices || !window.MediaRecorder){ setHoerStatus('❌ Aufnahme wird auf diesem Gerät nicht unterstützt.','#e74c3c'); return; }
-  try{ _hStream=await navigator.mediaDevices.getUserMedia({audio:true}); }
-  catch(e){ setHoerStatus('❌ Mikrofon-Zugriff verweigert.','#e74c3c'); return; }
+  // Gesang: Handy-Sprachfilter aus (Rauschunterdrückung, Echo-Filter und Auto-Pegel verzerren Gesang und lassen Töne "pumpen")
+  try{ _hStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1,sampleRate:48000}}); }
+  catch(e){
+    if(e && (e.name==='NotAllowedError'||e.name==='SecurityError')){ setHoerStatus('❌ Mikrofon-Zugriff verweigert.','#e74c3c'); return; }
+    try{ _hStream=await navigator.mediaDevices.getUserMedia({audio:true}); }
+    catch(e2){ setHoerStatus('❌ Mikrofon-Zugriff verweigert.','#e74c3c'); return; }
+  }
   _hChunks=[];
-  let mime='audio/webm';
-  if(!MediaRecorder.isTypeSupported(mime)) mime = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
-  try{ _hMediaRec = mime ? new MediaRecorder(_hStream,{mimeType:mime}) : new MediaRecorder(_hStream); }
-  catch(e){ _hMediaRec = new MediaRecorder(_hStream); }
+  let mime=['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(t=>MediaRecorder.isTypeSupported(t))||'';
+  const recOpts=mime?{mimeType:mime,audioBitsPerSecond:192000}:{audioBitsPerSecond:192000};
+  try{ _hMediaRec = new MediaRecorder(_hStream,recOpts); }
+  catch(e){ try{ _hMediaRec = mime ? new MediaRecorder(_hStream,{mimeType:mime}) : new MediaRecorder(_hStream); }catch(e2){ _hMediaRec = new MediaRecorder(_hStream); } }
   _hMediaRec.ondataavailable=e=>{ if(e.data && e.data.size) _hChunks.push(e.data); };
   _hMediaRec.onstop=()=>uploadHoer(voice);
   _hActive=voice; _hMediaRec.start();
