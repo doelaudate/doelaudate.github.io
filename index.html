@@ -7658,6 +7658,33 @@ function renderGeburtstage(){
     if(later.length>8) html += `<div style="font-size:.78rem;color:#aaa;padding:4px 0">… und ${later.length-8} weitere</div>`;
   }
 
+  // Komplette Liste nach Monat (mit Alter, wenn das Geburtsjahr bekannt ist)
+  const MON=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  const byMonth=Array.from({length:12},()=>[]);
+  all.forEach(m=>{ const p=String(m.geburtstag).split('.'); const mo=parseInt(p[1])-1; if(mo>=0&&mo<12) byMonth[mo].push({m,d:parseInt(p[0])||0,y:p[2]!=null&&p[2]!==''?parseInt(p[2]):null}); });
+  const thisYear=today.getFullYear();
+  const fullYear=y=>y==null||isNaN(y)?null:(y<100?(y<=(thisYear%100)?2000+y:1900+y):y);
+  const nowMo=today.getMonth();
+  let listHtml='';
+  for(let i=0;i<12;i++){
+    const mo=(nowMo+i)%12, rows=byMonth[mo].sort((a,b)=>a.d-b.d||(a.m.nachname||'').localeCompare(b.m.nachname||'','de'));
+    if(!rows.length) continue;
+    listHtml+=`<div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:${mo===nowMo?'#1e8449':'#888'};margin:12px 0 5px">${MON[mo]} (${rows.length})</div>`;
+    listHtml+=rows.map(({m,d,y})=>{
+      const fy=fullYear(y), showY=canSeeMemberField('geburtstag',m);
+      const alter=(fy&&showY)?(m.daysUntil===0?thisYear-fy:(m.bdDate.getFullYear()-fy)):null;
+      const heute=m.daysUntil===0;
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;border-bottom:1px solid #f0f0f0;font-size:.85rem${heute?';background:#fef9e7;border-radius:6px':''}">
+        <span style="min-width:34px;font-weight:700;color:#2563b5">${d}.${mo+1}.</span>
+        <span style="flex:1"><span style="font-weight:600">${esc(m.vorname)} ${esc(m.nachname)}</span>${m.stimme?`<span style="color:#aaa;margin-left:6px;font-size:.75rem">${esc(m.stimme)}</span>`:''}${isPausedNow&&isPausedNow(m)?'<span style="color:#aaa;margin-left:6px;font-size:.72rem">⏸</span>':''}</span>
+        <span style="color:#777;font-size:.78rem">${heute?'🎂 heute':(alter?'wird '+alter:'')}</span>
+      </div>`;
+    }).join('');
+  }
+  if(listHtml) html+=`<details style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;font-size:.9rem;color:#2563b5;padding:6px 0">📅 Alle Geburtstage nach Monat (${all.length})</summary>${listHtml}<button class="btn-sm" style="margin-top:10px" onclick="window.print()">🖨️ Drucken</button></details>`;
+  const ohne=mitglieder.filter(m=>!m.geburtstag).length;
+  if(ohne) html+=`<div style="font-size:.76rem;color:#aaa;margin-top:8px">${ohne} Mitglied${ohne===1?'':'er'} ohne Geburtsdatum (nicht in der Liste).</div>`;
+
   el.innerHTML = html;
 }
 
