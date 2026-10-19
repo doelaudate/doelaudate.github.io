@@ -1,4 +1,4 @@
-const CACHE = 'chor-doelau-v7';
+const CACHE = 'chor-doelau-v8';
 const OFFLINE_FILES = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png', '/logo.png'];
 // Firebase-SDK (fest versioniert, ändert sich nie): ohne diese Skripte startet die App offline gar nicht.
 const SDK_FILES = [
@@ -41,7 +41,8 @@ self.addEventListener('fetch', e => {
     // Die App-Seite selbst: IMMER zuerst das Netz versuchen (neue Funktionen sofort sichtbar, kein Warten
     // auf den nächsten Öffnen-Zyklus). Nur bei fehlender Verbindung auf den Cache zurückfallen (Offline).
     e.respondWith(
-      fetch(req).then(res => {
+      // cache:'no-cache' = beim Server nachfragen, ob sich etwas geändert hat (GitHub Pages erlaubt sonst 10 Min. altes HTTP-Caching)
+      fetch(req, { cache: 'no-cache' }).then(res => {
         // Immer unter '/index.html' ablegen — sonst entstünde pro Query (?gast=…, ?x=…) ein eigener Eintrag
         if (res && res.status === 200 && res.type === 'basic') {
           caches.open(CACHE).then(cache => cache.put('/index.html', res.clone()));

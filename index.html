@@ -8622,7 +8622,7 @@ function myKey(){
 async function loadPinnwand(){ const d=await dbGet('pinnwand',{}); if(d!==undefined) pinnwand=d; }
 function renderPinnwand(){
   const card=document.getElementById('pinnwand-card'); if(!card) return;
-  const editor=canPin()&&editMode; // Eingabe, Löschen und „Gelesen von“ nur im Bearbeiten-Modus
+  const editor=canPin()&&adminMode&&editMode; // Eingabe, Löschen und „Gelesen von“ nur in der Admin-Ansicht mit Bearbeiten-Modus
   const entries=Object.entries(pinnwand||{}).map(([k,v])=>Object.assign({_key:k},v||{})).filter(x=>x&&x.text).sort((a,b)=>(b.ts||0)-(a.ts||0));
   if(!entries.length && !editor){ card.innerHTML=''; return; }
   // Eingabe nur auf Wunsch (Knopf „Ankündigen“ oben bzw. hier) – sonst nimmt das leere Feld ständig Platz weg
