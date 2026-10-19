@@ -515,6 +515,19 @@ html.mod-off-plakate [onclick*="showPage('plakate'"],html.mod-off-plakate [oncli
 html.mod-off-kommentare [onclick*="showPage('kommentare'"],html.mod-off-kommentare [onclick*="bnavMore('kommentare')"],
 html.mod-off-umfragen [onclick*="showPage('umfragen'"],html.mod-off-umfragen [onclick*="bnavMore('umfragen')"],html.mod-off-umfragen [onclick*="showPageByName('umfragen')"],
 html.mod-off-liedwuensche #ltab-wuensche,html.mod-off-geburtstage #t-btn-geburtstage{display:none!important}
+html.mod-off-organigramm [onclick*="showPage('organigramm'"],html.mod-off-organigramm [onclick*="bnavMore('organigramm')"]{display:none!important}
+.org-level{display:flex;flex-direction:column;align-items:center}
+.org-lbl{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#aaa;margin-bottom:8px}
+.org-row{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;width:100%}
+.org-box{flex:1 1 140px;max-width:230px;min-width:130px;background:#fff;border:1.5px solid var(--line);border-top:4px solid var(--oc,#2563b5);border-radius:12px;padding:10px 12px;text-align:center}
+.org-box h4{margin:0 0 6px;font-size:.88rem;color:var(--navy)}
+.org-p{font-size:.86rem;padding:2px 0;overflow-wrap:anywhere}
+.org-p small{color:var(--muted)}
+.org-conn{width:2px;height:20px;background:#c9d3e3;margin:6px auto}
+.org-ed{border:1.5px dashed var(--line);border-radius:12px;padding:10px;margin-bottom:12px}
+.org-ed .org-box{text-align:left;max-width:none}
+.org-chip{display:inline-flex;align-items:center;gap:4px;background:#eef3fa;border-radius:14px;padding:3px 4px 3px 10px;font-size:.8rem;margin:2px 4px 2px 0}
+.org-chip button{border:none;background:none;cursor:pointer;color:#888;font-size:.9rem;padding:0 4px;box-shadow:none}
 /* Handy: Antippen ohne Verzögerung/Doppeltipp-Zoom, Statusleiste (iPhone-App), Abstimm-Knöpfe, Aktionsreihen */
 a,button,input,select,summary,label,.stab,.mtab{touch-action:manipulation}
 html{-webkit-tap-highlight-color:transparent}
@@ -717,6 +730,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   <div class="mtab" onclick="showPage('termine',this)">📆 Termine</div>
   <div class="mtab" onclick="showPage('umfragen',this)">📊 Umfragen</div>
   <div class="mtab" onclick="showPage('mitglieder',this)">👥 Mitglieder</div>
+  <div class="mtab" onclick="showPage('organigramm',this)">🏛️ Organigramm</div>
   <div class="mtab" onclick="showPage('plakate',this)">📋 Plakate</div>
   <div class="mtab" onclick="showPage('kommentare',this)">💬 Kommentare <span id="k-count" style="background:rgba(41,128,185,.15);color:#2563b5;padding:1px 6px;border-radius:10px;font-size:.72rem;margin-left:3px"></span></div>
   <div class="mtab admin-tab admin-only" onclick="showPage('statistik',this)">📊 Auswertung</div>
@@ -1131,6 +1145,13 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   <div class="card" id="plakate-ranking-card" style="margin-top:12px;display:none">
     <div class="card-title">🏆 Wer verteilt wie viel?</div>
     <div id="plakate-ranking"></div>
+  </div>
+</div>
+
+<div class="page" id="p-organigramm">
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><div class="card-title" style="margin:0;flex:1">🏛️ Organigramm</div><span id="org-actions"></span></div>
+    <div id="org-chart"></div>
   </div>
 </div>
 
@@ -1650,7 +1671,6 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
       <div class="set-row"><div class="set-lbl">📆 Nächste Termine</div><label class="sw"><input type="checkbox" id="pf-card-termine" onchange="onPrefChange()"><i></i></label></div>
       <div class="set-row"><div class="set-lbl">📊 Offene Umfragen</div><label class="sw"><input type="checkbox" id="pf-card-umfragen" onchange="onPrefChange()"><i></i></label></div>
       <div class="set-row"><div class="set-lbl">🎂 Geburtstage der Woche</div><label class="sw"><input type="checkbox" id="pf-card-geburtstage" onchange="onPrefChange()"><i></i></label></div>
-      <div class="set-row"><div class="set-lbl">📍 Plakat-Standorte in der Nähe</div><label class="sw"><input type="checkbox" id="pf-card-plakate" onchange="onPrefChange()"><i></i></label></div>
       <div class="set-row"><div class="set-lbl">📊 Kachel „Mein Jahr"</div><label class="sw"><input type="checkbox" id="pf-card-meinjahr" onchange="onPrefChange()"><i></i></label></div>
       <div style="margin-top:8px"><button class="btn btn-gray btn-sm" onclick="resetPrefs()">↺ Alles zurücksetzen</button></div>
     </div>
@@ -1708,6 +1728,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     <div class="sheet-grid">
       <button class="sheet-link" onclick="bnavMore('umfragen')"><span class="si">📊</span>Umfragen</button>
       <button class="sheet-link" onclick="bnavMore('mitglieder')"><span class="si">👥</span>Mitglieder</button>
+      <button class="sheet-link" onclick="bnavMore('organigramm')"><span class="si">🏛️</span>Organigramm</button>
       <button class="sheet-link" onclick="bnavMore('plakate')"><span class="si">📋</span>Plakate</button>
       <button class="sheet-link" onclick="bnavMore('kommentare')"><span class="si">💬</span>Kommentare</button>
     </div>
@@ -2261,7 +2282,7 @@ try{ if(window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventLi
 
 // ===== PERSÖNLICHE EINSTELLUNGEN (nur auf diesem Gerät, localStorage) =====
 const PREF_KEY='chor_prefs';
-const PREF_CARDS=['probe','termine','umfragen','geburtstage','plakate','meinjahr'];
+const PREF_CARDS=['probe','termine','umfragen','geburtstage','meinjahr'];
 function getPrefs(){
   let p={}; try{ p=JSON.parse(localStorage.getItem(PREF_KEY)||'{}')||{}; }catch(e){}
   const cards={}; PREF_CARDS.forEach(k=>{ cards[k]=!(p.cards&&p.cards[k]===false); });
@@ -2604,6 +2625,7 @@ function showPage(id,tab){
   if(id==='einstellungen') renderEinstellungen();
   if(id==='lieder') renderLiedwuensche();
   if(id==='plakate') renderPlakate();
+  if(id==='organigramm') renderOrganigramm();
   syncBottomNav(id);
   try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){}
 }
@@ -2762,20 +2784,7 @@ function renderStart(){
 
   if(!prefCard('geburtstage')||!moduleOn('geburtstage')) html=html.slice(0,_m3);
 
-  // 📍 Plakat-Standorte in der Nähe (nur wenn eigener Wohnort geocodiert ist & es offene Standorte gibt)
-  const _m4=html.length;
-  const nearbyPlakate=(typeof nearestOpenPlakate==='function')?nearestOpenPlakate(3):[];
-  if(nearbyPlakate.length){
-    html+=`<div class="card" style="margin-top:12px;cursor:pointer" onclick="showPageByName('plakate')">
-      <div style="display:flex;justify-content:space-between;align-items:center"><span class="card-title" style="margin-bottom:0">📍 Plakat-Standorte in deiner Nähe</span><span style="font-size:.76rem;color:#2563b5">Alle ›</span></div>`;
-    html+=nearbyPlakate.map(x=>`<div style="border-top:1px solid var(--line);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;gap:8px;align-items:center">
-        <span style="font-size:.88rem;font-weight:600">${esc(x.p.ort)}</span>
-        <span style="font-size:.76rem;color:#1d4e96;font-weight:700;white-space:nowrap">~${x.dist.toFixed(1)} km</span>
-      </div>`).join('');
-    html+='</div>';
-  }
-  if(!prefCard('plakate')||!moduleOn('plakate')) html=html.slice(0,_m4);
-
+  // (Plakat-Standorte stehen nicht mehr auf der Startseite – nur noch unter Mehr → Plakate)
   el.innerHTML=html;
 }
 
@@ -4308,7 +4317,8 @@ const APP_MODULES=[
   {k:'kommentare',l:'💬 Kommentare',d:'Gemeinsame Kommentar-Wand'},
   {k:'umfragen',l:'📊 Umfragen & Terminfindung',d:'Abstimmungen und Terminfindung nach Doodle-Art'},
   {k:'liedwuensche',l:'🎁 Liedwünsche',d:'Mitglieder schlagen Lieder vor und schließen sich an'},
-  {k:'geburtstage',l:'🎂 Geburtstage',d:'Hinweis auf der Startseite und Geburtstagsliste'}
+  {k:'geburtstage',l:'🎂 Geburtstage',d:'Hinweis auf der Startseite und Geburtstagsliste'},
+  {k:'organigramm',l:'🏛️ Organigramm',d:'Wer macht was im Chor (Chorleitung, Vorstand, Stimmführung …)'}
 ];
 const APP_REGELN=[
   {k:'sichtbar_handy',l:'📱 Handy & Telefon sichtbar',d:'Rufnummern in der Mitgliederliste',def:true},
@@ -4329,7 +4339,7 @@ function applyModules(){
   const h=document.documentElement;
   APP_MODULES.forEach(m=>h.classList.toggle('mod-off-'+m.k,!moduleOn(m.k)));
   const act=document.querySelector('.page.active'); const id=act&&act.id.replace(/^p-/,'');
-  if(id && ['plakate','kommentare','umfragen'].includes(id) && !moduleOn(id)) showPage('start');
+  if(id && ['plakate','kommentare','umfragen','organigramm'].includes(id) && !moduleOn(id)) showPage('start');
 }
 // Darf das angemeldete Mitglied dieses Feld bei Mitglied m sehen? (Leitung/Mitglieder-Recht und eigener Eintrag: immer)
 function canSeeMemberField(f,m){
@@ -7741,6 +7751,98 @@ function renderGeburtstage(){
   el.innerHTML = html;
 }
 
+// ===== ORGANIGRAMM: Ebenen mit Kästen (Funktion + Personen). Daten: organigramm/{ebenen:[{label,boxen:[{id,titel,personen:["m:<Nr>"|Freitext],auto?:"sf:<Stimme>"}]}]}
+// Personen werden über die Mitglieds-Nr. verknüpft (Namensänderung wirkt automatisch); „auto“-Kästen füllen sich selbst mit den Stimmführer*innen.
+let organigramm=null, _orgEdit=false;
+const ORG_COLORS=['#1b3a6b','#2563b5','#27ae60','#e67e22','#8e44ad','#16a085'];
+const _orgArr=x=>Array.isArray(x)?x:(x&&typeof x==='object'?Object.values(x):[]);
+function orgNormalize(o){
+  return {ebenen:_orgArr(o&&o.ebenen).map(e=>({label:(e&&e.label)||'',boxen:_orgArr(e&&e.boxen).map(b=>({id:b.id||uid(),titel:b.titel||'',personen:_orgArr(b.personen),auto:b.auto||''}))}))};
+}
+function orgDefault(){
+  return {ebenen:[
+    {label:'Leitung',boxen:[{id:uid(),titel:'Chorleitung',personen:['Martin Wolff'],auto:''}]},
+    {label:'Stimmführung',boxen:SATB_VOICES.map(v=>({id:uid(),titel:'Stimmführung '+v,personen:[],auto:'sf:'+v}))}
+  ]};
+}
+function orgModel(){ return organigramm?orgNormalize(organigramm):orgDefault(); }
+function orgPersons(b){
+  const ms=mitglieder||[];
+  if(b.auto&&b.auto.indexOf('sf:')===0){
+    const v=b.auto.slice(3).toLowerCase();
+    return ms.filter(m=>m.stimmfuehrer&&String(m.stimme||'').toLowerCase()===v&&!isPausedNow(m)).map(m=>({n:memberName(m)}));
+  }
+  return (b.personen||[]).map(p=>{
+    if(String(p).indexOf('m:')===0){ const m=ms.find(x=>String(x.nr)===String(p).slice(2)); return m?{n:memberName(m),s:m.stimme||''}:null; }
+    return {n:String(p)};
+  }).filter(Boolean);
+}
+function renderOrganigramm(){
+  const el=document.getElementById('org-chart'); if(!el) return;
+  const admin=canPin();
+  const act=document.getElementById('org-actions');
+  if(act) act.innerHTML=admin?(_orgEdit
+    ?`<button class="btn btn-primary btn-sm" onclick="orgToggleEdit()">✓ Fertig</button>`
+    :`<button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="orgToggleEdit()">✏️ Bearbeiten</button>`):'';
+  if(!admin) _orgEdit=false;
+  const o=orgModel();
+  if(_orgEdit){ el.innerHTML=orgEditHtml(o); return; }
+  const levels=o.ebenen.map(e=>({label:e.label,boxen:e.boxen.map(b=>({b,ps:orgPersons(b)})).filter(x=>x.ps.length||(!x.b.auto&&x.b.titel))})).filter(l=>l.boxen.length);
+  if(!levels.length){ el.innerHTML='<div class="empty">Noch kein Organigramm angelegt.'+(admin?' Tippe oben auf „Bearbeiten“.':'')+'</div>'; return; }
+  el.innerHTML=levels.map((l,li)=>{
+    const col=ORG_COLORS[li%ORG_COLORS.length];
+    return (li?'<div class="org-conn"></div>':'')+`<div class="org-level">${l.label?`<div class="org-lbl">${esc(l.label)}</div>`:''}<div class="org-row">${l.boxen.map(({b,ps})=>`<div class="org-box" style="--oc:${col}"><h4>${esc(b.titel)}</h4>${ps.length?ps.map(p=>`<div class="org-p">${esc(p.n)}${p.s?` <small>· ${esc(p.s)}</small>`:''}</div>`).join(''):'<div class="org-p" style="color:#bbb">–</div>'}</div>`).join('')}</div></div>`;
+  }).join('')+(admin?'':'')+`<div style="text-align:center;margin-top:16px"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="window.print()">🖨️ Drucken</button></div>`;
+}
+function orgToggleEdit(){ _orgEdit=!_orgEdit; renderOrganigramm(); }
+function orgEditHtml(o){
+  const opts='<option value="">＋ Person hinzufügen …</option>'+[...(mitglieder||[])].sort((a,b)=>(a.nachname||'').localeCompare(b.nachname||'','de')).map(m=>`<option value="m:${esc(String(m.nr))}">${esc(m.nachname||'')}, ${esc(m.vorname||'')}</option>`).join('')+'<option value="__free">✎ Freitext (z. B. extern) …</option>';
+  const btn=(t,fn,extra)=>`<button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96;${extra||''}" onclick="${fn}">${t}</button>`;
+  let h='<div style="font-size:.8rem;color:#888;margin-bottom:10px">Ebenen von oben nach unten. Änderungen werden sofort gespeichert und sind für alle sichtbar.</div>';
+  h+=o.ebenen.map((e,li)=>`<div class="org-ed">
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+      <input class="fl-input" style="flex:1;margin:0" value="${esc(e.label)}" placeholder="Ebene (z. B. Vorstand)" maxlength="40" onchange="orgSetLabel(${li},this.value)">
+      ${btn('▲',`orgMoveLevel(${li},-1)`)}${btn('▼',`orgMoveLevel(${li},1)`)}${btn('🗑️',`orgDelLevel(${li})`)}
+    </div>
+    <div class="org-row" style="justify-content:stretch">${e.boxen.map((b,bi)=>`<div class="org-box" style="--oc:${ORG_COLORS[li%ORG_COLORS.length]}">
+      <input class="fl-input" style="margin:0 0 6px;font-weight:700" value="${esc(b.titel)}" placeholder="Funktion (z. B. Vorsitz)" maxlength="50" onchange="orgSetTitel(${li},${bi},this.value)">
+      ${b.auto?`<div style="font-size:.78rem;color:#888;margin-bottom:6px">🔄 füllt sich automatisch mit den Stimmführer*innen (${esc(b.auto.slice(3))})</div>`
+        :`<div>${(b.personen||[]).map((p,pi)=>{ const x=orgPersons({personen:[p]})[0]; return `<span class="org-chip">${esc(x?x.n:String(p))}<button aria-label="Entfernen" onclick="orgDelPerson(${li},${bi},${pi})">✕</button></span>`; }).join('')}</div>
+      <select class="fl-input" style="margin:6px 0 0;font-size:.82rem" onchange="orgAddPerson(${li},${bi},this)">${opts}</select>`}
+      <div style="margin-top:8px">${btn('Kasten löschen',`orgDelBox(${li},${bi})`,'font-size:.74rem')}</div>
+    </div>`).join('')}</div>
+    <div style="margin-top:8px">${btn('＋ Kasten',`orgAddBox(${li})`)}</div>
+  </div>`).join('');
+  h+=`<div style="display:flex;gap:8px;flex-wrap:wrap">${btn('＋ Neue Ebene','orgAddLevel()')}${btn('＋ Stimmführung (automatisch)','orgAddSfLevel()')}${organigramm?btn('↺ Zurücksetzen','orgReset()'):''}</div>`;
+  return h;
+}
+// Änderungen: erst Arbeitskopie anlegen (beim ersten Mal aus der Vorlage), dann speichern + neu zeichnen
+function _orgWork(){ organigramm=orgModel(); return organigramm; }
+async function orgSave(){
+  renderOrganigramm();
+  try{ await dbPut('organigramm',organigramm); }catch(e){ showToast('Speichern fehlgeschlagen','err'); }
+}
+function orgSetLabel(li,v){ _orgWork().ebenen[li].label=v.trim(); orgSave(); }
+function orgSetTitel(li,bi,v){ _orgWork().ebenen[li].boxen[bi].titel=v.trim(); orgSave(); }
+function orgMoveLevel(li,d){ const o=_orgWork(), j=li+d; if(j<0||j>=o.ebenen.length) return; [o.ebenen[li],o.ebenen[j]]=[o.ebenen[j],o.ebenen[li]]; orgSave(); }
+function orgDelLevel(li){ if(!confirm('Diese Ebene mit allen Kästen löschen?')) return; _orgWork().ebenen.splice(li,1); orgSave(); }
+function orgAddLevel(){ _orgWork().ebenen.push({label:'',boxen:[{id:uid(),titel:'',personen:[],auto:''}]}); orgSave(); }
+function orgAddSfLevel(){ _orgWork().ebenen.push({label:'Stimmführung',boxen:SATB_VOICES.map(v=>({id:uid(),titel:'Stimmführung '+v,personen:[],auto:'sf:'+v}))}); orgSave(); }
+function orgAddBox(li){ _orgWork().ebenen[li].boxen.push({id:uid(),titel:'',personen:[],auto:''}); orgSave(); }
+function orgDelBox(li,bi){ const o=_orgWork(); o.ebenen[li].boxen.splice(bi,1); if(!o.ebenen[li].boxen.length) o.ebenen.splice(li,1); orgSave(); }
+function orgDelPerson(li,bi,pi){ _orgWork().ebenen[li].boxen[bi].personen.splice(pi,1); orgSave(); }
+function orgAddPerson(li,bi,sel){
+  let v=sel.value; if(!v) return;
+  if(v==='__free'){ v=(prompt('Name der Person:')||'').trim(); if(!v){ sel.value=''; return; } }
+  const b=_orgWork().ebenen[li].boxen[bi]; if(!b.personen.includes(v)) b.personen.push(v);
+  orgSave();
+}
+async function orgReset(){
+  if(!confirm('Organigramm auf die Vorlage zurücksetzen? Eigene Einträge gehen verloren.')) return;
+  organigramm=null; renderOrganigramm();
+  try{ await dbDel('organigramm'); }catch(e){}
+}
+
 // ===== SETLISTE / ABLAUF EDIT =====
 // Item-Modell: {typ:'lied'|'moderation', text}. Alte Setlisten (Strings) werden normalisiert.
 function normSetliste(arr){
@@ -9031,6 +9133,7 @@ async function _loadAllImpl(){
     loadAufgaben(),
     loadTerminfindungen(),
     dbGet('settings/rueckblick',null).then(s=>{ if(s!==undefined) rueckblickSetting=s; }),
+    dbGet('organigramm',null).then(o=>{ if(o!==undefined) organigramm=o; }),
     loadUeben(),
     loadProbenotizen(),
     loadAppSettings(),
