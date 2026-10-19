@@ -346,7 +346,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .hero{margin:2px 0 12px}
 .hero-greet{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;color:var(--navy);line-height:1.15}
 .hero-date{font-size:.86rem;color:var(--muted);margin-top:3px;text-transform:capitalize}
-.qa-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:9px;margin-bottom:16px}
+.qa-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:9px;margin-bottom:16px}
 .qa{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:13px 6px;
   background:var(--card);border:1px solid rgba(20,40,80,.06);border-radius:var(--radius-sm);
   box-shadow:var(--shadow);cursor:pointer;font-size:.75rem;font-weight:600;color:var(--ink);
@@ -356,6 +356,25 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .qa-ic{font-size:1.5rem;line-height:1}
 .qa.qa-adm{background:linear-gradient(135deg,#fff6ec,#fdecdb);border-color:#f6d9bd;color:#a2600f}
 .qa.qa-adm:hover{border-color:#e67e22;color:#a2600f}
+/* Startseite: „Für dich offen“ */
+.todo-card{border-left:4px solid var(--primary)}
+.todo-n{display:inline-block;min-width:20px;padding:1px 7px;margin-left:6px;border-radius:10px;background:var(--primary);color:#fff;font-size:.72rem;font-weight:700;text-align:center;vertical-align:middle}
+.todo-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.card-title+.todo-row{border-top:0}
+.todo-link{cursor:pointer}
+.todo-main{flex:1;min-width:0}
+.todo-t{font-size:.92rem;font-weight:600;color:var(--navy);overflow-wrap:anywhere}
+.todo-s{font-size:.78rem;color:var(--muted);margin-top:2px}
+.todo-go{color:var(--primary);font-size:1.3rem;line-height:1}
+.todo-btns{display:flex;gap:6px;flex-shrink:0}
+.tb{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line);background:#fff;font-size:1.05rem;line-height:1;padding:0;cursor:pointer;box-shadow:none}
+.tb-ja:hover,.tb-ja:active{background:#d5f5e3;border-color:#27ae60}.tb-vl:hover,.tb-vl:active{background:#fef3d6;border-color:#f39c12}.tb-nein:hover,.tb-nein:active{background:#fdecea;border-color:#e74c3c}
+.todo-done{font-size:.84rem;color:#1a7a40;margin:0 2px 14px}
+.push-slim{padding:12px 16px;margin-bottom:12px}
+.pw-compose>summary{cursor:pointer;font-size:.84rem;font-weight:700;color:var(--primary);padding:4px 0;list-style:none}
+.pw-compose>summary::-webkit-details-marker{display:none}
+.pin-note{border-left:3px solid #e67e22;background:#fff8f1;border-radius:8px;padding:10px 12px;margin-top:8px}
+.card-title+.pin-note{margin-top:0}
 
 /* ---- Leerzustände mit mehr Ruhe ---- */
 .empty{text-align:center;padding:26px 16px;color:var(--muted);font-size:.9rem;line-height:1.5}
@@ -425,7 +444,15 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 .song-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .song-name{font-weight:700;font-size:.98rem;color:var(--ink);line-height:1.25;word-break:break-word}
 .song-meta{font-size:.76rem;color:var(--muted);margin-top:3px}
-.song-actions{display:flex;flex-wrap:wrap;gap:2px;margin-top:6px}
+.song-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px;margin-top:0}
+.song-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:2px}
+.song-row .song-meta{margin-top:0;flex:1;min-width:0}
+.stats-line{font-size:.8rem;color:var(--muted);margin:0 2px 12px}
+.stats-line b{color:var(--navy)}
+#saison-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-bottom:10px}
+#saison-tabs::-webkit-scrollbar{display:none}
+#saison-tabs .stab{flex:0 0 auto;white-space:nowrap}
+.stab-arch{margin-left:auto}
 .song-actions a,.song-actions button{min-width:42px;min-height:42px;display:inline-flex;align-items:center;justify-content:center;font-size:1.25rem!important;border-radius:10px;text-decoration:none;background:#f3f6fa!important;border:none;margin:2px 3px 2px 0;padding:0!important}
 .ueb-pill{border-radius:14px;padding:5px 11px;font-size:.78rem;cursor:pointer;font-weight:600}
 @media(max-width:640px){
@@ -692,10 +719,12 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
 <div class="content">
 
 <div class="page active" id="p-start">
+  <div id="start-head"></div>
+  <div id="todo-card"></div>
+  <div id="push-reminder-card"></div>
   <div id="pinnwand-card"></div>
   <div id="tf-pinned-card"></div>
   <div id="rueckblick-card"></div>
-  <div id="push-reminder-card"></div>
   <div id="start-content"></div>
 </div>
 
@@ -2604,8 +2633,8 @@ function probeRueckblickCard(){
   if(!n && !(canEdit && days<=10)) return '';
   if(n && days>21 && !canEdit) return '';
   const id=esc(p.id);
-  const view=n?`${n.gut?`<div style="font-size:.88rem;margin-top:6px">👍 ${esc(n.gut)}</div>`:''}${n.wdh?`<div style="font-size:.88rem;margin-top:5px">🔁 <strong>Nächstes Mal wiederholen:</strong> ${esc(n.wdh)}</div>`:''}`:'<div style="font-size:.82rem;color:#999;margin-top:5px">Noch kein Rückblick eingetragen.</div>';
-  const form=canEdit?`<details style="margin-top:8px"${n?'':' open'}><summary style="cursor:pointer;font-size:.8rem;color:#1d4e96;font-weight:600">${n?'✏️ Rückblick bearbeiten':'✍️ Wie lief die Probe?'}</summary>
+  const view=n?`${n.gut?`<div style="font-size:.88rem;margin-top:6px">👍 ${esc(n.gut)}</div>`:''}${n.wdh?`<div style="font-size:.88rem;margin-top:5px">🔁 <strong>Nächstes Mal wiederholen:</strong> ${esc(n.wdh)}</div>`:''}`:'';
+  const form=canEdit?`<details style="margin-top:8px"><summary style="cursor:pointer;font-size:.8rem;color:#1d4e96;font-weight:600">${n?'✏️ Rückblick bearbeiten':'✍️ Wie lief die Probe? (eintragen)'}</summary>
     <input class="fl-input" id="pr-gut-${id}" placeholder="👍 Was lief gut?" value="${esc(n&&n.gut||'')}" maxlength="200" style="margin:8px 0 6px;font-size:.84rem">
     <input class="fl-input" id="pr-wdh-${id}" placeholder="🔁 Was wiederholen wir nächstes Mal?" value="${esc(n&&n.wdh||'')}" maxlength="200" style="margin-bottom:6px;font-size:.84rem">
     <button class="btn btn-primary btn-sm" onclick="saveProbeRueckblick('${id}')">💾 Speichern</button></details>`:'';
@@ -2624,7 +2653,7 @@ async function saveProbeRueckblick(id){
 // START-ÜBERSICHT
 function renderStart(){
   try{ renderPinnwand(); }catch(e){}
-  try{ renderPinnedTerminfindung(); }catch(e){}
+  try{ renderTodo(); }catch(e){}
   try{ renderPushReminder(); }catch(e){}
   try{ renderRueckblickCard(); }catch(e){}
   const el=document.getElementById('start-content'); if(!el) return;
@@ -2637,16 +2666,15 @@ function renderStart(){
   const _gruss=_h<11?'Guten Morgen':_h<17?'Hallo':'Guten Abend';
   const _me=(typeof currentUser!=='undefined'&&currentUser)?(prettyName(getUserVoteName())||'').split(' ')[0]:'';
   const _heute=new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'});
-  html+=`<div class="hero"><div class="hero-greet">${_gruss}${_me?', '+esc(_me):''} 👋</div><div class="hero-date">${esc(_heute)}</div></div>`;
   const _qa=[
     `<button class="qa" onclick="openZusagen()"><span class="qa-ic">📆</span>Zu-/Absagen</button>`,
     `<button class="qa" onclick="openAbmelden()"><span class="qa-ic">🙋</span>Abmelden</button>`,
-    `<button class="qa" onclick="showPageByName('lieder')"><span class="qa-ic">🎵</span>Lieder</button>`,
     ...(prefCard('meinjahr')?[`<button class="qa" onclick="openMeinJahr()"><span class="qa-ic">📊</span>Mein Jahr</button>`]:[])
   ];
   if(isStimmfuehrer()) _qa.push(`<button class="qa" onclick="openMeineStimme()"><span class="qa-ic">🎚️</span>Meine Stimme</button>`);
-  if(canPin()) _qa.push(`<button class="qa qa-adm" onclick="document.getElementById('pw-text')&&document.getElementById('pw-text').focus();window.scrollTo({top:0,behavior:'smooth'})"><span class="qa-ic">📌</span>Ankündigen</button>`);
-  html+=`<div class="qa-row">${_qa.join('')}</div>`;
+  if(canPin()) _qa.push(`<button class="qa qa-adm" onclick="openPinnwandCompose()"><span class="qa-ic">📌</span>Ankündigen</button>`);
+  const _head=document.getElementById('start-head');
+  if(_head) _head.innerHTML=`<div class="hero"><div class="hero-greet">${_gruss}${_me?', '+esc(_me):''} 👋</div><div class="hero-date">${esc(_heute)}</div></div><div class="qa-row">${_qa.join('')}</div>`;
 
   html+=probeRueckblickCard();
 
@@ -2694,11 +2722,6 @@ function renderStart(){
           <div><strong>${TYP_IC[t.typ]||'📌'} ${esc(t.titel)}</strong><div style="font-size:.8rem;color:#777;margin-top:2px">${fmt(t.datum)}${t.datum_ende?' – '+fmt(t.datum_ende):''}${t.uhrzeit?' · '+esc(t.uhrzeit):''}</div>${infoOnly&&t.beschreibung?`<div style="font-size:.78rem;color:#888;margin-top:3px">${esc(t.beschreibung)}</div>`:''}</div>
           ${chip}
         </div>
-        ${(myName&&!mv&&!infoOnly)?`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
-          <button class="btn btn-sm" style="background:#27ae60;color:white" onclick="abstimmen('${t.id}','ja').then(()=>renderStart())">✅ Komme</button>
-          <button class="btn btn-sm" style="background:#e74c3c;color:white" onclick="abstimmen('${t.id}','nein').then(()=>renderStart())">❌ Komme nicht</button>
-          <button class="btn btn-sm" style="background:#f39c12;color:white" onclick="abstimmen('${t.id}','vielleicht').then(()=>renderStart())">❓ Vielleicht</button>
-        </div>`:''}
       </div>`;
     });
   } else html+='<div class="empty" style="padding:12px 0 4px">Keine anstehenden Termine.</div>';
@@ -2706,23 +2729,7 @@ function renderStart(){
 
   if(!prefCard('termine')) html=html.slice(0,_m1);
 
-  // Offene Umfragen
-  const _m2=html.length;
-  const offene=Object.entries(umfragen||{}).filter(([id,u])=>u&&!u.geschlossen);
-  if(offene.length){
-    html+='<div class="card" style="margin-top:12px;cursor:pointer" onclick="showPageByName(\'umfragen\')">';
-    html+='<div style="display:flex;justify-content:space-between;align-items:center"><span class="card-title" style="margin-bottom:0">📊 Offene Umfragen</span><span style="font-size:.76rem;color:#2563b5">Abstimmen ›</span></div>';
-    offene.slice(0,3).forEach(([id,u])=>{
-      const voted=myName&&u.votes&&u.votes[ufSafeKey(myName)];
-      html+=`<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;gap:8px;align-items:center">
-        <span style="font-size:.9rem;font-weight:600">${esc(u.frage)}</span>
-        ${voted?'<span style="font-size:.72rem;color:#1a7a40;white-space:nowrap">✓ abgestimmt</span>':'<span style="font-size:.72rem;color:#9a6b00;white-space:nowrap">noch offen</span>'}
-      </div>`;
-    });
-    html+='</div>';
-  }
-
-  if(!prefCard('umfragen')||!moduleOn('umfragen')) html=html.slice(0,_m2);
+  // (Offene Umfragen stehen jetzt oben in „Für dich offen“ – renderTodo)
 
   // 🎂 Geburtstage der nächsten 7 Tage
   const _m3=html.length;
@@ -2762,23 +2769,58 @@ function renderStart(){
   el.innerHTML=html;
 }
 
+// „Für dich offen“: alles, was von dir noch eine Antwort braucht, an einer Stelle (Termine, Terminfindung, Umfragen)
+function renderTodo(){
+  const card=document.getElementById('todo-card'); if(!card) return;
+  card.innerHTML='';
+  if(typeof currentUser==='undefined'||!currentUser) return;
+  const today=localToday(), myName=getUserVoteName(), myk=myKey();
+  if(!myName) return;
+  const rows=[];
+  if(prefCard('termine')){
+    const open=(termine||[]).filter(t=>((t.datum_ende||t.datum)>=today)&&t.startseite!==false&&!t.keineAbstimmung&&!((t.abstimmungen||{})[myName])).sort((a,b)=>a.datum.localeCompare(b.datum));
+    open.slice(0,4).forEach(t=>{
+      const ic={konzert:'🎵',fest:'🎪',chorlager:'🏕️',gottesdienst:'⛪',probe:'🎹',sonstiges:'📌'}[t.typ]||'📌';
+      rows.push(`<div class="todo-row"><div class="todo-main"><div class="todo-t">${ic} ${esc(t.titel)}</div><div class="todo-s">${fmt(t.datum)}${t.datum_ende?' – '+fmt(t.datum_ende):''}${t.uhrzeit?' · '+esc(t.uhrzeit):''}</div></div>
+        <div class="todo-btns"><button class="tb tb-ja" aria-label="Zusagen" onclick="abstimmen('${t.id}','ja').then(()=>renderStart())">✅</button><button class="tb tb-vl" aria-label="Vielleicht" onclick="abstimmen('${t.id}','vielleicht').then(()=>renderStart())">❓</button><button class="tb tb-nein" aria-label="Absagen" onclick="abstimmen('${t.id}','nein').then(()=>renderStart())">❌</button></div></div>`);
+    });
+    if(open.length>4) rows.push(`<div class="todo-row todo-link" onclick="openZusagen()"><div class="todo-main"><div class="todo-t" style="color:var(--primary)">+ ${open.length-4} weitere Termine beantworten ›</div></div></div>`);
+  }
+  if(moduleOn('umfragen')){
+    Object.entries(terminfindungen||{}).map(([k,v])=>Object.assign({_key:k},v||{})).filter(x=>x&&x.titel&&x.angepinnt&&!x.geschlossen&&!(x.stimmen&&x.stimmen[myk])).sort((a,b)=>(b.ts||0)-(a.ts||0)).forEach(p=>{
+      rows.push(`<div class="todo-row todo-link" onclick="showPageByName('umfragen')"><div class="todo-main"><div class="todo-t">🗓️ ${esc(p.titel)}</div><div class="todo-s">Terminfindung · bitte abstimmen</div></div><span class="todo-go">›</span></div>`);
+    });
+    if(prefCard('umfragen')) Object.entries(umfragen||{}).filter(([id,u])=>u&&!u.geschlossen&&!(u.votes&&u.votes[ufSafeKey(myName)])).slice(0,3).forEach(([id,u])=>{
+      rows.push(`<div class="todo-row todo-link" onclick="showPageByName('umfragen')"><div class="todo-main"><div class="todo-t">📊 ${esc(u.frage)}</div><div class="todo-s">Umfrage · bitte abstimmen</div></div><span class="todo-go">›</span></div>`);
+    });
+  }
+  card.innerHTML = rows.length
+    ? `<div class="card todo-card"><div class="card-title" style="margin-bottom:4px">Für dich offen <span class="todo-n">${rows.length}</span></div>${rows.join('')}</div>`
+    : `<div class="todo-done">✅ Alles beantwortet – danke!</div>`;
+}
+
 // LIEDER
 function renderStats(){
   if(!D)return;
   const all=D.seasons.flatMap(s=>(s.songs||[]).filter(x=>!x.archived));
   const never=all.filter(s=>!getStat(s.id).last).length;
   const fresh=all.filter(s=>{const d=dSince(getStat(s.id).last);return d!==null&&d<=14}).length;
-  document.getElementById('stats').innerHTML=`<div class="stat"><div class="stat-n">${all.length}</div><div class="stat-l">Lieder</div></div><div class="stat"><div class="stat-n" style="color:#27ae60">${fresh}</div><div class="stat-l">Frisch</div></div><div class="stat"><div class="stat-n" style="color:#e74c3c">${never}</div><div class="stat-l">Nie geprobt</div></div><div class="stat"><div class="stat-n">${(D.proben||[]).length}</div><div class="stat-l">Proben</div></div>`;
+  // Eine ruhige Zeile statt vier großer Kacheln – die Lieder selbst sollen oben im Blick sein
+  const st=document.getElementById('stats'); st.className='stats-line';
+  st.innerHTML=`<b>${all.length}</b> Lieder · <span style="color:#1a7a40"><b>${fresh}</b> frisch</span> · <span style="color:#c0392b"><b>${never}</b> nie geprobt</span> · <b>${(D.proben||[]).length}</b> Proben`;
 }
 function renderSaisonTabs(){
   if(!D)return;
   const admin=uiEdit('lieder');
   const archivCount=D.seasons.flatMap(s=>s.songs||[]).filter(x=>x.archived).length;
   const dnd=admin?' ondragover="event.preventDefault()"':'';
-  const sw=`<div style="display:flex;gap:6px;width:100%;margin-bottom:9px">
-    <button class="stab ${liederView==='aktiv'?'active':''}" style="flex:1;justify-content:center" onclick="setLiederView('aktiv')"${dnd}${admin?' ondrop="dropOnActive(event)"':''}>🎵 Aktiv</button>
-    <button class="stab ${liederView==='archiv'?'active':''}" style="flex:1;justify-content:center" onclick="setLiederView('archiv')"${dnd}${admin?' ondrop="dropOnArchive(event)"':''}>🗄️ Archiv${archivCount?` (${archivCount})`:''}</button>
-  </div>`;
+  // Aktiv/Archiv ist keine eigene Zeile mehr: im Archiv führt „← Aktiv“ zurück, in der Aktiv-Ansicht steht „Archiv“ am Ende der Leiste
+  const sw = liederView==='archiv'
+    ? `<button class="stab" onclick="setLiederView('aktiv')"${dnd}${admin?' ondrop="dropOnActive(event)"':''}>← Aktiv</button>`
+    : '';
+  const archChip = liederView==='aktiv'
+    ? `<button class="stab stab-arch" onclick="setLiederView('archiv')"${dnd}${admin?' ondrop="dropOnArchive(event)"':''}>🗄️ Archiv${archivCount?` (${archivCount})`:''}</button>`
+    : '';
   let seasons=D.seasons.map(s=>s);
   if(liederView==='aktiv'){ if(!admin) seasons=seasons.filter(s=>!s.hidden); }
   else { seasons=seasons.filter(s=>(s.songs||[]).some(x=>x.archived)); }
@@ -2798,7 +2840,7 @@ function renderSaisonTabs(){
     const drop=(admin && !isVirtual)?` ondragover="event.preventDefault()" ondrop="dropOnSeason(event,'${t.id}')"`:'';
     return `<button class="stab ${tc} ${aktiveSaison===t.id?'active':''}" style="${dim}" onclick="setSaison('${t.id}')"${drop}>${ic}${esc(t.label)}${eye}</button>`;
   }).join('');
-  document.getElementById('saison-tabs').innerHTML=sw+tabHtml;
+  document.getElementById('saison-tabs').innerHTML=sw+tabHtml+archChip;
 }
 function setSaison(id){aktiveSaison=id;renderLieder();}
 // Unter-Tabs der Lieder-Seite: Lieder | Wünsche
@@ -2968,7 +3010,8 @@ function renderLieder(){
   else songs.sort((a,b)=>a.count-b.count);
   const el=document.getElementById('lieder-list');if(!el)return;
   if(!songs.length){el.innerHTML='<div class="empty">'+(liederView==='archiv'?'Archiv ist leer.':'Keine Lieder vorhanden.')+'</div>';return;}
-  let html=uebenSummaryHtml()+liederheftButtonHtml(songs);
+  let html=uebenSummaryHtml();
+  const _heftBtn=liederheftButtonHtml(songs); // steht unter der Liste, nicht davor
   // Admin: ganze Saison ins Archiv / zurück (nur wenn eine konkrete, echte Saison gewählt ist — nicht bei
   // den virtuellen Sammel-Tabs "Alle"/"Aktuell", die keine einzelne Saison sind)
   if(admin && aktiveSaison!=='__all__' && aktiveSaison!=='__current__'){
@@ -2979,7 +3022,7 @@ function renderLieder(){
   }
   if(aktiveSaison==='__all__'||aktiveSaison==='__current__'){const seen=new Set();D.seasons.forEach(s=>{let ss=songs.filter(x=>x.seasonId===s.id);ss=ss.filter(x=>{const k=songKey(x);if(seen.has(k))return false;seen.add(k);return true;});if(!ss.length)return;const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'}[s.type]||'🎵';html+=`<div class="section-label">${ic} ${esc(s.name)}</div>`+buildTbl(ss);});}
   else html+=buildTbl(songs);
-  el.innerHTML=html;
+  el.innerHTML=html+_heftBtn;
 }
 function buildTbl(songs){
   const canEdit = uiEdit('lieder');
@@ -2998,7 +3041,7 @@ function buildTbl(songs){
     const startBtn = ((s.start&&Object.keys(s.start).length)||canEdit)?`<button onclick="openStartTone('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:1.05rem;padding:0 1px;${(s.start&&Object.keys(s.start).length)?'':'opacity:.4'}" title="Starttöne anhören">🎼</button>`:'';
     const cell = (openLink||uebenLink||hoerBtn||startBtn||editBtn||archBtn||moveBtn) ? [openLink,uebenLink,hoerBtn,startBtn,editBtn,moveBtn,archBtn].filter(Boolean).join(' ') : '—';
     if(_mob){
-      return `<div class="song-card"><div class="song-top"><div class="song-name">${esc(s.name)}</div><span style="white-space:nowrap;flex-shrink:0"><span class="dot" style="background:${dotC(s.last)}"></span><span class="badge" style="${bdgS(s.last)}">${bdgT(s.last)}</span></span></div><div class="song-meta">${s.last?'Zuletzt '+fmt(s.last)+' · ':''}${s.count}× geprobt</div>${uebenRowHtml(s)}${cell!=='—'?`<div class="song-actions">${cell}</div>`:''}</div>`;
+      return `<div class="song-card"><div class="song-top"><div class="song-name">${esc(s.name)}</div><span style="white-space:nowrap;flex-shrink:0"><span class="dot" style="background:${dotC(s.last)}"></span><span class="badge" style="${bdgS(s.last)}">${bdgT(s.last)}</span></span></div><div class="song-row"><div class="song-meta">${s.last?'Zuletzt '+fmt(s.last)+'<br>':''}${s.count}× geprobt</div>${cell!=='—'?`<div class="song-actions">${cell}</div>`:''}</div>${uebenRowHtml(s)}</div>`;
     }
     const dragAttr = canEdit?` draggable="true" ondragstart="dragSong(event,'${s.id}')" style="cursor:grab"`:'';
     return `<tr${dragAttr}><td><strong>${esc(s.name)}</strong>${uebenRowHtml(s)}</td><td>${fmt(s.last)}</td><td style="text-align:center;color:#666">${s.count}×</td><td><span class="dot" style="background:${dotC(s.last)}"></span><span class="badge" style="${bdgS(s.last)}">${bdgT(s.last)}</span></td><td style="text-align:center;white-space:nowrap">${cell}</td></tr>`;
@@ -3062,7 +3105,7 @@ function liederheftButtonHtml(songs){
   const seen=new Set();
   songs.forEach(s=>{ if(s&&s.pdf&&!s.archived&&!seen.has(s.pdf)){ seen.add(s.pdf); _heftIds.push(s.id); } });
   if(!_heftIds.length) return '';
-  return `<div style="margin-bottom:12px"><button class="btn btn-sm" style="background:#1b3a6b;color:#fff" onclick="makeLiederheft()">📖 Liederheft als PDF (${_heftIds.length} Lieder)</button> <span id="heft-msg" style="font-size:.78rem;color:#888;margin-left:6px"></span></div>`;
+  return `<div style="margin:16px 0 4px"><button class="btn btn-sm" style="background:#1b3a6b;color:#fff" onclick="makeLiederheft()">📖 Liederheft als PDF (${_heftIds.length} Lieder)</button> <span id="heft-msg" style="font-size:.78rem;color:#888;margin-left:6px"></span></div>`;
 }
 async function makeLiederheft(){
   if(_heftBusy || !_heftIds.length) return;
@@ -8182,12 +8225,10 @@ async function renderPushReminder(){
   if(Notification.permission==='denied'){
     let blockedDismissed=0; try{ blockedDismissed=parseInt(localStorage.getItem(PUSH_BLOCKED_KEY))||0; }catch(e){}
     if(Date.now()-blockedDismissed < 7*24*60*60*1000) return;
-    card.innerHTML=`<div class="card" style="border-top:3px solid #e67e22;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <div style="flex:1;min-width:180px">
-        <div style="font-weight:700;color:#c0620f;font-size:.92rem">🔕 Benachrichtigungen sind für diese Seite blockiert</div>
-        <div style="font-size:.82rem;color:#666;margin-top:2px">So kannst du das rückgängig machen: ${esc(pushBlockedInstructionsHtml())}</div>
-      </div>
-      <button class="btn btn-sm" style="background:#eef1f5;color:#666;flex-shrink:0" onclick="dismissPushBlockedHint()">Verstanden</button>
+    card.innerHTML=`<div class="card push-slim" style="border-left:4px solid #e67e22">
+      <div style="display:flex;align-items:center;gap:10px"><div style="flex:1;font-weight:600;color:#c0620f;font-size:.86rem">🔕 Benachrichtigungen sind blockiert</div>
+        <button class="btn btn-sm" style="background:#eef1f5;color:#666;flex-shrink:0" onclick="dismissPushBlockedHint()">Verstanden</button></div>
+      <details style="margin-top:6px"><summary style="cursor:pointer;font-size:.78rem;color:#1d4e96">So änderst du das</summary><div style="font-size:.8rem;color:#666;margin-top:4px">${esc(pushBlockedInstructionsHtml())}</div></details>
     </div>`;
     return;
   }
@@ -8197,12 +8238,10 @@ async function renderPushReminder(){
     const reg=await navigator.serviceWorker.ready;
     const sub=await reg.pushManager.getSubscription();
     if(sub) return; // schon aktiviert
-    card.innerHTML=`<div class="card" style="border-top:3px solid #2563b5;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <div style="flex:1;min-width:180px">
-        <div style="font-weight:700;color:#1b3a6b;font-size:.92rem">🔔 Benachrichtigungen aktivieren?</div>
-        <div style="font-size:.82rem;color:#666;margin-top:2px">Verpasse keine neuen Termine, Proben oder Ankündigungen mehr — auch wenn die App geschlossen ist.</div>
-      </div>
-      <div style="display:flex;gap:8px;flex-shrink:0">
+    card.innerHTML=`<div class="card push-slim" style="border-left:4px solid #2563b5">
+      <div style="font-weight:700;color:#1b3a6b;font-size:.9rem">🔔 Benachrichtigungen aktivieren?</div>
+      <div style="font-size:.8rem;color:#666;margin:2px 0 8px">Keine neuen Termine, Proben oder Ankündigungen mehr verpassen – auch bei geschlossener App.</div>
+      <div style="display:flex;gap:8px">
         <button class="btn btn-primary btn-sm" onclick="togglePush().then(renderPushReminder)">🔔 Aktivieren</button>
         <button class="btn btn-sm" style="background:#eef1f5;color:#666" onclick="dismissPushReminder()">Später</button>
       </div>
@@ -8446,32 +8485,43 @@ function renderPinnwand(){
   const editor=canPin();
   const entries=Object.entries(pinnwand||{}).map(([k,v])=>Object.assign({_key:k},v||{})).filter(x=>x&&x.text).sort((a,b)=>(b.ts||0)-(a.ts||0));
   if(!entries.length && !editor){ card.innerHTML=''; return; }
+  // Eingabe nur auf Wunsch (Knopf „Ankündigen“ oben bzw. hier) – sonst nimmt das leere Feld ständig Platz weg
+  const keepOpen=!!(document.getElementById('pw-compose')&&document.getElementById('pw-compose').open);
   const compose = editor ? `
-    <div style="margin-bottom:${entries.length?'12px':'0'}">
-      <textarea id="pw-text" class="fl-input" rows="2" placeholder="Neue Ankündigung an alle…" style="resize:vertical"></textarea>
+    <details id="pw-compose" class="pw-compose"${keepOpen?' open':''}><summary>＋ Neue Ankündigung</summary>
+      <textarea id="pw-text" class="fl-input" rows="2" placeholder="Neue Ankündigung an alle…" style="resize:vertical;margin-top:8px"></textarea>
       <div style="display:flex;justify-content:flex-end;margin-top:6px"><button class="btn btn-primary btn-sm" onclick="addPinnwand()">📌 Anpinnen</button></div>
-    </div>` : '';
+    </details>` : '';
   const myk=myKey();
-  const list=entries.map(e=>{
-    const gel=e.gelesen||{};
-    const gelNames=Object.values(gel).filter(Boolean);
+  const one=e=>{
+    const gelNames=Object.values(e.gelesen||{}).filter(Boolean);
     const cnt=gelNames.length;
-    const gelHtml = cnt
+    // Wer gelesen hat, sehen nur die Bearbeiter – für alle anderen ist es nur Rauschen
+    const gelHtml = !editor ? '' : (cnt
       ? `<details class="t-coll" style="margin-top:6px"><summary style="font-size:.74rem;color:#888">👁️ Gelesen von ${cnt}</summary><div style="font-size:.78rem;color:#777;padding-top:4px">${esc(gelNames.map(n=>prettyName(n)||n).join(', '))}</div></details>`
-      : `<div style="font-size:.74rem;color:#bbb;margin-top:6px">Noch nicht gelesen</div>`;
+      : `<div style="font-size:.74rem;color:#bbb;margin-top:6px">Noch nicht gelesen</div>`);
     const del = editor ? `<button class="btn btn-danger btn-sm" style="opacity:1;position:static;margin-left:auto;padding:2px 8px" onclick="deletePinnwand('${e._key}')">✕</button>` : '';
-    return `<div style="border-left:3px solid #e67e22;background:#fff8f1;border-radius:8px;padding:10px 12px;margin-bottom:8px">
+    return `<div class="pin-note">
       <div style="white-space:pre-wrap;font-size:.9rem;color:#333">${esc(e.text)}</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:.72rem;color:#a06020">📌 ${esc(prettyName(e.autor)||e.autor||'Chorleitung')} · ${e.ts?fmt(new Date(e.ts).toISOString().split('T')[0]):''}${del}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:.72rem;color:#a06020">${esc(prettyName(e.autor)||e.autor||'Chorleitung')} · ${e.ts?fmt(new Date(e.ts).toISOString().split('T')[0]):''}${del}</div>
       ${gelHtml}
     </div>`;
-  }).join('');
+  };
+  // Die zwei neuesten stehen offen da, ältere sind eingeklappt
+  const list=entries.slice(0,2).map(one).join('');
+  const older=entries.length>2?`<details class="t-coll" style="margin-top:8px"><summary style="font-size:.8rem;color:#a06020">Ältere Ankündigungen (${entries.length-2})</summary>${entries.slice(2).map(one).join('')}</details>`:'';
   card.innerHTML=`<div class="card" style="border-top:3px solid #e67e22">
-    <div class="card-title" style="color:#c0620f">📌 Ankündigungen</div>
-    ${compose}${list||(editor?'<div style="font-size:.82rem;color:#aaa">Noch keine Ankündigungen.</div>':'')}
+    <div class="card-title" style="color:#c0620f;margin-bottom:${entries.length?'10px':'6px'}">📌 Ankündigungen</div>
+    ${list||(editor?'<div style="font-size:.82rem;color:#aaa;margin-bottom:8px">Noch keine Ankündigungen.</div>':'')}${older}${compose?`<div style="margin-top:${entries.length?'10px':'0'}">${compose}</div>`:''}
   </div>`;
   // Still als „gelesen" markieren (nur eigene Kennung)
   if(myk){ entries.forEach(e=>{ if(!(e.gelesen&&e.gelesen[myk])) markPinnwandRead(e._key); }); }
+}
+function openPinnwandCompose(){
+  const d=document.getElementById('pw-compose'); if(!d) return;
+  d.open=true;
+  try{ d.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){}
+  const ta=document.getElementById('pw-text'); if(ta) setTimeout(()=>ta.focus(),250);
 }
 async function addPinnwand(){
   if(!canPin()){ showToast('Nur Admins können anpinnen','err'); return; }
@@ -8934,13 +8984,9 @@ function renderTerminfindung(){
 // Angepinnte, noch offene Terminfindungen ganz oben auf der Startseite — wie die Pinnwand, aber pro Umfrage
 // einzeln von einem Bearbeiter ausgewählt (tfTogglePin), damit direkt von dort abgestimmt werden kann.
 function renderPinnedTerminfindung(){
-  const card=document.getElementById('tf-pinned-card'); if(!card) return;
-  const editor=canUseEditMode();
-  const pinned=Object.entries(terminfindungen||{}).map(([k,v])=>Object.assign({_key:k},v||{})).filter(x=>x&&x.titel&&x.angepinnt&&!x.geschlossen).sort((a,b)=>(b.ts||0)-(a.ts||0));
-  card.innerHTML = pinned.length
-    ? `<div style="margin-bottom:12px"><div class="section-label" style="color:#c0620f">📌 Angepinnte Terminfindung</div>${pinned.map(p=>tfPollCardHtml(p,editor)).join('')}</div>`
-    : '';
-  if(myKey()){ pinned.forEach(p=>markTfSeen(p._key)); }
+  // Die Abstimmung selbst läuft auf der Umfragen-Seite; auf der Startseite steht nur noch eine Zeile in „Für dich offen“
+  const card=document.getElementById('tf-pinned-card'); if(card) card.innerHTML='';
+  try{ renderTodo(); }catch(e){}
 }
 
 // Ladevorgang: nur beim ERSTEN Laden der Vollbild-Ladebildschirm; spätere Aktualisierungen (Intervall,
