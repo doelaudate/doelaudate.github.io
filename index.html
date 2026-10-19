@@ -2522,6 +2522,7 @@ function setEditMode(on){
   if(typeof renderKommentare==='function') renderKommentare();
   if(typeof renderLiedwuensche==='function') renderLiedwuensche();
   if(typeof renderPlakate==='function') renderPlakate();
+  try{ renderStart(); renderOrganigramm(); renderTerminfindung(); }catch(e){}
   updateEditModeUI();
 }
 // Wer darf überhaupt bearbeiten? Voll-Admin ODER Nutzer mit Einzelrechten (aus dem Profil).
@@ -2659,7 +2660,7 @@ function probeRueckblickCard(){
   const p=allProbenSorted().find(x=>x.datum<=today); if(!p) return '';
   const days=(Date.now()-new Date(p.datum+'T12:00:00').getTime())/86400000;
   const n=probenotizen[p.id]||null;
-  const canEdit=hasPermission('proben');
+  const canEdit=hasPermission('proben')&&editMode;
   if(!n && !(canEdit && days<=10)) return '';
   if(n && days>21 && !canEdit) return '';
   const id=esc(p.id);
@@ -2704,7 +2705,7 @@ function renderStart(){
     ...(prefCard('meinjahr')?[`<button class="qa" onclick="openMeinJahr()"><span class="qa-ic">📊</span>Mein Jahr</button>`]:[])
   ];
   if(isStimmfuehrer()) _qa.push(`<button class="qa" onclick="openMeineStimme()"><span class="qa-ic">🎚️</span>Meine Stimme</button>`);
-  if(canPin()) _qa.push(`<button class="qa qa-adm" onclick="openPinnwandCompose()"><span class="qa-ic">📌</span>Ankündigen</button>`);
+  if(canPin()&&editMode) _qa.push(`<button class="qa qa-adm" onclick="openPinnwandCompose()"><span class="qa-ic">📌</span>Ankündigen</button>`);
   const _head=document.getElementById('start-head');
   if(_head) _head.innerHTML=`<div class="hero"><div class="hero-greet">${_gruss}${_me?', '+esc(_me):''} 👋</div><div class="hero-date">${esc(_heute)}</div></div><div class="qa-row">${_qa.join('')}</div>`;
 
@@ -7779,7 +7780,7 @@ function orgPersons(b){
 }
 function renderOrganigramm(){
   const el=document.getElementById('org-chart'); if(!el) return;
-  const admin=canPin();
+  const admin=canPin()&&editMode; // nur im Bearbeiten-Modus (wie überall sonst)
   const act=document.getElementById('org-actions');
   if(act) act.innerHTML=admin?(_orgEdit
     ?`<button class="btn btn-primary btn-sm" onclick="orgToggleEdit()">✓ Fertig</button>`
@@ -8594,7 +8595,7 @@ function myKey(){
 async function loadPinnwand(){ const d=await dbGet('pinnwand',{}); if(d!==undefined) pinnwand=d; }
 function renderPinnwand(){
   const card=document.getElementById('pinnwand-card'); if(!card) return;
-  const editor=canPin();
+  const editor=canPin()&&editMode; // Eingabe, Löschen und „Gelesen von“ nur im Bearbeiten-Modus
   const entries=Object.entries(pinnwand||{}).map(([k,v])=>Object.assign({_key:k},v||{})).filter(x=>x&&x.text).sort((a,b)=>(b.ts||0)-(a.ts||0));
   if(!entries.length && !editor){ card.innerHTML=''; return; }
   // Eingabe nur auf Wunsch (Knopf „Ankündigen“ oben bzw. hier) – sonst nimmt das leere Feld ständig Platz weg
@@ -9085,7 +9086,7 @@ function renderTerminfindung(){
   const el=document.getElementById('tf-list');
   const polls=Object.entries(terminfindungen||{}).map(([k,v])=>Object.assign({_key:k},v||{})).filter(x=>x&&x.titel).sort((a,b)=>(b.ts||0)-(a.ts||0));
   if(el){
-    const editor=canUseEditMode();
+    const editor=canUseEditMode()&&editMode;
     el.innerHTML = polls.length
       ? polls.map(p=>tfPollCardHtml(p,editor)).join('')
       : '<div class="empty">Noch keine Terminfindung.'+(editor?' Erstelle oben eine neue.':'')+'</div>';
