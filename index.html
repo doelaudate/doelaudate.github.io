@@ -371,6 +371,14 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .tb-ja:hover,.tb-ja:active{background:#d5f5e3;border-color:#27ae60}.tb-vl:hover,.tb-vl:active{background:#fef3d6;border-color:#f39c12}.tb-nein:hover,.tb-nein:active{background:#fdecea;border-color:#e74c3c}
 .todo-done{font-size:.84rem;color:#1a7a40;margin:0 2px 14px}
 .push-slim{padding:12px 16px;margin-bottom:12px}
+.rb-card{padding:12px 16px}
+.rb-card>summary{display:flex;align-items:center;gap:10px;cursor:pointer;list-style:none}
+.rb-card>summary::-webkit-details-marker{display:none}
+.rb-sum{flex:1;min-width:0}
+.rb-prev{font-size:.8rem;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rb-chev{color:var(--primary);font-size:1rem;transition:transform .15s}
+.rb-card[open] .rb-chev{transform:rotate(180deg)}
+.rb-card[open] .rb-prev{display:none}
 .pw-compose>summary{cursor:pointer;font-size:.84rem;font-weight:700;color:var(--primary);padding:4px 0;list-style:none}
 .pw-compose>summary::-webkit-details-marker{display:none}
 .pin-note{border-left:3px solid #e67e22;background:#fff8f1;border-radius:8px;padding:10px 12px;margin-top:8px}
@@ -2638,7 +2646,9 @@ function probeRueckblickCard(){
     <input class="fl-input" id="pr-gut-${id}" placeholder="👍 Was lief gut?" value="${esc(n&&n.gut||'')}" maxlength="200" style="margin:8px 0 6px;font-size:.84rem">
     <input class="fl-input" id="pr-wdh-${id}" placeholder="🔁 Was wiederholen wir nächstes Mal?" value="${esc(n&&n.wdh||'')}" maxlength="200" style="margin-bottom:6px;font-size:.84rem">
     <button class="btn btn-primary btn-sm" onclick="saveProbeRueckblick('${id}')">💾 Speichern</button></details>`:'';
-  return `<div class="card" style="margin-bottom:12px;border-left:4px solid #2563b5"><div class="card-title" style="margin-bottom:0">🔁 Rückblick letzte Probe · ${fmt(p.datum)}</div>${view}${form}</div>`;
+  // Eingeklappt: eine Zeile mit Titel + Vorschau, Details und Eingabe erst nach Antippen
+  const preview=n?(n.wdh?'🔁 '+n.wdh:(n.gut?'👍 '+n.gut:'')):(canEdit?'Noch nichts eingetragen':'');
+  return `<details class="card rb-card" style="margin-bottom:12px;border-left:4px solid #2563b5"><summary><div class="rb-sum"><div class="card-title" style="margin-bottom:0">🔁 Probe-Rückblick · ${fmt(p.datum).slice(0,6)}</div>${preview?`<div class="rb-prev">${esc(preview)}</div>`:''}</div><span class="rb-chev">▾</span></summary><div style="margin-top:6px">${view}${form}</div></details>`;
 }
 async function saveProbeRueckblick(id){
   if(!hasPermission('proben')) return;
