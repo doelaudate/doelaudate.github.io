@@ -515,7 +515,7 @@ html.mod-off-plakate [onclick*="showPage('plakate'"],html.mod-off-plakate [oncli
 html.mod-off-kommentare [onclick*="showPage('kommentare'"],html.mod-off-kommentare [onclick*="bnavMore('kommentare')"],
 html.mod-off-umfragen [onclick*="showPage('umfragen'"],html.mod-off-umfragen [onclick*="bnavMore('umfragen')"],html.mod-off-umfragen [onclick*="showPageByName('umfragen')"],
 html.mod-off-liedwuensche #ltab-wuensche,html.mod-off-geburtstage #t-btn-geburtstage{display:none!important}
-html.mod-off-organigramm [onclick*="showPage('organigramm'"],html.mod-off-organigramm [onclick*="bnavMore('organigramm')"]{display:none!important}
+html.mod-off-organigramm #mtab-organigramm,html.mod-off-organigramm [onclick*="showPage('organigramm'"],html.mod-off-organigramm [onclick*="bnavMore('organigramm')"]{display:none!important}
 .org-level{display:flex;flex-direction:column;align-items:center}
 .org-lbl{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#aaa;margin-bottom:8px}
 .org-row{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;width:100%}
@@ -526,6 +526,7 @@ html.mod-off-organigramm [onclick*="showPage('organigramm'"],html.mod-off-organi
 .org-conn{width:2px;height:20px;background:#c9d3e3;margin:6px auto}
 .org-ed{border:1.5px dashed var(--line);border-radius:12px;padding:10px;margin-bottom:12px}
 .org-ed .org-box{text-align:left;max-width:none}
+.org-post{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px}
 .org-chip{display:inline-flex;align-items:center;gap:4px;background:#eef3fa;border-radius:14px;padding:3px 4px 3px 10px;font-size:.8rem;margin:2px 4px 2px 0}
 .org-chip button{border:none;background:none;cursor:pointer;color:#888;font-size:.9rem;padding:0 4px;box-shadow:none}
 /* Handy: Antippen ohne Verzögerung/Doppeltipp-Zoom, Statusleiste (iPhone-App), Abstimm-Knöpfe, Aktionsreihen */
@@ -730,7 +731,6 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   <div class="mtab" onclick="showPage('termine',this)">📆 Termine</div>
   <div class="mtab" onclick="showPage('umfragen',this)">📊 Umfragen</div>
   <div class="mtab" onclick="showPage('mitglieder',this)">👥 Mitglieder</div>
-  <div class="mtab" onclick="showPage('organigramm',this)">🏛️ Organigramm</div>
   <div class="mtab" onclick="showPage('plakate',this)">📋 Plakate</div>
   <div class="mtab" onclick="showPage('kommentare',this)">💬 Kommentare <span id="k-count" style="background:rgba(41,128,185,.15);color:#2563b5;padding:1px 6px;border-radius:10px;font-size:.72rem;margin-left:3px"></span></div>
   <div class="mtab admin-tab admin-only" onclick="showPage('statistik',this)">📊 Auswertung</div>
@@ -961,6 +961,13 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     <button id="mtab-mitglieder" class="stab active" onclick="setMitgliederTab('mitglieder')">👥 Mitglieder</button>
     <button id="mtab-beitraege" class="stab" style="display:none" onclick="setMitgliederTab('beitraege')">💶 Beiträge</button>
     <button id="mtab-kasse" class="stab" onclick="setMitgliederTab('kasse')">💰 Chorkasse</button>
+    <button id="mtab-organigramm" class="stab" onclick="setMitgliederTab('organigramm')">🏛️ Organigramm</button>
+  </div>
+  <div id="mv-organigramm" style="display:none">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><div class="card-title" style="margin:0;flex:1">🏛️ Organigramm</div><span id="org-actions"></span></div>
+      <div id="org-chart"></div>
+    </div>
   </div>
   <div id="mv-mitglieder">
   <div class="admin-section admin-only" data-perm="mitglieder">
@@ -1148,12 +1155,6 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   </div>
 </div>
 
-<div class="page" id="p-organigramm">
-  <div class="card">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><div class="card-title" style="margin:0;flex:1">🏛️ Organigramm</div><span id="org-actions"></span></div>
-    <div id="org-chart"></div>
-  </div>
-</div>
 
 <div class="page" id="p-kommentare">
   <div class="card k-form-wrap">
@@ -1476,6 +1477,13 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
       <div style="font-size:.74rem;color:#999;margin-top:8px">Hinweis: Der Ablauf sperrt den Link. Wer ein PDF schon heruntergeladen hat, behält seine Kopie — das lässt sich technisch nicht verhindern.</div>
     </div>
     </div>
+    <div class="konsole-pane" id="kp-organigramm">
+    <div class="konsole-section">
+      <div class="konsole-title">👔 Organigramm verwalten</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:12px">Lege hier Ebenen und Posten fest (z. B. Orgateam, Notenwart) und weise Personen zu. Nur Admins sehen diese Verwaltung. Alle Mitglieder sehen das Ergebnis unter <strong>Mitglieder → Organigramm</strong>. Änderungen werden sofort gespeichert.</div>
+      <div id="org-admin"></div>
+    </div>
+    </div>
     <div class="konsole-pane" id="kp-stimmen">
     <div class="konsole-section">
       <div class="konsole-title">🎚️ Stimmen zuweisen (S/A/T/B)</div>
@@ -1497,6 +1505,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
       <button class="km" data-kp="daten" onclick="konsoleNav('daten')">💾 Daten &amp; Backup</button>
       <button class="km" data-kp="sicherheit" onclick="konsoleNav('sicherheit')">🔑 Sicherheit</button>
       <button class="km" data-kp="benutzer" onclick="konsoleNav('benutzer')">👥 Benutzer</button>
+      <button class="km" data-kp="organigramm" onclick="konsoleNav('organigramm')">👔 Organigramm</button>
       <button class="km" data-kp="stimmen" onclick="konsoleNav('stimmen')">🎚️ Stimmen</button>
       <button class="km" data-kp="gast" onclick="konsoleNav('gast')">🎫 Gast-Noten</button>
     </div>
@@ -1728,7 +1737,6 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     <div class="sheet-grid">
       <button class="sheet-link" onclick="bnavMore('umfragen')"><span class="si">📊</span>Umfragen</button>
       <button class="sheet-link" onclick="bnavMore('mitglieder')"><span class="si">👥</span>Mitglieder</button>
-      <button class="sheet-link" onclick="bnavMore('organigramm')"><span class="si">🏛️</span>Organigramm</button>
       <button class="sheet-link" onclick="bnavMore('plakate')"><span class="si">📋</span>Plakate</button>
       <button class="sheet-link" onclick="bnavMore('kommentare')"><span class="si">💬</span>Kommentare</button>
     </div>
@@ -2612,6 +2620,7 @@ function applyAdminMode(){
 
 // PAGE
 function showPage(id,tab){
+  if(id==='organigramm'){ showPage('mitglieder', tab); setMitgliederTab('organigramm'); return; } // Organigramm ist jetzt Unter-Reiter der Mitglieder
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.mtab').forEach(t=>t.classList.remove('active'));
   document.getElementById('p-'+id).classList.add('active');
@@ -2626,7 +2635,6 @@ function showPage(id,tab){
   if(id==='einstellungen') renderEinstellungen();
   if(id==='lieder') renderLiedwuensche();
   if(id==='plakate') renderPlakate();
-  if(id==='organigramm') renderOrganigramm();
   syncBottomNav(id);
   try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){}
 }
@@ -3829,14 +3837,16 @@ function applyBeitragAccess(){
 // Unter-Tabs auf der Mitglieder-Seite (Mitglieder / Beiträge / Chorkasse)
 function setMitgliederTab(which){
   if(which==='beitraege' && !isBeitragOwner()) which='mitglieder';   // Zugriffsschutz
-  const views={mitglieder:'mv-mitglieder', beitraege:'mv-beitraege', kasse:'mv-kasse'};
-  const tabs={mitglieder:'mtab-mitglieder', beitraege:'mtab-beitraege', kasse:'mtab-kasse'};
+  if(which==='organigramm' && !moduleOn('organigramm')) which='mitglieder';
+  const views={mitglieder:'mv-mitglieder', beitraege:'mv-beitraege', kasse:'mv-kasse', organigramm:'mv-organigramm'};
+  const tabs={mitglieder:'mtab-mitglieder', beitraege:'mtab-beitraege', kasse:'mtab-kasse', organigramm:'mtab-organigramm'};
   Object.keys(views).forEach(k=>{
     const v=document.getElementById(views[k]); if(v) v.style.display = (k===which)?'':'none';
     const t=document.getElementById(tabs[k]); if(t) t.classList.toggle('active', k===which);
   });
   if(which==='beitraege') renderBeitraege();
   else if(which==='kasse') renderKasse();
+  else if(which==='organigramm') renderOrganigramm();
   else renderMitglieder();
 }
 function setBeitragJahr(delta){ beitragJahr+=delta; renderBeitraege(); }
@@ -4340,7 +4350,8 @@ function applyModules(){
   const h=document.documentElement;
   APP_MODULES.forEach(m=>h.classList.toggle('mod-off-'+m.k,!moduleOn(m.k)));
   const act=document.querySelector('.page.active'); const id=act&&act.id.replace(/^p-/,'');
-  if(id && ['plakate','kommentare','umfragen','organigramm'].includes(id) && !moduleOn(id)) showPage('start');
+  if(id && ['plakate','kommentare','umfragen'].includes(id) && !moduleOn(id)) showPage('start');
+  if(!moduleOn('organigramm')){ const ov=document.getElementById('mv-organigramm'); if(ov && ov.style.display!=='none') setMitgliederTab('mitglieder'); }
 }
 // Darf das angemeldete Mitglied dieses Feld bei Mitglied m sehen? (Leitung/Mitglieder-Recht und eigener Eintrag: immer)
 function canSeeMemberField(f,m){
@@ -5529,6 +5540,7 @@ function konsoleNav(id){
     }
   }catch(e){}
   if(id==='gast') renderGastAdmin();
+  if(id==='organigramm') renderOrgAdmin();
   if(id==='datenpflege') renderDatenpflege();
   if(id==='chor'||id==='module') renderAppSettings();
 }
@@ -7754,7 +7766,7 @@ function renderGeburtstage(){
 
 // ===== ORGANIGRAMM: Ebenen mit Kästen (Funktion + Personen). Daten: organigramm/{ebenen:[{label,boxen:[{id,titel,personen:["m:<Nr>"|Freitext],auto?:"sf:<Stimme>"}]}]}
 // Personen werden über die Mitglieds-Nr. verknüpft (Namensänderung wirkt automatisch); „auto“-Kästen füllen sich selbst mit den Stimmführer*innen.
-let organigramm=null, _orgEdit=false;
+let organigramm=null;
 const ORG_COLORS=['#1b3a6b','#2563b5','#27ae60','#e67e22','#8e44ad','#16a085'];
 const _orgArr=x=>Array.isArray(x)?x:(x&&typeof x==='object'?Object.values(x):[]);
 function orgNormalize(o){
@@ -7780,67 +7792,82 @@ function orgPersons(b){
 }
 function renderOrganigramm(){
   const el=document.getElementById('org-chart'); if(!el) return;
-  const admin=canPin()&&editMode; // nur im Bearbeiten-Modus (wie überall sonst)
+  // Bearbeitet wird nur von Admins in der Konsole (Organigramm). Hier steht nur eine Abkürzung – und nur im Bearbeiten-Modus.
   const act=document.getElementById('org-actions');
-  if(act) act.innerHTML=admin?(_orgEdit
-    ?`<button class="btn btn-primary btn-sm" onclick="orgToggleEdit()">✓ Fertig</button>`
-    :`<button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="orgToggleEdit()">✏️ Bearbeiten</button>`):'';
-  if(!admin) _orgEdit=false;
+  if(act) act.innerHTML=(canPin()&&editMode)?`<button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="orgOpenAdmin()">⚙️ Verwalten</button>`:'';
   const o=orgModel();
-  if(_orgEdit){ el.innerHTML=orgEditHtml(o); return; }
   const levels=o.ebenen.map(e=>({label:e.label,boxen:e.boxen.map(b=>({b,ps:orgPersons(b)})).filter(x=>x.ps.length||(!x.b.auto&&x.b.titel))})).filter(l=>l.boxen.length);
-  if(!levels.length){ el.innerHTML='<div class="empty">Noch kein Organigramm angelegt.'+(admin?' Tippe oben auf „Bearbeiten“.':'')+'</div>'; return; }
+  if(!levels.length){ el.innerHTML='<div class="empty">Noch kein Organigramm angelegt.</div>'; return; }
   el.innerHTML=levels.map((l,li)=>{
     const col=ORG_COLORS[li%ORG_COLORS.length];
     return (li?'<div class="org-conn"></div>':'')+`<div class="org-level">${l.label?`<div class="org-lbl">${esc(l.label)}</div>`:''}<div class="org-row">${l.boxen.map(({b,ps})=>`<div class="org-box" style="--oc:${col}"><h4>${esc(b.titel)}</h4>${ps.length?ps.map(p=>`<div class="org-p">${esc(p.n)}${p.s?` <small>· ${esc(p.s)}</small>`:''}</div>`).join(''):'<div class="org-p" style="color:#bbb">–</div>'}</div>`).join('')}</div></div>`;
-  }).join('')+(admin?'':'')+`<div style="text-align:center;margin-top:16px"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="window.print()">🖨️ Drucken</button></div>`;
+  }).join('')+`<div style="text-align:center;margin-top:16px"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="window.print()">🖨️ Drucken</button></div>`;
 }
-function orgToggleEdit(){ _orgEdit=!_orgEdit; renderOrganigramm(); }
-function orgEditHtml(o){
+function orgOpenAdmin(){ showPage('konsole'); setTimeout(()=>konsoleNav('organigramm'),60); }
+
+// ----- Verwaltung (Konsole → Organigramm, nur Admins) -----
+function renderOrgAdmin(){
+  const el=document.getElementById('org-admin'); if(!el) return;
+  el.innerHTML=canPin()?orgAdminHtml(orgModel()):'';
+}
+function orgAdminHtml(o){
   const opts='<option value="">＋ Person hinzufügen …</option>'+[...(mitglieder||[])].sort((a,b)=>(a.nachname||'').localeCompare(b.nachname||'','de')).map(m=>`<option value="m:${esc(String(m.nr))}">${esc(m.nachname||'')}, ${esc(m.vorname||'')}</option>`).join('')+'<option value="__free">✎ Freitext (z. B. extern) …</option>';
+  const lvlOpts=cur=>o.ebenen.map((e,i)=>`<option value="${i}"${i===cur?' selected':''}>${esc(e.label||('Ebene '+(i+1)))}</option>`).join('');
   const btn=(t,fn,extra)=>`<button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96;${extra||''}" onclick="${fn}">${t}</button>`;
-  let h='<div style="font-size:.8rem;color:#888;margin-bottom:10px">Ebenen von oben nach unten. Änderungen werden sofort gespeichert und sind für alle sichtbar.</div>';
+  let h='';
   h+=o.ebenen.map((e,li)=>`<div class="org-ed">
-    <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
-      <input class="fl-input" style="flex:1;margin:0" value="${esc(e.label)}" placeholder="Ebene (z. B. Vorstand)" maxlength="40" onchange="orgSetLabel(${li},this.value)">
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px">
+      <input class="fl-input" style="flex:1;margin:0;font-weight:700" value="${esc(e.label)}" placeholder="Ebene (z. B. Vorstand)" maxlength="40" onchange="orgSetLabel(${li},this.value)">
       ${btn('▲',`orgMoveLevel(${li},-1)`)}${btn('▼',`orgMoveLevel(${li},1)`)}${btn('🗑️',`orgDelLevel(${li})`)}
     </div>
-    <div class="org-row" style="justify-content:stretch">${e.boxen.map((b,bi)=>`<div class="org-box" style="--oc:${ORG_COLORS[li%ORG_COLORS.length]}">
-      <input class="fl-input" style="margin:0 0 6px;font-weight:700" value="${esc(b.titel)}" placeholder="Funktion (z. B. Vorsitz)" maxlength="50" onchange="orgSetTitel(${li},${bi},this.value)">
-      ${b.auto?`<div style="font-size:.78rem;color:#888;margin-bottom:6px">🔄 füllt sich automatisch mit den Stimmführer*innen (${esc(b.auto.slice(3))})</div>`
-        :`<div>${(b.personen||[]).map((p,pi)=>{ const x=orgPersons({personen:[p]})[0]; return `<span class="org-chip">${esc(x?x.n:String(p))}<button aria-label="Entfernen" onclick="orgDelPerson(${li},${bi},${pi})">✕</button></span>`; }).join('')}</div>
-      <select class="fl-input" style="margin:6px 0 0;font-size:.82rem" onchange="orgAddPerson(${li},${bi},this)">${opts}</select>`}
-      <div style="margin-top:8px">${btn('Kasten löschen',`orgDelBox(${li},${bi})`,'font-size:.74rem')}</div>
-    </div>`).join('')}</div>
-    <div style="margin-top:8px">${btn('＋ Kasten',`orgAddBox(${li})`)}</div>
+    ${e.boxen.map((b,bi)=>`<div class="org-post">
+      <div style="display:flex;gap:6px;align-items:center">
+        <input class="fl-input" style="flex:1;margin:0;font-weight:600" value="${esc(b.titel)}" placeholder="Posten (z. B. Notenwart)" maxlength="50" onchange="orgSetTitel(${li},${bi},this.value)">
+        ${btn('✕',`orgDelBox(${li},${bi})`)}
+      </div>
+      ${b.auto?`<div style="font-size:.78rem;color:#888;margin-top:8px">🔄 füllt sich automatisch mit den Stimmführer*innen (${esc(b.auto.slice(3))}) – festgelegt unter Konsole → Stimmen</div>`
+        :`<div style="margin-top:8px">${(b.personen||[]).map((p,pi)=>{ const x=orgPersons({personen:[p]})[0]; return `<span class="org-chip">${esc(x?x.n:String(p))}<button aria-label="Entfernen" onclick="orgDelPerson(${li},${bi},${pi})">✕</button></span>`; }).join('')||'<span style="font-size:.8rem;color:#bbb">Noch niemand eingetragen</span>'}</div>
+      <select class="fl-input" style="margin:8px 0 0;font-size:.84rem" onchange="orgAddPerson(${li},${bi},this)">${opts}</select>`}
+      ${o.ebenen.length>1?`<div style="margin-top:8px;font-size:.78rem;color:#888">Ebene: <select style="font-size:.8rem;padding:3px 6px;border:1px solid #ddd;border-radius:6px" onchange="orgMoveBox(${li},${bi},this.value)">${lvlOpts(li)}</select></div>`:''}
+    </div>`).join('')}
+    <div style="margin-top:6px">${btn('＋ Posten in dieser Ebene',`orgAddBox(${li})`)}</div>
   </div>`).join('');
-  h+=`<div style="display:flex;gap:8px;flex-wrap:wrap">${btn('＋ Neue Ebene','orgAddLevel()')}${btn('＋ Stimmführung (automatisch)','orgAddSfLevel()')}${organigramm?btn('↺ Zurücksetzen','orgReset()'):''}</div>`;
+  h+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">${btn('＋ Neue Ebene','orgAddLevel()')}${btn('＋ Stimmführung (automatisch)','orgAddSfLevel()')}${organigramm?btn('↺ Auf Vorlage zurücksetzen','orgReset()'):''}</div>`;
   return h;
 }
-// Änderungen: erst Arbeitskopie anlegen (beim ersten Mal aus der Vorlage), dann speichern + neu zeichnen
+// Änderungen: nur Admins; erst Arbeitskopie anlegen (beim ersten Mal aus der Vorlage), dann speichern + neu zeichnen
 function _orgWork(){ organigramm=orgModel(); return organigramm; }
+function orgMut(fn){
+  if(!canPin()){ showToast('Nur Admins können das Organigramm ändern','err'); return; }
+  fn(_orgWork()); orgSave();
+}
 async function orgSave(){
-  renderOrganigramm();
+  try{ renderOrganigramm(); renderOrgAdmin(); }catch(e){}
   try{ await dbPut('organigramm',organigramm); }catch(e){ showToast('Speichern fehlgeschlagen','err'); }
 }
-function orgSetLabel(li,v){ _orgWork().ebenen[li].label=v.trim(); orgSave(); }
-function orgSetTitel(li,bi,v){ _orgWork().ebenen[li].boxen[bi].titel=v.trim(); orgSave(); }
-function orgMoveLevel(li,d){ const o=_orgWork(), j=li+d; if(j<0||j>=o.ebenen.length) return; [o.ebenen[li],o.ebenen[j]]=[o.ebenen[j],o.ebenen[li]]; orgSave(); }
-function orgDelLevel(li){ if(!confirm('Diese Ebene mit allen Kästen löschen?')) return; _orgWork().ebenen.splice(li,1); orgSave(); }
-function orgAddLevel(){ _orgWork().ebenen.push({label:'',boxen:[{id:uid(),titel:'',personen:[],auto:''}]}); orgSave(); }
-function orgAddSfLevel(){ _orgWork().ebenen.push({label:'Stimmführung',boxen:SATB_VOICES.map(v=>({id:uid(),titel:'Stimmführung '+v,personen:[],auto:'sf:'+v}))}); orgSave(); }
-function orgAddBox(li){ _orgWork().ebenen[li].boxen.push({id:uid(),titel:'',personen:[],auto:''}); orgSave(); }
-function orgDelBox(li,bi){ const o=_orgWork(); o.ebenen[li].boxen.splice(bi,1); if(!o.ebenen[li].boxen.length) o.ebenen.splice(li,1); orgSave(); }
-function orgDelPerson(li,bi,pi){ _orgWork().ebenen[li].boxen[bi].personen.splice(pi,1); orgSave(); }
+function orgSetLabel(li,v){ orgMut(o=>{ o.ebenen[li].label=v.trim(); }); }
+function orgSetTitel(li,bi,v){ orgMut(o=>{ o.ebenen[li].boxen[bi].titel=v.trim(); }); }
+function orgMoveLevel(li,d){ orgMut(o=>{ const j=li+d; if(j<0||j>=o.ebenen.length) return; [o.ebenen[li],o.ebenen[j]]=[o.ebenen[j],o.ebenen[li]]; }); }
+function orgDelLevel(li){
+  const e=orgModel().ebenen[li]; if(!e) return;
+  if(e.boxen.length && !confirm('Diese Ebene mit allen '+e.boxen.length+' Posten löschen?')) return;
+  orgMut(o=>{ o.ebenen.splice(li,1); });
+}
+function orgAddLevel(){ orgMut(o=>{ o.ebenen.push({label:'',boxen:[{id:uid(),titel:'',personen:[],auto:''}]}); }); }
+function orgAddSfLevel(){ orgMut(o=>{ o.ebenen.push({label:'Stimmführung',boxen:SATB_VOICES.map(v=>({id:uid(),titel:'Stimmführung '+v,personen:[],auto:'sf:'+v}))}); }); }
+function orgAddBox(li){ orgMut(o=>{ o.ebenen[li].boxen.push({id:uid(),titel:'',personen:[],auto:''}); }); }
+function orgDelBox(li,bi){ orgMut(o=>{ o.ebenen[li].boxen.splice(bi,1); }); }
+function orgMoveBox(li,bi,to){ to=parseInt(to); orgMut(o=>{ if(to===li||!o.ebenen[to]) return; const b=o.ebenen[li].boxen.splice(bi,1)[0]; o.ebenen[to].boxen.push(b); }); }
+function orgDelPerson(li,bi,pi){ orgMut(o=>{ o.ebenen[li].boxen[bi].personen.splice(pi,1); }); }
 function orgAddPerson(li,bi,sel){
   let v=sel.value; if(!v) return;
   if(v==='__free'){ v=(prompt('Name der Person:')||'').trim(); if(!v){ sel.value=''; return; } }
-  const b=_orgWork().ebenen[li].boxen[bi]; if(!b.personen.includes(v)) b.personen.push(v);
-  orgSave();
+  orgMut(o=>{ const b=o.ebenen[li].boxen[bi]; if(!b.personen.includes(v)) b.personen.push(v); });
 }
 async function orgReset(){
+  if(!canPin()) return;
   if(!confirm('Organigramm auf die Vorlage zurücksetzen? Eigene Einträge gehen verloren.')) return;
-  organigramm=null; renderOrganigramm();
+  organigramm=null; renderOrganigramm(); renderOrgAdmin();
   try{ await dbDel('organigramm'); }catch(e){}
 }
 
