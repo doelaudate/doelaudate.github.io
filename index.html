@@ -1773,6 +1773,21 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-probefeedback">
+  <div class="modal">
+    <h3>🔁 Feedback zur Probe</h3>
+    <div style="font-size:.83rem;color:#666;margin-bottom:10px">Kurze Rückmeldung für alle Mitglieder – sie erscheint auf der Startseite als „Probe-Rückblick“.</div>
+    <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:4px;color:#444">Probe</label>
+    <select id="pfb-probe" class="fl-input" onchange="fillProbeFeedback()"></select>
+    <label style="display:block;font-size:.8rem;font-weight:500;margin:10px 0 4px;color:#444">👍 Was lief gut?</label>
+    <input id="pfb-gut" class="fl-input" maxlength="200" placeholder="z. B. Der Schluss von „Maria durch“ klang sauber">
+    <label style="display:block;font-size:.8rem;font-weight:500;margin:10px 0 4px;color:#444">🔁 Was wiederholen wir nächstes Mal?</label>
+    <input id="pfb-wdh" class="fl-input" maxlength="200" placeholder="z. B. Takt 20–36, Einsätze Tenor und Bass">
+    <div style="font-size:.76rem;color:#999;margin-top:8px">Beide Felder leer speichern = Eintrag entfernen.</div>
+    <div class="modal-actions"><button class="btn btn-gray" onclick="closeModal()">Abbrechen</button><button class="btn btn-primary" onclick="saveProbeFeedback()">💾 Speichern</button></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-abmelden">
   <div class="modal">
     <h3>🙋 Abmelden</h3>
@@ -2662,32 +2677,47 @@ function closeMoreSheet(){ document.getElementById('more-sheet').classList.remov
 // Notiz beim Übernehmen vergangener Proben nicht verloren geht.
 let probenotizen={};
 async function loadProbenotizen(){ const d=await dbGet('probenotizen',{}); if(d!==undefined) probenotizen=d; }
+function probeFeedbackAdmin(){ return !!(hasPermission('proben') && adminMode); }
 function probeRueckblickCard(){
   if(!currentUser || typeof allProbenSorted!=='function') return '';
   const today=localToday();
   const p=allProbenSorted().find(x=>x.datum<=today); if(!p) return '';
   const days=(Date.now()-new Date(p.datum+'T12:00:00').getTime())/86400000;
   const n=probenotizen[p.id]||null;
-  const canEdit=hasPermission('proben')&&editMode;
-  if(!n && !(canEdit && days<=10)) return '';
-  if(n && days>21 && !canEdit) return '';
-  const id=esc(p.id);
-  const view=n?`${n.gut?`<div style="font-size:.88rem;margin-top:6px">👍 ${esc(n.gut)}</div>`:''}${n.wdh?`<div style="font-size:.88rem;margin-top:5px">🔁 <strong>Nächstes Mal wiederholen:</strong> ${esc(n.wdh)}</div>`:''}`:'';
-  const form=canEdit?`<details style="margin-top:8px"><summary style="cursor:pointer;font-size:.8rem;color:#1d4e96;font-weight:600">${n?'✏️ Rückblick bearbeiten':'✍️ Wie lief die Probe? (eintragen)'}</summary>
-    <input class="fl-input" id="pr-gut-${id}" placeholder="👍 Was lief gut?" value="${esc(n&&n.gut||'')}" maxlength="200" style="margin:8px 0 6px;font-size:.84rem">
-    <input class="fl-input" id="pr-wdh-${id}" placeholder="🔁 Was wiederholen wir nächstes Mal?" value="${esc(n&&n.wdh||'')}" maxlength="200" style="margin-bottom:6px;font-size:.84rem">
-    <button class="btn btn-primary btn-sm" onclick="saveProbeRueckblick('${id}')">💾 Speichern</button></details>`:'';
-  // Eingeklappt: eine Zeile mit Titel + Vorschau, Details und Eingabe erst nach Antippen
-  const preview=n?(n.wdh?'🔁 '+n.wdh:(n.gut?'👍 '+n.gut:'')):(canEdit?'Noch nichts eingetragen':'');
-  return `<details class="card rb-card" style="margin-bottom:12px;border-left:4px solid #2563b5"><summary><div class="rb-sum"><div class="card-title" style="margin-bottom:0">🔁 Probe-Rückblick · ${fmt(p.datum).slice(0,6)}</div>${preview?`<div class="rb-prev">${esc(preview)}</div>`:''}</div><span class="rb-chev">▾</span></summary><div style="margin-top:6px">${view}${form}</div></details>`;
+  const adm=probeFeedbackAdmin();
+  // Ohne Eintrag gibt es nichts zu zeigen – eingetragen wird über den Knopf „Feedback“ (Chorleitung)
+  if(!n || (days>21 && !adm)) return '';
+  const view=`${n.gut?`<div style="font-size:.88rem;margin-top:6px">👍 ${esc(n.gut)}</div>`:''}${n.wdh?`<div style="font-size:.88rem;margin-top:5px">🔁 <strong>Nächstes Mal wiederholen:</strong> ${esc(n.wdh)}</div>`:''}`;
+  const edit=adm?`<div style="margin-top:8px"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="openProbeFeedback('${esc(p.id)}')">✏️ Bearbeiten</button></div>`:'';
+  // Eingeklappt: eine Zeile mit Titel + Vorschau, Details erst nach Antippen
+  const preview=n.wdh?'🔁 '+n.wdh:(n.gut?'👍 '+n.gut:'');
+  return `<details class="card rb-card" style="margin-bottom:12px;border-left:4px solid #2563b5"><summary><div class="rb-sum"><div class="card-title" style="margin-bottom:0">🔁 Probe-Rückblick · ${fmt(p.datum).slice(0,6)}</div>${preview?`<div class="rb-prev">${esc(preview)}</div>`:''}</div><span class="rb-chev">▾</span></summary><div style="margin-top:6px">${view}${edit}</div></details>`;
 }
-async function saveProbeRueckblick(id){
-  if(!hasPermission('proben')) return;
-  const gut=((document.getElementById('pr-gut-'+id)||{}).value||'').trim();
-  const wdh=((document.getElementById('pr-wdh-'+id)||{}).value||'').trim();
+// Feedback zur letzten Probe eintragen (Chorleitung): Dialog über den Knopf „Feedback“ auf der Startseite
+function openProbeFeedback(id){
+  if(!probeFeedbackAdmin()) return;
+  const today=localToday();
+  const list=allProbenSorted().filter(x=>x.datum<=today).slice(0,8);
+  if(!list.length){ showToast('Noch keine vergangene Probe','err'); return; }
+  const sel=document.getElementById('pfb-probe');
+  sel.innerHTML=list.map(p=>`<option value="${esc(p.id)}">${esc(fmt(p.datum))}${probenotizen[p.id]?' ✓':''}</option>`).join('');
+  sel.value=(id&&list.some(p=>p.id===id))?id:list[0].id;
+  fillProbeFeedback();
+  document.getElementById('modal-probefeedback').classList.add('open');
+}
+function fillProbeFeedback(){
+  const id=document.getElementById('pfb-probe').value, n=probenotizen[id]||{};
+  document.getElementById('pfb-gut').value=n.gut||'';
+  document.getElementById('pfb-wdh').value=n.wdh||'';
+}
+async function saveProbeFeedback(){
+  if(!probeFeedbackAdmin()) return;
+  const id=document.getElementById('pfb-probe').value; if(!id) return;
+  const gut=document.getElementById('pfb-gut').value.trim(), wdh=document.getElementById('pfb-wdh').value.trim();
   if(!gut && !wdh){ delete probenotizen[id]; await dbDel('probenotizen/'+encodeURIComponent(id)).catch(e=>console.warn(e)); }
   else { const n={gut,wdh,ts:Date.now()}; probenotizen[id]=n; await dbPut('probenotizen/'+encodeURIComponent(id), n).catch(e=>console.warn(e)); }
-  showToast('Rückblick gespeichert','ok');
+  closeModal();
+  showToast('Feedback gespeichert','ok');
   renderStart();
 }
 
@@ -2713,6 +2743,7 @@ function renderStart(){
     ...(prefCard('meinjahr')?[`<button class="qa" onclick="openMeinJahr()"><span class="qa-ic">📊</span>Mein Jahr</button>`]:[])
   ];
   if(isStimmfuehrer()) _qa.push(`<button class="qa" onclick="openMeineStimme()"><span class="qa-ic">🎚️</span>Meine Stimme</button>`);
+  if(probeFeedbackAdmin()) _qa.push(`<button class="qa qa-adm" onclick="openProbeFeedback()"><span class="qa-ic">🔁</span>Feedback</button>`);
   if(canPin()&&editMode) _qa.push(`<button class="qa qa-adm" onclick="openPinnwandCompose()"><span class="qa-ic">📌</span>Ankündigen</button>`);
   const _head=document.getElementById('start-head');
   if(_head) _head.innerHTML=`<div class="hero"><div class="hero-greet">${_gruss}${_me?', '+esc(_me):''} 👋</div><div class="hero-date">${esc(_heute)}</div></div><div class="qa-row">${_qa.join('')}</div>`;
