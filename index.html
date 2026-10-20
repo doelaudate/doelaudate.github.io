@@ -455,7 +455,8 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 .song-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px;margin-top:0}
 .song-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:2px}
 .song-row .song-meta{margin-top:0;flex:1;min-width:0}
-.stats-line{font-size:.8rem;color:var(--muted);margin:0 2px 12px}
+.stats-line{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin:0 2px 12px}
+.arch-btn{padding:6px 12px;font-size:.78rem;flex-shrink:0}
 .stats-line b{color:var(--navy)}
 #saison-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-bottom:10px}
 #saison-tabs::-webkit-scrollbar{display:none}
@@ -2866,7 +2867,13 @@ function renderStats(){
   const fresh=all.filter(s=>{const d=dSince(getStat(s.id).last);return d!==null&&d<=14}).length;
   // Eine ruhige Zeile statt vier großer Kacheln – die Lieder selbst sollen oben im Blick sein
   const st=document.getElementById('stats'); st.className='stats-line';
-  st.innerHTML=`<b>${all.length}</b> Lieder · <span style="color:#1a7a40"><b>${fresh}</b> frisch</span> · <span style="color:#c0392b"><b>${never}</b> nie geprobt</span> · <b>${(D.proben||[]).length}</b> Proben`;
+  // Archiv-Knopf gehört hierher (immer sichtbar), nicht ans Ende der wischbaren Saison-Leiste
+  const admin=uiEdit('lieder'), dnd=admin?' ondragover="event.preventDefault()"':'';
+  const archivCount=D.seasons.flatMap(s=>s.songs||[]).filter(x=>x.archived).length;
+  const archBtn = liederView==='archiv'
+    ? `<button class="stab arch-btn" onclick="setLiederView('aktiv')"${dnd}${admin?' ondrop="dropOnActive(event)"':''}>← Zurück zu aktiv</button>`
+    : `<button class="stab arch-btn" onclick="setLiederView('archiv')"${dnd}${admin?' ondrop="dropOnArchive(event)"':''}>🗄️ Archiv${archivCount?` (${archivCount})`:''}</button>`;
+  st.innerHTML=`<span class="stats-txt"><b>${all.length}</b> Lieder · <span style="color:#1a7a40"><b>${fresh}</b> frisch</span> · <span style="color:#c0392b"><b>${never}</b> nie geprobt</span> · <b>${(D.proben||[]).length}</b> Proben</span>${archBtn}`;
 }
 function renderSaisonTabs(){
   if(!D)return;
@@ -2874,12 +2881,8 @@ function renderSaisonTabs(){
   const archivCount=D.seasons.flatMap(s=>s.songs||[]).filter(x=>x.archived).length;
   const dnd=admin?' ondragover="event.preventDefault()"':'';
   // Aktiv/Archiv ist keine eigene Zeile mehr: im Archiv führt „← Aktiv“ zurück, in der Aktiv-Ansicht steht „Archiv“ am Ende der Leiste
-  const sw = liederView==='archiv'
-    ? `<button class="stab" onclick="setLiederView('aktiv')"${dnd}${admin?' ondrop="dropOnActive(event)"':''}>← Aktiv</button>`
-    : '';
-  const archChip = liederView==='aktiv'
-    ? `<button class="stab stab-arch" onclick="setLiederView('archiv')"${dnd}${admin?' ondrop="dropOnArchive(event)"':''}>🗄️ Archiv${archivCount?` (${archivCount})`:''}</button>`
-    : '';
+  const sw = '';
+  const archChip = ''; // Archiv-Knopf steht jetzt in der Statistik-Zeile (renderStats)
   let seasons=D.seasons.map(s=>s);
   if(liederView==='aktiv'){ if(!admin) seasons=seasons.filter(s=>!s.hidden); }
   else { seasons=seasons.filter(s=>(s.songs||[]).some(x=>x.archived)); }
@@ -3176,12 +3179,13 @@ async function makeLiederheft(){
     const u=window._fbAuth&&window._fbAuth.currentUser; if(!u) throw new Error('nicht angemeldet');
     const r=await fetch(window.LIEDERHEFT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:await u.getIdToken(),ids:_heftIds,title})});
     if(!r.ok) throw new Error(r.status===404?'Keines der Lieder konnte eingelesen werden':'Fehler '+r.status);
-    const skipped=decodeURIComponent(r.headers.get('X-Skipped')||'').split('|').filter(Boolean);
-    const blob=await r.blob();
-    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='Liederheft-'+title.replace(/[^A-Za-z0-9ÄÖÜäöüß_-]+/g,'_')+'.pdf'; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(a.href),30000);
-    set('✅ Fertig – '+(_heftIds.length-skipped.length)+' Lieder im Heft','#27ae60');
-    if(skipped.length) alert('Nicht im Heft (zu groß oder PDF nicht lesbar):\n\n'+skipped.join('\n')+'\n\nDiese Lieder bitte einzeln über 📄 öffnen.');
+    // Die Function legt das fertige Heft kurz im Speicher ab und liefert nur den Download-Link (kein Größenlimit mehr)
+    const j=await r.json();
+    if(!j||!j.url) throw new Error('Keine Antwort vom Server');
+    const skipped=j.skipped||[];
+    const a=document.createElement('a'); a.href=j.url; a.download=j.filename||'Liederheft.pdf'; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove();
+    set('✅ Fertig – '+(j.count-skipped.length)+' Lieder im Heft ('+((j.size||0)/1048576).toFixed(1)+' MB)','#27ae60');
+    if(skipped.length) alert('Diese Lieder stehen im Heft nur als Hinweisseite (PDF defekt oder zu groß):\n\n'+skipped.join('\n')+'\n\nBitte die Noten dieser Lieder neu hochladen und einzeln über 📄 öffnen.');
   }catch(e){ set('❌ '+(e.message||e),'#e74c3c'); }
   _heftBusy=false;
 }
@@ -4821,7 +4825,8 @@ function renderProben(){
   if(verlEl){
     if(!vergangen.length){verlEl.innerHTML='<div class="empty" style="padding:16px">Noch keine Proben erfasst.</div>';}
     else {
-      verlEl.innerHTML=vergangen.map(p=>{
+      const _wasOpen=!!(document.getElementById('verlauf-aeltere')&&document.getElementById('verlauf-aeltere').open);
+      const _vi=vergangen.map(p=>{
         const names=(p.songIds||[]).map(id=>{const s=allS.find(x=>x.id===id);return s?s.name:'?'}).join(', ');
         // Geplante Probe, deren Datum vorbei ist, aber nie erfasst wurde
         if(p._src==='plan'){
@@ -4848,7 +4853,9 @@ function renderProben(){
             <button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',false)">🗑️ Löschen</button>
           </div>`:''}
         </div>`;
-      }).join('');
+      });
+      // Die letzten 5 stehen offen da, ältere sind eingeklappt – sonst wird die Seite endlos lang
+      verlEl.innerHTML=_vi.slice(0,5).join('')+(_vi.length>5?`<details id="verlauf-aeltere" class="t-coll" style="margin-top:8px"${_wasOpen?' open':''}><summary style="cursor:pointer;font-size:.85rem;font-weight:700;color:var(--primary);padding:6px 0">Ältere Proben anzeigen (${_vi.length-5})</summary>${_vi.slice(5).join('')}</details>`:'');
     }
   }
 }
