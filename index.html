@@ -3327,7 +3327,8 @@ async function saveStartTones(){
 // Daten: ueben/<songId>/<uid> = 'kann' | 'hilfe'. Mitglieder sehen nur den eigenen Status, die Chorleitung die Summen.
 let uebenStatus={};
 async function loadUeben(){ const d=await dbGet('ueben',{}); if(d!==undefined) uebenStatus=d; }
-function uebenLeitung(){ return !!(adminMode || (currentUserProfile&&currentUserProfile.isAdmin) || hasPermission('lieder')); }
+// Nur im Bearbeiten-Modus (Aus = App wie für ein normales Mitglied)
+function uebenLeitung(){ return !!(editMode && (adminMode || (currentUserProfile&&currentUserProfile.isAdmin) || hasPermission('lieder'))); }
 function uebenCounts(id){
   const o=uebenStatus[id]||{}; let kann=0,hilfe=0;
   Object.values(o).forEach(v=>{ if(v==='kann')kann++; else if(v==='hilfe')hilfe++; });
@@ -3351,8 +3352,8 @@ async function setUeben(id,val){
   renderLieder();
 }
 function uebenSummaryHtml(){
-  // Nur für den Admin in der Admin-Ansicht (nicht für Mitglieder mit Einzelrechten, nicht in der Nutzer-Ansicht)
-  if(!(canPin()&&adminMode) || liederView==='archiv') return '';
+  // Nur für den Admin, in der Admin-Ansicht UND bei eingeschaltetem Bearbeiten-Modus (nicht für Mitglieder mit Einzelrechten)
+  if(!(canPin()&&adminMode&&editMode) || liederView==='archiv') return '';
   const rows=[];
   (D&&D.seasons||[]).forEach(se=>(se.songs||[]).forEach(s=>{ if(s.archived) return; const c=uebenCounts(s.id); if(c.hilfe) rows.push({n:s.name,h:c.hilfe,id:s.id}); }));
   if(!rows.length) return '';
