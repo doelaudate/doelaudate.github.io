@@ -1478,6 +1478,13 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
       <div style="font-size:.74rem;color:#999;margin-top:8px">Hinweis: Der Ablauf sperrt den Link. Wer ein PDF schon heruntergeladen hat, behält seine Kopie — das lässt sich technisch nicht verhindern.</div>
     </div>
     </div>
+    <div class="konsole-pane" id="kp-saisons">
+    <div class="konsole-section">
+      <div class="konsole-title">📅 Saisons &amp; Zeiträume</div>
+      <div style="font-size:.83rem;color:#666;margin-bottom:12px">Lege fest, von wann bis wann eine Saison läuft. <strong>Vorne bei den Liedern</strong> stehen dann nur die laufenden Saisons (und das Repertoire) – alles andere ist über das <strong>🗄️ Archiv</strong> abrufbar. Ohne Zeitraum gilt wie bisher: Saison des laufenden Jahres.</div>
+      <div id="saison-admin"></div>
+    </div>
+    </div>
     <div class="konsole-pane" id="kp-organigramm">
     <div class="konsole-section">
       <div class="konsole-title">👔 Organigramm verwalten</div>
@@ -1506,6 +1513,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
       <button class="km" data-kp="daten" onclick="konsoleNav('daten')">💾 Daten &amp; Backup</button>
       <button class="km" data-kp="sicherheit" onclick="konsoleNav('sicherheit')">🔑 Sicherheit</button>
       <button class="km" data-kp="benutzer" onclick="konsoleNav('benutzer')">👥 Benutzer</button>
+      <button class="km" data-kp="saisons" onclick="konsoleNav('saisons')">📅 Saisons</button>
       <button class="km" data-kp="organigramm" onclick="konsoleNav('organigramm')">👔 Organigramm</button>
       <button class="km" data-kp="stimmen" onclick="konsoleNav('stimmen')">🎚️ Stimmen</button>
       <button class="km" data-kp="gast" onclick="konsoleNav('gast')">🎫 Gast-Noten</button>
@@ -2579,6 +2587,21 @@ function songSeasonYear(s){
   return m?parseInt(m[1],10):null;
 }
 function isCurrentYearSeason(s){ return songSeasonYear(s)===new Date().getFullYear(); }
+// „Läuft die Saison gerade?“ – nach dem Zeitraum (von/bis), den der Admin in der Konsole festlegt.
+// Ohne Zeitraum gilt wie bisher: Saison des laufenden Jahres. Repertoire ist immer aktiv.
+function seasonActive(s){
+  if(!s) return false;
+  if(s.type==='repertoire') return true;
+  if(s.von||s.bis){ const t=localToday(); return (!s.von||t>=s.von)&&(!s.bis||t<=s.bis); }
+  return isCurrentYearSeason(s);
+}
+// Nur die laufenden Saisons stehen vorne bei den Liedern, alles andere ist im Archiv abrufbar.
+// Gibt es gerade gar keine laufende Saison (außer Repertoire), bleibt es bei allen (kein leerer Bildschirm).
+function activeSeasonIds(){
+  const seasons=(D&&D.seasons)||[];
+  const act=seasons.filter(seasonActive);
+  return new Set((act.some(s=>s.type!=='repertoire')?act:seasons).map(s=>s.id));
+}
 let liederView='aktiv'; // 'aktiv' | 'archiv'
 let kalMonat=new Date().getMonth(), kalJahr=new Date().getFullYear(), kalSel=null;
 
@@ -2862,14 +2885,15 @@ function renderTodo(){
 // LIEDER
 function renderStats(){
   if(!D)return;
-  const all=D.seasons.flatMap(s=>(s.songs||[]).filter(x=>!x.archived));
+  const _act=activeSeasonIds();
+  const all=D.seasons.filter(s=>_act.has(s.id)).flatMap(s=>(s.songs||[]).filter(x=>!x.archived));
   const never=all.filter(s=>!getStat(s.id).last).length;
   const fresh=all.filter(s=>{const d=dSince(getStat(s.id).last);return d!==null&&d<=14}).length;
   // Eine ruhige Zeile statt vier großer Kacheln – die Lieder selbst sollen oben im Blick sein
   const st=document.getElementById('stats'); st.className='stats-line';
   // Archiv-Knopf gehört hierher (immer sichtbar), nicht ans Ende der wischbaren Saison-Leiste
   const admin=uiEdit('lieder'), dnd=admin?' ondragover="event.preventDefault()"':'';
-  const archivCount=D.seasons.flatMap(s=>s.songs||[]).filter(x=>x.archived).length;
+  const archivCount=D.seasons.flatMap(s=>(s.songs||[]).filter(x=>x.archived||!_act.has(s.id))).length;
   const archBtn = liederView==='archiv'
     ? `<button class="stab arch-btn" onclick="setLiederView('aktiv')"${dnd}${admin?' ondrop="dropOnActive(event)"':''}>← Zurück zu aktiv</button>`
     : `<button class="stab arch-btn" onclick="setLiederView('archiv')"${dnd}${admin?' ondrop="dropOnArchive(event)"':''}>🗄️ Archiv${archivCount?` (${archivCount})`:''}</button>`;
@@ -2883,13 +2907,14 @@ function renderSaisonTabs(){
   // Aktiv/Archiv ist keine eigene Zeile mehr: im Archiv führt „← Aktiv“ zurück, in der Aktiv-Ansicht steht „Archiv“ am Ende der Leiste
   const sw = '';
   const archChip = ''; // Archiv-Knopf steht jetzt in der Statistik-Zeile (renderStats)
+  const _act=activeSeasonIds();
   let seasons=D.seasons.map(s=>s);
-  if(liederView==='aktiv'){ if(!admin) seasons=seasons.filter(s=>!s.hidden); }
-  else { seasons=seasons.filter(s=>(s.songs||[]).some(x=>x.archived)); }
-  // „Aktuell" nur in der Aktiv-Ansicht: kombiniert automatisch alle Saisons des laufenden Jahres
-  // (Sommer/Winter/beides — je nachdem was gerade existiert) + Repertoire, ohne manuelles Aus-/Einblenden.
-  const virtualTabs = liederView==='aktiv' ? [{id:'__current__',label:'Aktuell',type:'current'}] : [];
-  const tabs=[...virtualTabs,{id:'__all__',label:'Alle',type:'all'},...seasons.map(s=>({id:s.id,label:s.name,type:s.type,hidden:!!s.hidden}))];
+  if(liederView==='aktiv'){ seasons=seasons.filter(s=>_act.has(s.id)); if(!admin) seasons=seasons.filter(s=>!s.hidden); }
+  else { seasons=seasons.filter(s=>(s.songs||[]).some(x=>x.archived||!_act.has(s.id))).sort((a,b)=>(songSeasonYear(b)||0)-(songSeasonYear(a)||0)); }
+  // Aktiv-Ansicht: „Aktuell“ = alle laufenden Saisons zusammen (Zeitraum: Konsole → Saisons), dazu je Saison ein Reiter.
+  // Archiv-Ansicht: „Alle“ + je Saison, neueste zuerst.
+  const virtualTabs = liederView==='aktiv' ? [{id:'__current__',label:'Aktuell',type:'current'}] : [{id:'__all__',label:'Alle',type:'all'}];
+  const tabs=[...virtualTabs,...seasons.map(s=>({id:s.id,label:s.name,type:s.type,hidden:!!s.hidden}))];
   const tabHtml=tabs.map(t=>{
     const tc={sommer:'sommer',weihnachten:'weihnachten',repertoire:'repertoire'}[t.type]||'';
     const ic={sommer:'☀️ ',weihnachten:'🎄 ',repertoire:'📚 ',all:'🎵 ',current:'🗓️ '}[t.type]||'🎵 ';
@@ -2905,6 +2930,57 @@ function renderSaisonTabs(){
   document.getElementById('saison-tabs').innerHTML=sw+tabHtml+archChip;
 }
 function setSaison(id){aktiveSaison=id;renderLieder();}
+// ----- Konsole → Saisons: Zeitraum je Saison festlegen -----
+function renderSaisonAdmin(){
+  const el=document.getElementById('saison-admin'); if(!el||!D) return;
+  const act=activeSeasonIds(), t=localToday();
+  const real=D.seasons.some(s=>s.type!=='repertoire'&&act.has(s.id));
+  const fm=iso=>iso?fmt(iso):'';
+  const rows=D.seasons.map((s,si)=>{
+    const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'}[s.type]||'🎵';
+    let chip;
+    if(act.has(s.id)&&(real||s.type==='repertoire')) chip='<span style="background:#d5f5e3;color:#1a7a40;border-radius:12px;padding:2px 9px;font-size:.72rem;font-weight:700">● läuft jetzt</span>';
+    else if(s.bis&&s.bis<t) chip='<span style="background:#eaeef3;color:#666;border-radius:12px;padding:2px 9px;font-size:.72rem;font-weight:700">beendet → Archiv</span>';
+    else if(s.von&&s.von>t) chip='<span style="background:#fef9e7;color:#9a6b00;border-radius:12px;padding:2px 9px;font-size:.72rem;font-weight:700">kommt noch → Archiv</span>';
+    else chip='<span style="background:#eaeef3;color:#666;border-radius:12px;padding:2px 9px;font-size:.72rem;font-weight:700">nicht aktuell → Archiv</span>';
+    const nSongs=(s.songs||[]).filter(x=>!x.archived).length;
+    const dates=s.type==='repertoire'
+      ? '<div style="font-size:.8rem;color:#888;margin-top:6px">Repertoire ist immer vorne sichtbar.</div>'
+      : `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><label style="flex:1;min-width:130px;font-size:.78rem;color:#555">Von<input type="date" class="fl-input" id="sr-von-${si}" value="${esc(s.von||'')}" onchange="saveSeasonRange(${si})" style="margin:2px 0 0"></label><label style="flex:1;min-width:130px;font-size:.78rem;color:#555">Bis<input type="date" class="fl-input" id="sr-bis-${si}" value="${esc(s.bis||'')}" onchange="saveSeasonRange(${si})" style="margin:2px 0 0"></label></div>`;
+    return `<div class="org-post"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong style="flex:1;min-width:120px">${ic} ${esc(s.name)}</strong>${chip}</div><div style="font-size:.76rem;color:#999;margin-top:2px">${nSongs} Lieder${s.von||s.bis?' · '+(fm(s.von)||'…')+' – '+(fm(s.bis)||'…'):''}</div>${dates}</div>`;
+  }).join('');
+  el.innerHTML=rows+`<button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96;margin-top:4px" onclick="suggestSeasonRanges()">✨ Zeiträume vorschlagen (nur leere)</button><div style="font-size:.76rem;color:#999;margin-top:6px">Vorschlag: Sommer 1.3.–30.9., Winter/Weihnachten 1.10. bis 31.1. des Folgejahres.</div>`;
+}
+async function saveSeasonRange(si, silent){
+  if(!hasPermission('lieder')){ alert('Keine Berechtigung.'); return; }
+  const von=(document.getElementById('sr-von-'+si)||{}).value||'', bis=(document.getElementById('sr-bis-'+si)||{}).value||'';
+  if(von&&bis&&bis<von){ showToast('„Bis“ liegt vor „Von“','err'); return; }
+  const s=D.seasons[si]; if(!s) return;
+  s.von=von||undefined; s.bis=bis||undefined;
+  try{
+    for(const [k,v] of [['von',von],['bis',bis]]) await dbFetch(DB+'/chorproben/seasons/'+si+'/'+k+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(v||null)});
+  }catch(e){ showToast('Speichern fehlgeschlagen','err'); return; }
+  renderSaisonAdmin(); renderLieder();
+  if(!silent) showToast('Zeitraum gespeichert','ok');
+}
+async function suggestSeasonRanges(){
+  if(!hasPermission('lieder')) return;
+  let n=0;
+  D.seasons.forEach((s,si)=>{
+    if(s.type==='repertoire'||s.von||s.bis) return;
+    const y=songSeasonYear(s); if(!y) return;
+    if(s.type==='sommer'){ s.von=y+'-03-01'; s.bis=y+'-09-30'; }
+    else if(s.type==='weihnachten'){ s.von=y+'-10-01'; s.bis=(y+1)+'-01-31'; }
+    else return;
+    n++;
+  });
+  if(!n){ showToast('Alle Saisons haben schon einen Zeitraum','ok'); return; }
+  try{
+    for(let si=0;si<D.seasons.length;si++){ const s=D.seasons[si]; if(s.von&&s.bis&&s.type!=='repertoire'){ await dbFetch(DB+'/chorproben/seasons/'+si+'/von.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(s.von)}); await dbFetch(DB+'/chorproben/seasons/'+si+'/bis.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(s.bis)}); } }
+  }catch(e){ showToast('Speichern fehlgeschlagen','err'); return; }
+  renderSaisonAdmin(); renderLieder();
+  showToast(n+' Zeiträume eingetragen','ok');
+}
 // Unter-Tabs der Lieder-Seite: Lieder | Wünsche
 function setLiederPageTab(t){
   document.getElementById('lv-lieder').style.display = t==='lieder'?'':'none';
@@ -3051,28 +3127,29 @@ async function addLied(){
 function renderLieder(){
   if(!D)return; renderStats(); renderSaisonTabs(); renderLiedForm();
   const admin=uiEdit('lieder');
-  let songs=D.seasons.flatMap(s=>(s.songs||[]).map(song=>Object.assign({},song,{seasonId:s.id,seasonName:s.name,seasonType:s.type,seasonHidden:!!s.hidden})));
-  if(liederView==='archiv') songs=songs.filter(s=>s.archived);
-  else { songs=songs.filter(s=>!s.archived); if(!admin) songs=songs.filter(s=>!s.seasonHidden); }
-  if(aktiveSaison==='__current__'){
-    // Automatisch alle Saisons des laufenden Jahres (Sommer/Winter/beides) + Repertoire — Fallback auf
-    // alles, falls es (noch) gar keine Saison für das aktuelle Jahr gibt.
-    const hasCurrentYear=D.seasons.some(isCurrentYearSeason);
-    const curIds=new Set(D.seasons.filter(s=>isCurrentYearSeason(s)||s.type==='repertoire').map(s=>s.id));
-    if(hasCurrentYear) songs=songs.filter(s=>curIds.has(s.seasonId));
-  } else if(aktiveSaison!=='__all__'){
-    songs=songs.filter(s=>s.seasonId===aktiveSaison);
-  }
+  // Vorne stehen nur Lieder der laufenden Saison(en) (Zeitraum: Konsole → Saisons); alles andere sowie einzeln archivierte Lieder liegen im Archiv
+  const _act=activeSeasonIds();
+  const _all=D.seasons.flatMap(s=>(s.songs||[]).map(song=>Object.assign({},song,{seasonId:s.id,seasonName:s.name,seasonType:s.type,seasonHidden:!!s.hidden,seasonActive:_act.has(s.id)})));
+  // „Vorne ausblenden“ (👁️) gilt nur für die Aktiv-Ansicht; das Archiv zeigt alles
+  const _inArch=s=>s.archived||!s.seasonActive, _vis=s=>liederView==='archiv'||admin||!s.seasonHidden;
+  let songs=_all.filter(s=>_vis(s)&&(liederView==='archiv'?_inArch(s):!_inArch(s)));
+  if(aktiveSaison!=='__current__' && aktiveSaison!=='__all__') songs=songs.filter(s=>s.seasonId===aktiveSaison);
   const q=(document.getElementById('lied-search')?.value||'').trim().toLowerCase();
   if(q) songs=songs.filter(s=>(s.name||'').toLowerCase().includes(q));
+  // Wer vorne nichts (mehr) findet, bekommt den Weg ins Archiv angeboten
+  let archHint='';
+  if(q && liederView==='aktiv'){
+    const n=_all.filter(s=>_inArch(s)&&(s.name||'').toLowerCase().includes(q)).length;
+    if(n) archHint=`<div style="margin:14px 0 4px;text-align:center"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="liederView='archiv';aktiveSaison='__all__';renderLieder()">🗄️ ${n===1?'1 weiterer Treffer':n+' weitere Treffer'} im Archiv anzeigen</button></div>`;
+  }
   const sort=document.getElementById('sort-sel')?.value||'last';
   songs=songs.map(s=>Object.assign({},s,getStat(s.id)));
   if(sort==='last') songs.sort((a,b)=>{if(!a.last&&!b.last)return a.name.localeCompare(b.name);if(!a.last)return-1;if(!b.last)return 1;return a.last.localeCompare(b.last)});
   else if(sort==='name') songs.sort((a,b)=>a.name.localeCompare(b.name));
   else songs.sort((a,b)=>a.count-b.count);
   const el=document.getElementById('lieder-list');if(!el)return;
-  if(!songs.length){el.innerHTML='<div class="empty">'+(liederView==='archiv'?'Archiv ist leer.':'Keine Lieder vorhanden.')+'</div>';return;}
-  let html=uebenSummaryHtml();
+  if(!songs.length){el.innerHTML='<div class="empty">'+(liederView==='archiv'?'Im Archiv nichts gefunden.':(q?'Kein Lied in der laufenden Saison gefunden.':'Keine Lieder vorhanden.'))+'</div>'+archHint;return;}
+  let html=liederView==='archiv'?'<div style="font-size:.8rem;color:var(--muted);margin:0 2px 10px">🗄️ Ältere Saisons und archivierte Lieder, neueste zuerst. Zum Wiederverwenden: Lied in eine laufende Saison verschieben (↔️).</div>':uebenSummaryHtml();
   const _heftBtn=liederheftButtonHtml(songs); // steht unter der Liste, nicht davor
   // Admin: ganze Saison ins Archiv / zurück (nur wenn eine konkrete, echte Saison gewählt ist — nicht bei
   // den virtuellen Sammel-Tabs "Alle"/"Aktuell", die keine einzelne Saison sind)
@@ -3082,9 +3159,9 @@ function renderLieder(){
       ? `<div style="margin-bottom:10px"><button class="btn btn-sm btn-gray" onclick="archiveWholeSeason('${aktiveSaison}',false)">↩️ Ganze Saison „${nm}" zurückholen</button></div>`
       : `<div style="margin-bottom:10px"><button class="btn btn-sm btn-gray" onclick="archiveWholeSeason('${aktiveSaison}',true)">📦 Ganze Saison „${nm}" ins Archiv</button></div>`;
   }
-  if(aktiveSaison==='__all__'||aktiveSaison==='__current__'){const seen=new Set();D.seasons.forEach(s=>{let ss=songs.filter(x=>x.seasonId===s.id);ss=ss.filter(x=>{const k=songKey(x);if(seen.has(k))return false;seen.add(k);return true;});if(!ss.length)return;const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'}[s.type]||'🎵';html+=`<div class="section-label">${ic} ${esc(s.name)}</div>`+buildTbl(ss);});}
+  if(aktiveSaison==='__all__'||aktiveSaison==='__current__'){const seen=new Set();const _ord=liederView==='archiv'?[...D.seasons].sort((a,b)=>(songSeasonYear(b)||0)-(songSeasonYear(a)||0)):D.seasons;_ord.forEach(s=>{let ss=songs.filter(x=>x.seasonId===s.id);ss=ss.filter(x=>{const k=songKey(x);if(seen.has(k))return false;seen.add(k);return true;});if(!ss.length)return;const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'}[s.type]||'🎵';html+=`<div class="section-label">${ic} ${esc(s.name)}</div>`+buildTbl(ss);});}
   else html+=buildTbl(songs);
-  el.innerHTML=html+_heftBtn;
+  el.innerHTML=html+_heftBtn+archHint;
 }
 function buildTbl(songs){
   const canEdit = uiEdit('lieder');
@@ -3185,7 +3262,7 @@ async function makeLiederheft(){
     const skipped=j.skipped||[];
     const a=document.createElement('a'); a.href=j.url; a.download=j.filename||'Liederheft.pdf'; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove();
     set('✅ Fertig – '+(j.count-skipped.length)+' Lieder im Heft ('+((j.size||0)/1048576).toFixed(1)+' MB)','#27ae60');
-    if(skipped.length) alert('Diese Lieder stehen im Heft nur als Hinweisseite (PDF defekt oder zu groß):\n\n'+skipped.join('\n')+'\n\nBitte die Noten dieser Lieder neu hochladen und einzeln über 📄 öffnen.');
+    if(skipped.length) alert('Diese Lieder stehen im Heft nur als Hinweisseite:\n\n'+skipped.join('\n')+'\n\nBitte die Noten dieser Lieder als PDF-Datei neu hochladen (✏️ am Lied) – bis dahin einzeln über 📄 öffnen.');
   }catch(e){ set('❌ '+(e.message||e),'#e74c3c'); }
   _heftBusy=false;
 }
@@ -5579,6 +5656,7 @@ function konsoleNav(id){
   }catch(e){}
   if(id==='gast') renderGastAdmin();
   if(id==='organigramm') renderOrgAdmin();
+  if(id==='saisons') renderSaisonAdmin();
   if(id==='datenpflege') renderDatenpflege();
   if(id==='chor'||id==='module') renderAppSettings();
 }
