@@ -3351,7 +3351,8 @@ async function setUeben(id,val){
   renderLieder();
 }
 function uebenSummaryHtml(){
-  if(!uebenLeitung() || liederView==='archiv') return '';
+  // Nur für den Admin in der Admin-Ansicht (nicht für Mitglieder mit Einzelrechten, nicht in der Nutzer-Ansicht)
+  if(!(canPin()&&adminMode) || liederView==='archiv') return '';
   const rows=[];
   (D&&D.seasons||[]).forEach(se=>(se.songs||[]).forEach(s=>{ if(s.archived) return; const c=uebenCounts(s.id); if(c.hilfe) rows.push({n:s.name,h:c.hilfe,id:s.id}); }));
   if(!rows.length) return '';
