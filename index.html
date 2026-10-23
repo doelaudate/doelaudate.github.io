@@ -447,14 +447,18 @@ html.compact .hero{margin-bottom:6px}
 html.compact th,html.compact td{padding:5px 6px}
 html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 /* Lieder als Karten (Handy) */
-.song-list{display:flex;flex-direction:column;gap:8px}
-.song-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+.song-list{display:flex;flex-direction:column;gap:6px}
+.song-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px}
 .song-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .song-name{font-weight:700;font-size:.98rem;color:var(--ink);line-height:1.25;word-break:break-word}
+.song-stat{white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center}
 .song-meta{font-size:.76rem;color:var(--muted);margin-top:3px}
-.song-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px;margin-top:0}
-.song-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:2px}
-.song-row .song-meta{margin-top:0;flex:1;min-width:0}
+.song-actions{display:flex;flex-wrap:nowrap;gap:2px;margin-top:0}
+.song-row{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;margin-top:4px}
+.song-row .song-meta{margin-top:0;flex:0 1 auto;min-width:0;order:2}
+.song-row .song-actions{order:1}
+.song-row .ueb-row{margin:0 0 0 auto;order:3}
+.ueb-row{display:flex;gap:5px;margin-top:4px;align-items:center;flex-wrap:wrap}
 .stats-line{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin:0 2px 12px}
 .arch-btn{padding:6px 12px;font-size:.78rem;flex-shrink:0}
 .stats-line b{color:var(--navy)}
@@ -462,7 +466,7 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 #saison-tabs::-webkit-scrollbar{display:none}
 #saison-tabs .stab{flex:0 0 auto;white-space:nowrap}
 .stab-arch{margin-left:auto}
-.song-actions a,.song-actions button{min-width:42px;min-height:42px;display:inline-flex;align-items:center;justify-content:center;font-size:1.25rem!important;border-radius:10px;text-decoration:none;background:#f3f6fa!important;border:none;margin:2px 3px 2px 0;padding:0!important}
+.song-actions a,.song-actions button{min-width:38px;min-height:38px;display:inline-flex;align-items:center;justify-content:center;font-size:1.15rem!important;border-radius:10px;text-decoration:none;background:#f3f6fa!important;border:none;margin:0;padding:0!important}
 .ueb-pill{border-radius:14px;padding:5px 11px;font-size:.78rem;cursor:pointer;font-weight:600}
 @media(max-width:640px){
   /* Kopf: eine kompakte Zeile; „Stand" wandert in Einstellungen → Hilfe */
@@ -502,7 +506,7 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 /* Mindest-Tippfläche für alle Knöpfe im Inhalt (Handy) — sonst wirken Chips/Kleinstknöpfe wie 26 px hohe Streifen */
 @media(max-width:640px){
   .content button,.modal button,.sheet button{min-height:36px}
-  .song-actions button,.song-actions a{min-height:42px}
+  .song-actions button,.song-actions a{min-height:38px}
 }
 .ueb-pill{min-height:30px}
 .pause-chip{display:inline-block;background:#fff3e0;color:#a2600f;border-radius:10px;padding:1px 8px;font-size:.7rem;font-weight:700;vertical-align:middle}
@@ -510,7 +514,7 @@ details.pause-box{margin-top:12px;border:1.5px dashed #e0c9a8;border-radius:12px
 details.pause-box>summary{cursor:pointer;font-size:.84rem;font-weight:700;color:#a2600f;padding:6px 0}
 .fl-field{display:flex;flex-direction:column;gap:3px}
 .fl-cap{font-size:.72rem;font-weight:600;color:#667;margin-left:2px;line-height:1.1}
-@media(max-width:640px){.ueb-pill{min-height:36px;padding:6px 12px}}
+@media(max-width:640px){.ueb-pill{min-height:34px;padding:5px 10px}}
 /* Module ausgeblendet (Chorleitung → Module & Regeln) */
 html.mod-off-plakate [onclick*="showPage('plakate'"],html.mod-off-plakate [onclick*="bnavMore('plakate')"],html.mod-off-plakate [onclick*="showPageByName('plakate')"],
 html.mod-off-kommentare [onclick*="showPage('kommentare'"],html.mod-off-kommentare [onclick*="bnavMore('kommentare')"],
@@ -2897,7 +2901,7 @@ function renderStats(){
   const archBtn = liederView==='archiv'
     ? `<button class="stab arch-btn" onclick="setLiederView('aktiv')"${dnd}${admin?' ondrop="dropOnActive(event)"':''}>← Zurück zu aktiv</button>`
     : `<button class="stab arch-btn" onclick="setLiederView('archiv')"${dnd}${admin?' ondrop="dropOnArchive(event)"':''}>🗄️ Archiv${archivCount?` (${archivCount})`:''}</button>`;
-  st.innerHTML=`<span class="stats-txt"><b>${all.length}</b> Lieder · <span style="color:#1a7a40"><b>${fresh}</b> frisch</span> · <span style="color:#c0392b"><b>${never}</b> nie geprobt</span> · <b>${(D.proben||[]).length}</b> Proben</span>${archBtn}`;
+  st.innerHTML=`<span class="stats-txt"><b>${all.length}</b> Lieder${never?` · <span style="color:#c0392b"><b>${never}</b> noch nie geprobt</span>`:''}</span>${archBtn}`;
 }
 function renderSaisonTabs(){
   if(!D)return;
@@ -3180,7 +3184,7 @@ function buildTbl(songs){
     const startBtn = ((s.start&&Object.keys(s.start).length)||canEdit)?`<button onclick="openStartTone('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:1.05rem;padding:0 1px;${(s.start&&Object.keys(s.start).length)?'':'opacity:.4'}" title="Starttöne anhören">🎼</button>`:'';
     const cell = (openLink||uebenLink||hoerBtn||startBtn||editBtn||archBtn||moveBtn) ? [openLink,uebenLink,hoerBtn,startBtn,editBtn,moveBtn,archBtn].filter(Boolean).join(' ') : '—';
     if(_mob){
-      return `<div class="song-card"><div class="song-top"><div class="song-name">${esc(s.name)}</div><span style="white-space:nowrap;flex-shrink:0"><span class="dot" style="background:${dotC(s.last)}"></span><span class="badge" style="${bdgS(s.last)}">${bdgT(s.last)}</span></span></div><div class="song-row"><div class="song-meta">${s.last?'Zuletzt '+fmt(s.last)+'<br>':''}${s.count}× geprobt</div>${cell!=='—'?`<div class="song-actions">${cell}</div>`:''}</div>${uebenRowHtml(s)}</div>`;
+      return `<div class="song-card"><div class="song-top"><div class="song-name">${esc(s.name)}</div><span class="song-stat"><span class="dot" style="background:${dotC(s.last)}"></span><span class="badge" style="${bdgS(s.last)}">${bdgT(s.last)}</span></span></div><div class="song-row">${s.count?`<div class="song-meta">${s.count}× geprobt${s.last?' · '+fmt(s.last).slice(0,6):''}</div>`:''}${cell!=='—'?`<div class="song-actions">${cell}</div>`:''}${uebenRowHtml(s)}</div></div>`;
     }
     const dragAttr = canEdit?` draggable="true" ondragstart="dragSong(event,'${s.id}')" style="cursor:grab"`:'';
     return `<tr${dragAttr}><td><strong>${esc(s.name)}</strong>${uebenRowHtml(s)}</td><td>${fmt(s.last)}</td><td style="text-align:center;color:#666">${s.count}×</td><td><span class="dot" style="background:${dotC(s.last)}"></span><span class="badge" style="${bdgS(s.last)}">${bdgT(s.last)}</span></td><td style="text-align:center;white-space:nowrap">${cell}</td></tr>`;
@@ -3338,7 +3342,7 @@ function uebenRowHtml(s){
   if(!currentUser || liederView==='archiv' || s.archived) return '';
   const my=(uebenStatus[s.id]||{})[currentUser.uid]||'';
   const btn=(val,label,on,off)=>`<button class="ueb-pill" onclick="setUeben('${esc(s.id)}','${val}')" style="border:1px solid ${my===val?on:'#d5dbe3'};background:${my===val?on:'transparent'};color:${my===val?'#fff':'#777'};font-weight:${my===val?'700':'500'}">${label}</button>`;
-  let h=`<div style="display:flex;gap:5px;margin-top:4px;align-items:center;flex-wrap:wrap">${btn('kann','✅ kann ich','#27ae60')}${btn('hilfe','🆘 Hilfe','#e67e22')}`;
+  let h=`<div class="ueb-row">${btn('kann','✅ kann ich','#27ae60')}${btn('hilfe','🆘 Hilfe','#e67e22')}`;
   if(uebenLeitung()){ const c=uebenCounts(s.id); if(c.kann||c.hilfe) h+=`<span onclick="showUebenDetail('${esc(s.id)}')" style="font-size:.68rem;color:#888;cursor:pointer;text-decoration:underline dotted" title="Wer? (antippen)">${c.kann?'✅ '+c.kann:''}${c.kann&&c.hilfe?' · ':''}${c.hilfe?'<b style="color:#e67e22">🆘 '+c.hilfe+'</b>':''}</span>`; }
   return h+'</div>';
 }
