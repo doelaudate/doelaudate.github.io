@@ -1816,6 +1816,27 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-fahrt">
+  <div class="modal">
+    <h3 id="fa-title">🚗 Fahrgemeinschaft</h3>
+    <div id="fa-sub" style="font-size:.83rem;color:#666;margin-bottom:10px"></div>
+    <input type="hidden" id="fa-termin"><input type="hidden" id="fa-typ">
+    <div id="fa-plaetze-wrap">
+      <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:4px;color:#444">Freie Plätze (ohne dich)</label>
+      <select id="fa-plaetze" class="fl-input"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select>
+    </div>
+    <label id="fa-ort-lbl" style="display:block;font-size:.8rem;font-weight:500;margin:10px 0 4px;color:#444">📍 Abfahrtsort</label>
+    <input id="fa-ort" class="fl-input" maxlength="80" placeholder="z. B. Dölau Markt">
+    <div id="fa-zeit-wrap">
+      <label style="display:block;font-size:.8rem;font-weight:500;margin:10px 0 4px;color:#444">🕐 Abfahrtszeit (optional)</label>
+      <input id="fa-zeit" type="time" class="fl-input">
+    </div>
+    <label style="display:block;font-size:.8rem;font-weight:500;margin:10px 0 4px;color:#444">💬 Hinweis (optional)</label>
+    <input id="fa-notiz" class="fl-input" maxlength="120" placeholder="z. B. Kofferraum voll, Rückfahrt gegen 22 Uhr">
+    <div class="modal-actions"><button class="btn btn-gray" onclick="closeModal()">Abbrechen</button><button class="btn btn-primary" onclick="saveFahrt()">💾 Speichern</button></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-abmelden">
   <div class="modal">
     <h3>🙋 Abmelden</h3>
@@ -2834,7 +2855,7 @@ function renderStart(){
         :(myName?'<span style="background:#eaeef3;color:#666;border-radius:12px;padding:2px 9px;font-size:.72rem;font-weight:700">⚪ Noch offen</span>':'');
       html+=`<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
-          <div><strong>${TYP_IC[t.typ]||'📌'} ${esc(t.titel)}</strong><div style="font-size:.8rem;color:#777;margin-top:2px">${fmt(t.datum)}${t.datum_ende?' – '+fmt(t.datum_ende):''}${t.uhrzeit?' · '+esc(t.uhrzeit):''}</div>${infoOnly&&t.beschreibung?`<div style="font-size:.78rem;color:#888;margin-top:3px">${esc(t.beschreibung)}</div>`:''}</div>
+          <div><strong>${TYP_IC[t.typ]||'📌'} ${esc(t.titel)}</strong><div style="font-size:.8rem;color:#777;margin-top:2px">${fmt(t.datum)}${t.datum_ende?' – '+fmt(t.datum_ende):''}${t.uhrzeit?' · '+esc(t.uhrzeit):''}</div>${(()=>{ if(!fahrtenAn(t)) return ''; const bs=fahrtEntries(t.id).filter(e=>e.typ==='biete'); const fr=bs.reduce((s,e)=>s+Math.max(0,(parseInt(e.plaetze)||0)-fahrtPassengers(e).length),0); return fr?`<div style="font-size:.76rem;color:#1a7a40;margin-top:2px;font-weight:600">🚗 ${fr} ${fr===1?'Platz':'Plätze'} frei</div>`:''; })()}${infoOnly&&t.beschreibung?`<div style="font-size:.78rem;color:#888;margin-top:3px">${esc(t.beschreibung)}</div>`:''}</div>
           ${chip}
         </div>
       </div>`;
@@ -8830,69 +8851,193 @@ async function markPinnwandRead(id){
 }
 
 // ===== FAHRGEMEINSCHAFTEN (pro Termin) =====
+// Daten: fahrten/<terminId>/<Schlüssel> = {typ:'biete'|'suche', name, plaetze, ort, zeit, notiz, ts, mitfahrer:{<Schlüssel>:{name,ts}}}
+//  - „biete“: Fahrer*in mit Plätzen; andere treten über „Mitfahren“ bei (mitfahrer)
+//  - „suche“: sucht noch eine Mitfahrgelegenheit; Fahrer*innen können sie mit „Mitnehmen“ aufnehmen
 async function loadFahrten(){ const d=await dbGet('fahrten',{}); if(d!==undefined) fahrten=d; }
-// Pro Termin: Fahrgemeinschaften an/aus (nur Bearbeiter schalten; standardmäßig aus)
+// Standard: für alle Termine außer Proben an (Bearbeiter können pro Termin ein-/ausschalten)
+function fahrtenAn(t){ return t.fahrten===true || (t.fahrten===undefined && t.typ!=='probe'); }
 function fahrtenBlock(t){
-  const on = t.fahrten===true;
-  const canEdit = uiEdit('termine');
+  const on=fahrtenAn(t);
+  const canEdit=uiEdit('termine');
   if(on){
-    const off = canEdit ? `<div style="text-align:right;margin-top:2px"><button class="btn btn-sm" style="background:transparent;color:#e74c3c;font-size:.7rem;padding:1px 6px" onclick="toggleFahrtenAktiv('${esc(t.id)}')">🚗 Fahrgemeinschaften deaktivieren</button></div>` : '';
+    const off=canEdit?`<div style="text-align:right;margin-top:2px"><button class="btn btn-sm" style="background:transparent;color:#e74c3c;font-size:.7rem;padding:1px 6px" onclick="toggleFahrtenAktiv('${esc(t.id)}')">🚗 Fahrgemeinschaften deaktivieren</button></div>`:'';
     return fahrtenHtml(t)+off;
   }
-  return canEdit ? `<button class="btn btn-sm" style="background:#eef7f0;color:#1a7a40;font-size:.72rem;margin:3px 0" onclick="toggleFahrtenAktiv('${esc(t.id)}')">🚗 Fahrgemeinschaften aktivieren</button>` : '';
+  return canEdit?`<button class="btn btn-sm" style="background:#eef7f0;color:#1a7a40;font-size:.72rem;margin:3px 0" onclick="toggleFahrtenAktiv('${esc(t.id)}')">🚗 Fahrgemeinschaften aktivieren</button>`:'';
 }
 async function toggleFahrtenAktiv(id){
   if(!uiEdit('termine')){ alert('Nur im Bearbeiten-Modus.'); return; }
   const t=termine.find(x=>x.id===id); if(!t) return;
   const idx=termine.indexOf(t);
-  t.fahrten=!t.fahrten;
+  t.fahrten=!fahrtenAn(t);
   await dbPut('termine/'+idx+'/fahrten', !!t.fahrten).catch(e=>console.warn(e));
   renderTermine();
 }
+const _fk=k=>encodeURIComponent(String(k)).replace(/'/g,'%27');
+const _fdk=k=>decodeURIComponent(String(k));
+function fahrtEntries(terminId){
+  const f=(fahrten&&fahrten[terminId])||{};
+  return Object.entries(f).map(([k,v])=>Object.assign({_key:k},v||{})).filter(x=>x&&x.typ);
+}
+function fahrtPassengers(e){ return Object.entries(e.mitfahrer||{}).map(([k,v])=>({key:k,name:(v&&v.name)||'?'})); }
+// Wo bin ich in diesem Termin eingetragen? -> {rolle:'fahrer'|'mitfahrer'|'sucht', entry}
+function fahrtMine(entries,myk){
+  if(!myk) return null;
+  const own=entries.find(e=>e._key===myk);
+  if(own) return {rolle:own.typ==='biete'?'fahrer':'sucht',entry:own};
+  const drv=entries.find(e=>e.typ==='biete'&&e.mitfahrer&&e.mitfahrer[myk]);
+  return drv?{rolle:'mitfahrer',entry:drv}:null;
+}
 function fahrtenHtml(t){
-  const f=(fahrten&&fahrten[t.id])||{};
-  const entries=Object.entries(f).map(([k,v])=>Object.assign({_key:k},v||{})).filter(x=>x&&x.typ);
-  const biete=entries.filter(e=>e.typ==='biete');
+  const entries=fahrtEntries(t.id);
+  const biete=entries.filter(e=>e.typ==='biete').sort((a,b)=>(a.zeit||'').localeCompare(b.zeit||'')||(a.ts||0)-(b.ts||0));
   const suche=entries.filter(e=>e.typ==='suche');
   const myk=myKey();
-  const mine=myk?entries.find(e=>e._key===myk):null;
-  const freeSeats=biete.reduce((s,e)=>s+(parseInt(e.plaetze)||0),0);
-  const row=(e,ic)=>`<div style="display:flex;align-items:center;gap:6px;font-size:.82rem;padding:2px 0">
-      <span>${ic}</span><span style="flex:1">${esc(prettyName(e.name)||e.name||'?')}${e.ort?` <span style="color:#888">· ab ${esc(e.ort)}</span>`:''}${e.typ==='biete'?` <span style="color:#27ae60">(${parseInt(e.plaetze)||0} Pl.)</span>`:''}</span>
-      ${(e._key===myk)?`<button class="btn btn-danger btn-sm" style="opacity:1;position:static;padding:2px 7px" onclick="removeFahrt('${esc(t.id)}')">✕</button>`:''}
+  const loggedIn=(typeof currentUser!=='undefined'&&currentUser);
+  const mine=fahrtMine(entries,myk);
+  const tid=esc(t.id);
+  const free=e=>Math.max(0,(parseInt(e.plaetze)||0)-fahrtPassengers(e).length);
+  const freeTotal=biete.reduce((s,e)=>s+free(e),0);
+  const pn=n=>esc(prettyName(n)||n||'?');
+
+  const offerCard=e=>{
+    const pass=fahrtPassengers(e), fr=free(e), isMine=e._key===myk, iAmPass=!!(e.mitfahrer&&e.mitfahrer[myk]);
+    const meta=[e.zeit?'🕐 '+esc(e.zeit):'', e.ort?'📍 ab '+esc(e.ort):''].filter(Boolean).join(' · ');
+    const passHtml=pass.length?pass.map(p=>`<span class="org-chip">${pn(p.name)}${(isMine||p.key===myk)?`<button aria-label="Entfernen" onclick="leaveFahrt('${tid}','${_fk(e._key)}','${_fk(p.key)}')">✕</button>`:''}</span>`).join(''):'<span style="font-size:.78rem;color:#aaa">noch niemand</span>';
+    let act='';
+    if(loggedIn){
+      if(isMine) act=`<button class="btn btn-sm" style="background:#fdecea;color:#c0392b" onclick="removeFahrt('${tid}')">Angebot löschen</button>`;
+      else if(iAmPass) act=`<button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="leaveFahrt('${tid}','${_fk(e._key)}','${_fk(myk)}')">Aussteigen</button>`;
+      else if(!mine||mine.rolle==='sucht'||mine.rolle==='mitfahrer') act=fr>0?`<button class="btn btn-sm" style="background:#27ae60;color:#fff" onclick="joinFahrt('${tid}','${_fk(e._key)}')">🚗 ${mine&&mine.rolle==='mitfahrer'?'Hierher wechseln':'Mitfahren'}</button>`:'<span style="font-size:.76rem;color:#c0392b;font-weight:700">voll</span>';
+    }
+    return `<div class="org-post" style="margin:6px 0 0">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><strong style="font-size:.9rem">🚗 ${pn(e.name)}</strong><span style="font-size:.78rem;font-weight:700;color:${fr?'#1a7a40':'#c0392b'}">${fr?fr+' von '+(parseInt(e.plaetze)||0)+' Plätzen frei':'voll'}</span></div>
+      ${meta?`<div style="font-size:.8rem;color:#666;margin-top:3px">${meta}</div>`:''}
+      ${e.notiz?`<div style="font-size:.78rem;color:#888;margin-top:2px">💬 ${esc(e.notiz)}</div>`:''}
+      <div style="margin-top:6px">${passHtml}</div>
+      ${act?`<div style="margin-top:6px">${act}</div>`:''}
     </div>`;
+  };
+  const myOfferOpen=mine&&mine.rolle==='fahrer'&&free(mine.entry)>0;
+  const seekRow=e=>{
+    const isMine=e._key===myk;
+    const take=(myOfferOpen&&!isMine)?`<button class="btn btn-sm" style="background:#27ae60;color:#fff;padding:3px 9px" onclick="takeSeeker('${tid}','${_fk(e._key)}')">Mitnehmen</button>`:'';
+    return `<div style="display:flex;align-items:center;gap:8px;font-size:.84rem;padding:3px 0;flex-wrap:wrap"><span style="flex:1;min-width:120px">🙋 ${pn(e.name)}${e.ort?` <span style="color:#888">· Zustieg ${esc(e.ort)}</span>`:''}${e.notiz?` <span style="color:#888">· ${esc(e.notiz)}</span>`:''}</span>${take}${isMine?`<button class="btn btn-danger btn-sm" style="opacity:1;position:static;padding:2px 7px" onclick="removeFahrt('${tid}')">✕</button>`:''}</div>`;
+  };
   const lists=`
-    ${biete.length?`<div style="margin-top:4px"><strong style="font-size:.76rem;color:#1a7a40">🚗 Bietet Mitfahrt (${freeSeats} Plätze):</strong>${biete.map(e=>row(e,'🚗')).join('')}</div>`:''}
-    ${suche.length?`<div style="margin-top:4px"><strong style="font-size:.76rem;color:#a05a00">🙋 Sucht Mitfahrt (${suche.length}):</strong>${suche.map(e=>row(e,'🙋')).join('')}</div>`:''}
-    ${(!biete.length&&!suche.length)?'<div style="font-size:.8rem;color:#aaa;margin-top:4px">Noch keine Einträge.</div>':''}`;
-  const actions = (typeof currentUser!=='undefined'&&currentUser) ? (mine
-    ? `<div style="font-size:.76rem;color:#888;margin-top:8px">Dein Eintrag: ${mine.typ==='biete'?'🚗 du bietest Mitfahrt':'🙋 du suchst Mitfahrt'} · <a href="#" onclick="removeFahrt('${esc(t.id)}');return false" style="color:#e74c3c">entfernen</a></div>`
-    : `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
-        <button class="btn btn-sm" style="background:#27ae60;color:#fff;font-size:.74rem" onclick="addFahrt('${esc(t.id)}','biete')">🚗 Ich biete Plätze</button>
-        <button class="btn btn-sm" style="background:#e67e22;color:#fff;font-size:.74rem" onclick="addFahrt('${esc(t.id)}','suche')">🙋 Ich suche Mitfahrt</button>
-      </div>`) : '';
-  const total=entries.length;
-  return `<details class="t-coll"><summary>🚗 Fahrgemeinschaft${total?` · ${total}`:''}</summary><div>${lists}${actions}</div></details>`;
+    ${biete.length?biete.map(offerCard).join(''):'<div style="font-size:.82rem;color:#aaa;margin-top:6px">Noch kein Fahrangebot.</div>'}
+    ${suche.length?`<div style="margin-top:10px"><strong style="font-size:.78rem;color:#a05a00">🙋 Suchen noch eine Mitfahrgelegenheit (${suche.length}):</strong>${suche.map(seekRow).join('')}</div>`:''}`;
+  let actions='';
+  if(loggedIn){
+    if(!mine) actions=`<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:#27ae60;color:#fff" onclick="openFahrtForm('${tid}','biete')">🚗 Ich biete Plätze an</button>
+        <button class="btn btn-sm" style="background:#e67e22;color:#fff" onclick="openFahrtForm('${tid}','suche')">🙋 Ich suche eine Mitfahrt</button></div>`;
+    else if(mine.rolle==='sucht') actions=`<div style="font-size:.78rem;color:#888;margin-top:8px">Du suchst eine Mitfahrt – tippe bei einem Angebot auf „Mitfahren“ · <a href="#" onclick="removeFahrt('${tid}');return false" style="color:#e74c3c">Gesuch zurücknehmen</a></div>`;
+    else if(mine.rolle==='mitfahrer') actions=`<div style="font-size:.78rem;color:#1a7a40;margin-top:8px">✅ Du fährst bei ${pn(mine.entry.name)} mit.</div>`;
+    else actions=`<div style="font-size:.78rem;color:#1a7a40;margin-top:8px">✅ Du fährst selbst – Mitfahrer erscheinen oben in deinem Angebot.</div>`;
+  } else actions='<div style="font-size:.78rem;color:#888;margin-top:8px">Zum Mitfahren bitte anmelden.</div>';
+  const label=biete.length?`${freeTotal} ${freeTotal===1?'Platz':'Plätze'} frei`:(suche.length?suche.length+' suchen':'');
+  return `<details class="t-coll"><summary>🚗 Fahrgemeinschaft${label?` · ${label}`:''}</summary><div>${lists}${actions}</div></details>`;
 }
-async function addFahrt(terminId, typ){
+// Dialog „Plätze anbieten“ / „Mitfahrt suchen“
+function openFahrtForm(terminId,typ){
   const myk=myKey(); if(!myk){ alert('Bitte zuerst anmelden.'); return; }
-  let plaetze=1, ort='';
-  if(typ==='biete'){
-    const p=prompt('Wie viele Plätze bietest du an?','3'); if(p===null) return;
-    plaetze=Math.max(1,parseInt(p)||1);
-  }
-  const o=prompt(typ==='biete'?'Ab wo / Treffpunkt? (optional)':'Wo möchtest du zusteigen? (optional)',''); if(o===null) return; ort=o.trim();
-  const entry={typ, plaetze, ort, name:getUserVoteName()||'?', ts:Date.now()};
+  const t=termine.find(x=>x.id===terminId);
+  document.getElementById('fa-termin').value=terminId; document.getElementById('fa-typ').value=typ;
+  document.getElementById('fa-title').textContent=typ==='biete'?'🚗 Plätze anbieten':'🙋 Mitfahrt suchen';
+  document.getElementById('fa-sub').textContent=t?(t.titel+' · '+fmt(t.datum)):'';
+  document.getElementById('fa-plaetze-wrap').style.display=typ==='biete'?'':'none';
+  document.getElementById('fa-zeit-wrap').style.display=typ==='biete'?'':'none';
+  document.getElementById('fa-ort-lbl').textContent=typ==='biete'?'📍 Abfahrtsort / Treffpunkt':'📍 Wo kannst du zusteigen?';
+  document.getElementById('fa-plaetze').value='3'; document.getElementById('fa-zeit').value='';
+  document.getElementById('fa-ort').value=''; document.getElementById('fa-notiz').value='';
+  document.getElementById('modal-fahrt').classList.add('open');
+}
+async function saveFahrt(){
+  const myk=myKey(); if(!myk) return;
+  const terminId=document.getElementById('fa-termin').value, typ=document.getElementById('fa-typ').value;
+  const entry={typ,name:getUserVoteName()||'?',ort:document.getElementById('fa-ort').value.trim(),notiz:document.getElementById('fa-notiz').value.trim(),ts:Date.now()};
+  if(typ==='biete'){ entry.plaetze=Math.max(1,Math.min(8,parseInt(document.getElementById('fa-plaetze').value)||1)); entry.zeit=document.getElementById('fa-zeit').value; }
+  // Wer schon irgendwo mitfährt, wird dort ausgetragen
+  await fahrtDetach(terminId,myk);
   if(!fahrten[terminId]) fahrten[terminId]={};
   fahrten[terminId][myk]=entry;
+  closeModal();
   await dbPut('fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(myk), entry).catch(e=>console.warn(e));
   renderTermine();
-  showToast(typ==='biete'?'Mitfahrt angeboten':'Als Mitfahrer eingetragen','ok');
+  showToast(typ==='biete'?'Mitfahrt angeboten':'Gesuch eingetragen','ok');
 }
+// Mich überall in diesem Termin austragen (als Mitfahrer bzw. Gesuch)
+async function fahrtDetach(terminId,myk){
+  const f=fahrten[terminId]||{};
+  for(const [k,e] of Object.entries(f)){
+    if(e&&e.typ==='biete'&&e.mitfahrer&&e.mitfahrer[myk]){
+      delete e.mitfahrer[myk];
+      await dbDel('fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(k)+'/mitfahrer/'+encodeURIComponent(myk)).catch(e2=>console.warn(e2));
+    }
+  }
+  if(f[myk]&&f[myk].typ==='suche'){ delete f[myk]; await dbDel('fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(myk)).catch(e=>console.warn(e)); }
+}
+async function joinFahrt(terminId,driverKeyEnc){
+  const myk=myKey(); if(!myk){ alert('Bitte zuerst anmelden.'); return; }
+  const dk=_fdk(driverKeyEnc);
+  // Aktuellen Stand des Angebots frisch lesen (jemand anderes könnte gerade den letzten Platz genommen haben)
+  const cur=await dbGet('fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(dk),null);
+  if(!cur||cur.typ!=='biete'){ showToast('Das Angebot gibt es nicht mehr','err'); await loadFahrten(); renderTermine(); return; }
+  if(dk===myk){ return; }
+  const already=cur.mitfahrer&&cur.mitfahrer[myk];
+  if(!already&&Object.keys(cur.mitfahrer||{}).length>=(parseInt(cur.plaetze)||0)){ showToast('Leider schon voll','err'); fahrten[terminId]=fahrten[terminId]||{}; fahrten[terminId][dk]=cur; renderTermine(); return; }
+  // Eigenes Angebot kann man nicht gleichzeitig haben
+  const own=(fahrten[terminId]||{})[myk];
+  if(own&&own.typ==='biete'){ showToast('Du bietest selbst schon Plätze an','err'); return; }
+  await fahrtDetach(terminId,myk);
+  const me={name:getUserVoteName()||'?',ts:Date.now()};
+  await dbPut('fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(dk)+'/mitfahrer/'+encodeURIComponent(myk), me).catch(e=>console.warn(e));
+  // Gegenprobe: waren wir zu zweit für den letzten Platz? Dann gewinnt, wer zuerst eingetragen war.
+  const after=await dbGet('fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(dk),null);
+  if(after){
+    const list=Object.entries(after.mitfahrer||{}).sort((a,b)=>((a[1]&&a[1].ts)||0)-((b[1]&&b[1].ts)||0));
+    const cap=parseInt(after.plaetze)||0;
+    if(list.length>cap && list.slice(cap).some(([k])=>k===myk)){
+      await dbDel('fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(dk)+'/mitfahrer/'+encodeURIComponent(myk)).catch(e=>console.warn(e));
+      delete after.mitfahrer[myk];
+      showToast('Leider gerade vergeben – der Platz ging knapp an jemand anderen','err');
+    } else showToast('Du fährst mit 🚗','ok');
+    fahrten[terminId]=fahrten[terminId]||{}; fahrten[terminId][dk]=after;
+  }
+  await loadFahrten();
+  renderTermine(); try{ renderStart(); }catch(e){}
+}
+async function leaveFahrt(terminId,driverKeyEnc,passKeyEnc){
+  const dk=_fdk(driverKeyEnc), pk=_fdk(passKeyEnc);
+  const myk=myKey();
+  if(pk!==myk && dk!==myk) return; // nur selbst oder als Fahrer*in
+  if(fahrten[terminId]&&fahrten[terminId][dk]&&fahrten[terminId][dk].mitfahrer) delete fahrten[terminId][dk].mitfahrer[pk];
+  await dbDel('fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(dk)+'/mitfahrer/'+encodeURIComponent(pk)).catch(e=>console.warn(e));
+  renderTermine();
+}
+// Fahrer*in nimmt jemanden aus der Suche mit
+async function takeSeeker(terminId,seekerKeyEnc){
+  const myk=myKey(); const sk=_fdk(seekerKeyEnc);
+  const mine=(fahrten[terminId]||{})[myk], seeker=(fahrten[terminId]||{})[sk];
+  if(!mine||mine.typ!=='biete'||!seeker||seeker.typ!=='suche') return;
+  if(Object.keys(mine.mitfahrer||{}).length>=(parseInt(mine.plaetze)||0)){ showToast('Dein Auto ist schon voll','err'); return; }
+  const p={name:seeker.name||'?',ts:Date.now()};
+  if(!mine.mitfahrer) mine.mitfahrer={};
+  mine.mitfahrer[sk]=p; delete fahrten[terminId][sk];
+  await dbPut('fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(myk)+'/mitfahrer/'+encodeURIComponent(sk), p).catch(e=>console.warn(e));
+  await dbDel('fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(sk)).catch(e=>console.warn(e));
+  renderTermine();
+  showToast(prettyName(p.name)+' fährt mit dir','ok');
+}
+// Eigenes Angebot/Gesuch entfernen (ein Angebot nimmt seine Mitfahrer mit heraus – sie stehen danach wieder ohne Fahrt da)
 async function removeFahrt(terminId){
   const myk=myKey(); if(!myk) return;
+  const e=(fahrten[terminId]||{})[myk];
+  if(e&&e.typ==='biete'&&Object.keys(e.mitfahrer||{}).length&&!confirm('Dein Angebot hat schon Mitfahrer. Wirklich löschen?')) return;
   if(fahrten[terminId]) delete fahrten[terminId][myk];
-  await dbDel('fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(myk)).catch(e=>console.warn(e));
+  await dbDel('fahrten/'+encodeURIComponent(terminId)+'/'+encodeURIComponent(myk)).catch(e2=>console.warn(e2));
   renderTermine();
 }
 
