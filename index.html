@@ -846,7 +846,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
       <div style="flex:1;min-width:150px">
         <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:3px;color:#444">Datum</label>
-        <input class="fl-input" type="date" id="probe-datum">
+        <input class="fl-input" type="date" id="probe-datum" onchange="updateWdhLabels()">
       </div>
       <div style="flex:1;min-width:150px">
         <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:3px;color:#444">Art</label>
@@ -858,7 +858,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
       <div style="flex:1;min-width:150px">
-        <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:3px;color:#444">Wiederholen (nur bei geplant)</label>
+        <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:3px;color:#444">Wiederholen (z. B. jeden Dienstag)</label>
         <select id="probe-wdh" class="fl-input">
           <option value="">Einmalig</option>
           <option value="7">Wöchentlich</option>
@@ -867,16 +867,20 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
         </select>
       </div>
       <div style="flex:1;min-width:150px">
-        <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:3px;color:#444">… bis Enddatum</label>
+        <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:3px;color:#444">… bis (leer = 16 Wochen)</label>
         <input class="fl-input" type="date" id="probe-wdh-bis">
       </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <button class="btn btn-gray btn-sm" type="button" onclick="generateProbeSeries()">🔁 Serie erzeugen &amp; prüfen</button>
+      <span style="font-size:.74rem;color:#888;margin-left:6px">zeigt alle Termine unten – Ferien einzeln mit ✕ streichen, dann „Speichern“</span>
     </div>
     <div style="margin-bottom:10px">
       <label style="display:block;font-size:.8rem;font-weight:500;margin-bottom:3px;color:#444">📍 Abweichender Ort (optional)</label>
       <input class="fl-input" type="text" id="probe-ort" placeholder="z.B. Gemeindehaus – nur ausfüllen, falls nicht die übliche Chorprobe">
     </div>
     <div style="margin-bottom:10px;border:1px dashed #d7dee7;border-radius:9px;padding:10px 12px;background:#fafbfd">
-      <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:6px;color:#444">📚 Mehrere Termine als Stapel (optional)</label>
+      <label style="display:block;font-size:.8rem;font-weight:600;margin-bottom:6px;color:#444">📚 Termine der Serie / einzeln dazugesammelt (optional)</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <input class="fl-input" type="date" id="probe-add-date" style="flex:1;min-width:150px;margin-bottom:0">
         <button class="btn btn-gray btn-sm" type="button" onclick="addBatchDate()">＋ Termin hinzufügen</button>
@@ -3686,6 +3690,41 @@ function addBatchDate(){
   renderBatchDates();
 }
 function removeBatchDate(d){ _batchProbeDates=_batchProbeDates.filter(x=>x!==d); renderBatchDates(); }
+// Serie erzeugen: Startdatum + Rhythmus (+ Ende, sonst 16 Wochen). Liegt der Start in der Vergangenheit, zählen nur künftige Termine.
+function _isoDate(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function probeRepeatDates(datum,wdh,bis){
+  const out=[datum];
+  if(!bis||bis<datum){ const e=new Date(datum+'T12:00:00'); e.setDate(e.getDate()+7*16); bis=_isoDate(e); }
+  const base=new Date(datum+'T12:00:00'); const end=new Date(bis+'T12:00:00'); let d=new Date(base), n=0, guard=0;
+  while(guard++<400){
+    n++;
+    if(wdh==='month'){ d=new Date(base); d.setMonth(base.getMonth()+n); } else { d=new Date(base); d.setDate(base.getDate()+n*parseInt(wdh)); }
+    if(d>end) break;
+    out.push(_isoDate(d));
+  }
+  const t=localToday();
+  return out.filter(x=>x>=t);
+}
+// Knopf „Serie erzeugen“: legt die Termine als anklickbare Chips ab – einzelne (z. B. Ferien) lassen sich mit ✕ wieder streichen
+function generateProbeSeries(){
+  const datum=document.getElementById('probe-datum').value, wdh=document.getElementById('probe-wdh').value, bis=document.getElementById('probe-wdh-bis').value;
+  if(!datum){ alert('Bitte oben zuerst das Startdatum (erste Probe) wählen.'); return; }
+  if(!wdh){ alert('Bitte bei „Wiederholen“ einen Rhythmus wählen (z. B. Wöchentlich).'); return; }
+  const dates=probeRepeatDates(datum,wdh,bis);
+  if(!dates.length){ alert('Im gewählten Zeitraum liegt kein künftiger Termin.'); return; }
+  dates.forEach(d=>{ if(!_batchProbeDates.includes(d)) _batchProbeDates.push(d); });
+  _batchProbeDates.sort();
+  document.getElementById('probe-art').value='geplant';
+  document.getElementById('probe-datum').value=''; document.getElementById('probe-wdh').value=''; document.getElementById('probe-wdh-bis').value='';
+  renderBatchDates();
+  showToast(dates.length+' Termine zusammengestellt – unten prüfen, Ferien mit ✕ streichen, dann „Speichern“','ok');
+}
+// Beschriftung des Rhythmus mit dem Wochentag des Startdatums („Jeden Dienstag“)
+function updateWdhLabels(){
+  const d=document.getElementById('probe-datum').value, sel=document.getElementById('probe-wdh'); if(!sel) return;
+  const wd=d?new Date(d+'T12:00:00').toLocaleDateString('de-DE',{weekday:'long'}):'';
+  [...sel.options].forEach(o=>{ if(o.value==='7') o.text=wd?'Jeden '+wd:'Wöchentlich'; if(o.value==='14') o.text=wd?'Alle 2 Wochen ('+wd+')':'Alle 2 Wochen'; });
+}
 function renderBatchDates(){
   const box=document.getElementById('probe-batch-list'); if(!box) return;
   box.innerHTML=_batchProbeDates.map(d=>`<span style="background:#eef3fa;color:#1b3a6b;border-radius:14px;padding:3px 10px;font-size:.8rem;display:inline-flex;align-items:center;gap:6px">${fmt(d)}<span style="cursor:pointer;color:#e74c3c;font-weight:700" onclick="removeBatchDate('${d}')">✕</span></span>`).join('');
@@ -3697,8 +3736,9 @@ async function saveProbe(){
   const songIds=getCheckedSongs();
   const notiz=document.getElementById('probe-notiz').value.trim();
   const ort=document.getElementById('probe-ort').value.trim();
-  // Ein zukünftiges Datum kann keine bereits durchgeführte Probe sein → automatisch als geplant speichern
-  if(art==='vergangen' && datum>localToday()){
+  // Ein zukünftiges Datum kann keine bereits durchgeführte Probe sein → automatisch als geplant speichern.
+  // Dasselbe gilt, wenn eine Wiederholung gewählt ist oder Serien-Termine gesammelt wurden (Serien sind immer „geplant“).
+  if(art==='vergangen' && (datum>localToday() || document.getElementById('probe-wdh').value || (!datum && _batchProbeDates.length))){
     art='geplant';
   }
   if(art==='vergangen'){
@@ -3711,17 +3751,15 @@ async function saveProbe(){
     // Wiederkehrende Proben generieren
     const wdh=document.getElementById('probe-wdh').value;
     const bis=document.getElementById('probe-wdh-bis').value;
-    const daten=datum?[datum]:[];
-    if(datum && wdh && bis && bis>=datum){
-      let d=new Date(datum+'T12:00:00'); const end=new Date(bis+'T12:00:00'); let guard=0;
-      while(guard++<260){
-        if(wdh==='month'){ d.setMonth(d.getMonth()+1); } else { d.setDate(d.getDate()+parseInt(wdh)); }
-        if(d>end) break;
-        daten.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
-      }
-    }
+    // Mit Wiederholung: alle Termine ab dem Startdatum (ohne Enddatum: die nächsten 16 Wochen); sonst nur das eine Datum
+    const daten=(datum&&wdh)?probeRepeatDates(datum,wdh,bis):(datum?[datum]:[]);
     // Stapel-Termine dazu, doppelte entfernen, chronologisch
-    const alleDaten=[...new Set([...daten, ..._batchProbeDates])].sort();
+    // Tage, an denen schon eine Probe steht (geplant oder erfasst), nicht noch einmal anlegen
+    const _vorhanden=new Set([...probenplan.map(p=>p.datum),...((D&&D.proben)||[]).map(p=>p.datum)]);
+    const _roh=[...new Set([...daten, ..._batchProbeDates])].sort();
+    const alleDaten=_roh.filter(dt=>!_vorhanden.has(dt));
+    if(!alleDaten.length){ alert('An diesen Tagen gibt es schon Proben – nichts Neues angelegt.'); return; }
+    if(_roh.length>alleDaten.length) showToast((_roh.length-alleDaten.length)+' Tag(e) übersprungen, da schon eine Probe existiert','ok');
     alleDaten.forEach(dt=>probenplan.push({id:uid(),datum:dt,songIds,notiz,ort}));
     await dbFetch(DB+'/probenplan.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(probenplan)});
     document.getElementById('probe-wdh').value=''; document.getElementById('probe-wdh-bis').value='';
