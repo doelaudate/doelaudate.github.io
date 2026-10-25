@@ -280,6 +280,17 @@ html.dark img, html.dark video, html.dark .no-invert{ filter: invert(1) hue-rota
 .plakate-dist-tip::before{display:none!important}
 .satb-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .satb-cell{flex:1;min-width:82px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+/* Termine/Lieder: Reiter in einer wischbaren Zeile; auf dem Handy ohne äußere Karte (Karte-in-Karte entfällt) */
+.t-tabs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.t-tabs::-webkit-scrollbar{display:none}
+.t-tabs .stab{flex:0 0 auto;white-space:nowrap}
+.stab-s{padding:5px 12px;font-size:.76rem}
+@media(max-width:640px){
+  .t-shell{background:none;box-shadow:none;border:none;padding:0}
+  .t-tabs{gap:4px}
+  .t-tabs .stab{padding:8px 11px;font-size:.78rem}
+  .t-tabs .stab-s{padding:6px 12px}
+}
 /* Termin-Karte: Kurzinfo-Zeile, die alles Weitere aufklappt */
 .t-more{margin-top:8px}
 .t-more-sum{display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:#fafbfc;user-select:none}
@@ -806,7 +817,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     </div>
     <button class="btn btn-primary" onclick="addLied()">＋ Lied hinzufügen</button>
   </div>
-  <div class="card">
+  <div class="card t-shell">
     <div class="sub-tabs" id="saison-tabs"></div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
       <input type="text" class="search-box" id="lied-search" placeholder="🔍 Lied suchen…" oninput="renderLieder()" style="flex:1;margin-bottom:0">
@@ -931,29 +942,28 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     </div>
     <button class="btn btn-primary" onclick="addTermin()">＋ Termin hinzufügen</button>
   </div>
-  <div class="card">
+  <div class="card t-shell">
     <div style="margin-bottom:12px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap">
-        <span class="card-title" style="margin-bottom:0">📆 Termine</span>
-        <div class="ics-btns" style="display:flex;gap:6px;flex-wrap:wrap">
-          <button onclick="openICSAbo()" style="padding:5px 13px;background:#8e44ad;border:1.5px solid #8e44ad;color:#fff;border-radius:6px;font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap">🔄 Kalender abonnieren</button>
-          <button onclick="exportAlleTermineICS()" style="padding:5px 13px;background:transparent;border:1.5px solid #8e44ad;color:#8e44ad;border-radius:6px;font-size:.82rem;font-weight:500;cursor:pointer;white-space:nowrap">📥 Als .ics</button>
-        </div>
+      <div class="t-tabs">
+        <button id="t-btn-anstehend" class="stab active" onclick="setTerminTab('anstehend')">Anstehend</button>
+        <button id="t-btn-kalender" class="stab" onclick="setTerminTab('kalender')">Kalender</button>
+        <button id="t-btn-vergangen" class="stab" onclick="setTerminTab('vergangen')">Vergangen</button>
+        <button id="t-btn-geburtstage" class="stab" onclick="setTerminTab('geburtstage')">🎂</button>
       </div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap">
-        <button id="t-btn-anstehend" class="stab active" onclick="setTerminTab('anstehend')">📌 Anstehend</button>
-        <button id="t-btn-kalender" class="stab" onclick="setTerminTab('kalender')">📅 Kalender</button>
-        <button id="t-btn-vergangen" class="stab" onclick="setTerminTab('vergangen')">📜 Vergangen</button>
-        <button id="t-btn-geburtstage" class="stab" onclick="setTerminTab('geburtstage')">🎂 Geburtstage</button>
-      </div>
-      <div id="t-filter" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px">
-        <button id="tfl-alle" class="stab active" onclick="setTerminFilter('alle')">Alle</button>
-        <button id="tfl-proben" class="stab" onclick="setTerminFilter('proben')">🎹 Proben</button>
-        <button id="tfl-auftritte" class="stab" onclick="setTerminFilter('auftritte')">🎤 Auftritte</button>
+      <div id="t-filter" class="t-tabs" style="margin-top:8px">
+        <button id="tfl-alle" class="stab stab-s active" onclick="setTerminFilter('alle')">Alle</button>
+        <button id="tfl-proben" class="stab stab-s" onclick="setTerminFilter('proben')">🎹 Proben</button>
+        <button id="tfl-auftritte" class="stab stab-s" onclick="setTerminFilter('auftritte')">🎤 Auftritte</button>
       </div>
     </div>
     <div id="t-anstehend"></div>
-    <div id="t-kalender" style="display:none"><div id="kal-container"></div></div>
+    <div id="t-kalender" style="display:none">
+      <div class="ics-btns" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        <button onclick="openICSAbo()" style="padding:6px 13px;background:#8e44ad;border:1.5px solid #8e44ad;color:#fff;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap">🔄 Kalender abonnieren</button>
+        <button onclick="exportAlleTermineICS()" style="padding:6px 13px;background:transparent;border:1.5px solid #8e44ad;color:#8e44ad;border-radius:8px;font-size:.82rem;font-weight:500;cursor:pointer;white-space:nowrap">📥 Als .ics</button>
+      </div>
+      <div id="kal-container"></div>
+    </div>
     <div id="t-vergangen" style="display:none"></div>
     <div id="t-geburtstage" style="display:none"><div id="geburtstage-list"></div></div>
   </div>
@@ -5051,7 +5061,7 @@ function renderTermine(){
   const today=new Date().toISOString().split('T')[0];
   const isP=t=>t.typ==='probe';
   const fP=terminFilter==='proben', fA=terminFilter==='auftritte';
-  ['alle','proben','auftritte'].forEach(k=>{ const b=document.getElementById('tfl-'+k); if(b) b.className='stab'+(terminFilter===k?' active':''); });
+  ['alle','proben','auftritte'].forEach(k=>{ const b=document.getElementById('tfl-'+k); if(b) b.className='stab stab-s'+(terminFilter===k?' active':''); });
   const sorted=[...termine].sort((a,b)=>a.datum.localeCompare(b.datum));
   const keepT=t=>fP?isP(t):(fA?!isP(t):true);
   const upcoming=sorted.filter(t=>(t.datum_ende||t.datum)>=today&&keepT(t));
