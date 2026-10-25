@@ -518,6 +518,19 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
   .konsole-menu::-webkit-scrollbar{display:none}
   .konsole-menu .km{flex:0 0 auto;width:auto;min-height:40px;white-space:nowrap;padding:8px 14px;font-size:.84rem;border-radius:20px}
 }
+/* Konsole: Rubrik-Leiste (kg) über den Bereichen (km) */
+.konsole-menu .kg-bar{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
+.konsole-menu .kg{padding:8px 6px;border:1.5px solid var(--line);background:#f3f6fa;border-radius:10px;cursor:pointer;font-size:.8rem;font-weight:700;color:var(--navy);text-align:center}
+.konsole-menu .kg.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.konsole-menu .km-list{display:flex;flex-direction:column;gap:5px}
+.konsole-menu .km.km-off{display:none}
+@media(max-width:680px){
+  .konsole-menu{flex-direction:column;overflow:visible;gap:0;padding-bottom:8px}
+  .konsole-menu .kg-bar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-bottom:6px}
+  .konsole-menu .kg{white-space:nowrap;min-height:38px;border-radius:12px;padding:6px 2px;font-size:.72rem;overflow:hidden;text-overflow:ellipsis}
+  .konsole-menu .km-list{flex-direction:row;overflow-x:auto;gap:6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .konsole-menu .km-list::-webkit-scrollbar{display:none}
+}
 /* Mindest-Tippfläche für alle Knöpfe im Inhalt (Handy) — sonst wirken Chips/Kleinstknöpfe wie 26 px hohe Streifen */
 @media(max-width:640px){
   .content button,.modal button,.sheet button{min-height:36px}
@@ -1521,21 +1534,30 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     </div>
     </div><!-- /konsole-content -->
     <div class="konsole-menu">
-      <button class="km active" data-kp="bearbeiten" onclick="konsoleNav('bearbeiten')">✏️ Bearbeiten</button>
-      <button class="km" data-kp="chor" onclick="konsoleNav('chor')">🏛️ Chor</button>
-      <button class="km" data-kp="module" onclick="konsoleNav('module')">🧩 Module &amp; Regeln</button>
-      <button class="km" data-kp="app" onclick="konsoleNav('app')">📝 App-Hinweis</button>
-      <button class="km" data-kp="push" onclick="konsoleNav('push')">🔔 Benachrichtigungen</button>
-      <button class="km" data-kp="senden" onclick="konsoleNav('senden')">📢 Nachricht senden</button>
-      <button class="km" data-kp="uebersicht" onclick="konsoleNav('uebersicht')">📊 Übersicht</button>
-      <button class="km" data-kp="datenpflege" onclick="konsoleNav('datenpflege')">🩺 Datenpflege</button>
-      <button class="km" data-kp="daten" onclick="konsoleNav('daten')">💾 Daten &amp; Backup</button>
-      <button class="km" data-kp="sicherheit" onclick="konsoleNav('sicherheit')">🔑 Sicherheit</button>
-      <button class="km" data-kp="benutzer" onclick="konsoleNav('benutzer')">👥 Benutzer</button>
-      <button class="km" data-kp="saisons" onclick="konsoleNav('saisons')">📅 Saisons</button>
-      <button class="km" data-kp="organigramm" onclick="konsoleNav('organigramm')">👔 Organigramm</button>
-      <button class="km" data-kp="stimmen" onclick="konsoleNav('stimmen')">🎚️ Stimmen</button>
-      <button class="km" data-kp="gast" onclick="konsoleNav('gast')">🎫 Gast-Noten</button>
+      <!-- Zwei Ebenen: oben die Rubrik, darunter die Bereiche dieser Rubrik -->
+      <div class="kg-bar">
+        <button class="kg active" data-g="chor" onclick="konsoleGroup('chor')">🎶 Chor</button>
+        <button class="kg" data-g="komm" onclick="konsoleGroup('komm')">📣 Mitteilen</button>
+        <button class="kg" data-g="app" onclick="konsoleGroup('app')">⚙️ App</button>
+        <button class="kg" data-g="daten" onclick="konsoleGroup('daten')">🩺 Daten</button>
+      </div>
+      <div class="km-list">
+      <button class="km active" data-g="chor" data-kp="bearbeiten" onclick="konsoleNav('bearbeiten')">✏️ Bearbeiten</button>
+      <button class="km" data-g="chor" data-kp="chor" onclick="konsoleNav('chor')">🏛️ Chor-Stammdaten</button>
+      <button class="km" data-g="chor" data-kp="saisons" onclick="konsoleNav('saisons')">📅 Saisons</button>
+      <button class="km" data-g="chor" data-kp="organigramm" onclick="konsoleNav('organigramm')">👔 Organigramm</button>
+      <button class="km" data-g="chor" data-kp="stimmen" onclick="konsoleNav('stimmen')">🎚️ Stimmen</button>
+      <button class="km" data-g="chor" data-kp="gast" onclick="konsoleNav('gast')">🎫 Gast-Noten</button>
+      <button class="km" data-g="komm" data-kp="push" onclick="konsoleNav('push')">🔔 Benachrichtigungen</button>
+      <button class="km" data-g="komm" data-kp="senden" onclick="konsoleNav('senden')">📢 Nachricht senden</button>
+      <button class="km" data-g="komm" data-kp="app" onclick="konsoleNav('app')">📝 App-Hinweis</button>
+      <button class="km" data-g="app" data-kp="module" onclick="konsoleNav('module')">🧩 Module &amp; Regeln</button>
+      <button class="km" data-g="app" data-kp="benutzer" onclick="konsoleNav('benutzer')">👥 Benutzer</button>
+      <button class="km" data-g="app" data-kp="sicherheit" onclick="konsoleNav('sicherheit')">🔑 Sicherheit</button>
+      <button class="km" data-g="daten" data-kp="uebersicht" onclick="konsoleNav('uebersicht')">📊 Übersicht</button>
+      <button class="km" data-g="daten" data-kp="datenpflege" onclick="konsoleNav('datenpflege')">🩺 Datenpflege</button>
+      <button class="km" data-g="daten" data-kp="daten" onclick="konsoleNav('daten')">💾 Daten &amp; Backup</button>
+      </div>
     </div>
     </div><!-- /konsole-layout -->
   </div>
@@ -1763,12 +1785,14 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     <h4>Mehr</h4>
     <div class="sheet-label">🎶 Chor</div>
     <div class="sheet-grid">
-      <button class="sheet-link" onclick="bnavMore('umfragen')"><span class="si">📊</span>Umfragen</button>
       <button class="sheet-link" onclick="bnavMore('mitglieder')"><span class="si">👥</span>Mitglieder</button>
+      <button class="sheet-link" onclick="bnavMore('organigramm')"><span class="si">🏛️</span>Organigramm</button>
+      <button class="sheet-link" onclick="closeMoreSheet();showPage('mitglieder');setMitgliederTab('kasse')"><span class="si">💰</span>Chorkasse</button>
+      <button class="sheet-link" onclick="bnavMore('umfragen')"><span class="si">📊</span>Umfragen</button>
       <button class="sheet-link" onclick="bnavMore('plakate')"><span class="si">📋</span>Plakate</button>
       <button class="sheet-link" onclick="bnavMore('kommentare')"><span class="si">💬</span>Kommentare</button>
     </div>
-    <div class="sheet-label sheet-user" style="display:none">👤 Persönlich</div>
+    <div class="sheet-label sheet-user" style="display:none">👤 Ich</div>
     <div class="sheet-grid">
       <button class="sheet-link sheet-user" style="display:none" onclick="closeMoreSheet();openAbwesenheit()"><span class="si">🏖️</span>Abwesenheit</button>
       <button class="sheet-link sheet-user" id="more-einst" style="display:none" onclick="bnavMore('einstellungen')"><span class="si">⚙️</span>Einstellungen</button>
@@ -2710,7 +2734,7 @@ function showPage(id,tab){
   if(id==='termine') renderTermine();
   if(id==='umfragen'){ renderUmfragen(); if(!document.querySelector('#tf-optionen .tf-opt')) resetTfForm(); renderTerminfindung(); }
   if(id==='mitglieder') renderMitglieder();
-  if(id==='konsole') renderKonsole();
+  if(id==='konsole'){ renderKonsole(); const _ka=document.querySelector('#p-konsole .km.active'); konsoleShowGroup(_ka?_ka.getAttribute('data-g'):'chor'); }
   if(id==='einstellungen') renderEinstellungen();
   if(id==='lieder') renderLiedwuensche();
   if(id==='plakate') renderPlakate();
@@ -5683,16 +5707,27 @@ async function submitKommentar(){
 
 // ADMIN KONSOLE
 // Konsole: Menü-Navigation rechts
+// Zwei Ebenen: Rubrik (kg) → Bereiche (km). Es sind immer nur die Bereiche der gewählten Rubrik zu sehen.
+function konsoleShowGroup(g){
+  document.querySelectorAll('#p-konsole .kg').forEach(b=>b.classList.toggle('active', b.getAttribute('data-g')===g));
+  document.querySelectorAll('#p-konsole .km').forEach(b=>b.classList.toggle('km-off', b.getAttribute('data-g')!==g));
+}
+function konsoleGroup(g){
+  konsoleShowGroup(g);
+  const first=document.querySelector('#p-konsole .km[data-g="'+g+'"]'); if(first) konsoleNav(first.getAttribute('data-kp'));
+}
 function konsoleNav(id){
   document.querySelectorAll('#p-konsole .konsole-pane').forEach(p=>p.classList.toggle('active', p.id==='kp-'+id));
   document.querySelectorAll('#p-konsole .km').forEach(b=>b.classList.toggle('active', b.getAttribute('data-kp')===id));
+  const ab=document.querySelector('#p-konsole .km[data-kp="'+id+'"]'); if(ab) konsoleShowGroup(ab.getAttribute('data-g'));
   const c=document.querySelector('.konsole-content'); if(c) c.scrollTop=0;
   // Handy: aktiven Menüpunkt in die Mitte der Leiste holen und den Inhalt direkt unter der Leiste zeigen
   try{
-    const act=document.querySelector('#p-konsole .km.active'); const menu=document.querySelector('#p-konsole .konsole-menu');
+    const act=document.querySelector('#p-konsole .km.active'); const menu=document.querySelector('#p-konsole .km-list');
     if(act&&menu&&menu.scrollWidth>menu.clientWidth){ menu.scrollLeft=act.offsetLeft-(menu.clientWidth-act.offsetWidth)/2; }
-    if(c&&menu&&getComputedStyle(menu).position==='sticky'){
-      const top=c.getBoundingClientRect().top+window.scrollY-menu.offsetHeight-8;
+    const sticky=document.querySelector('#p-konsole .konsole-menu');
+    if(c&&sticky&&getComputedStyle(sticky).position==='sticky'){
+      const top=c.getBoundingClientRect().top+window.scrollY-sticky.offsetHeight-8;
       if(window.scrollY>top) window.scrollTo(0,Math.max(0,top));
     }
   }catch(e){}
