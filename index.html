@@ -760,7 +760,6 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
 <div class="main-tabs">
   <div class="mtab active" onclick="showPage('start',this)">🏠 Start</div>
   <div class="mtab" onclick="showPage('lieder',this)">🎵 Lieder</div>
-  <div class="mtab" onclick="showPage('proben',this)">📅 Proben</div>
   <div class="mtab" onclick="showPage('termine',this)">📆 Termine</div>
   <div class="mtab" onclick="showPage('umfragen',this)">📊 Umfragen</div>
   <div class="mtab" onclick="showPage('mitglieder',this)">👥 Mitglieder</div>
@@ -841,7 +840,7 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   </div>
 </div>
 
-<div class="page" id="p-proben">
+<div class="page" id="p-termine">
   <div class="admin-section admin-only" data-perm="proben">
     <div class="admin-label">🔑 Admin: Probe erfassen / planen</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
@@ -891,17 +890,6 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     <textarea id="probe-notiz" placeholder="z.B. Sopran bei Takt 12 nochmal üben…" style="min-height:55px;margin-bottom:10px"></textarea>
     <button class="btn btn-success" onclick="saveProbe()">✅ Speichern</button>
   </div>
-  <div class="card" style="margin-bottom:12px">
-    <div class="card-title">📋 Geplante Proben</div>
-    <div id="plan-list"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">📜 Probenverlauf</div>
-    <div id="verlauf-list"></div>
-  </div>
-</div>
-
-<div class="page" id="p-termine">
   <div class="admin-section admin-only" data-perm="termine">
     <div class="admin-label">🔑 Admin: Termin hinzufügen</div>
     <div class="form-row">
@@ -944,6 +932,11 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
         <button id="t-btn-kalender" class="stab" onclick="setTerminTab('kalender')">📅 Kalender</button>
         <button id="t-btn-vergangen" class="stab" onclick="setTerminTab('vergangen')">📜 Vergangen</button>
         <button id="t-btn-geburtstage" class="stab" onclick="setTerminTab('geburtstage')">🎂 Geburtstage</button>
+      </div>
+      <div id="t-filter" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px">
+        <button id="tfl-alle" class="stab active" onclick="setTerminFilter('alle')">Alle</button>
+        <button id="tfl-proben" class="stab" onclick="setTerminFilter('proben')">🎹 Proben</button>
+        <button id="tfl-auftritte" class="stab" onclick="setTerminFilter('auftritte')">🎤 Auftritte</button>
       </div>
     </div>
     <div id="t-anstehend"></div>
@@ -1773,7 +1766,6 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
 <nav class="bottomnav bnav" id="bottomnav">
   <button class="bnav-item active" data-page="start" onclick="bnav('start')"><span class="bnav-ic">🏠</span>Start</button>
   <button class="bnav-item" data-page="lieder" onclick="bnav('lieder')"><span class="bnav-ic">🎵</span>Lieder</button>
-  <button class="bnav-item" data-page="proben" onclick="bnav('proben')"><span class="bnav-ic">📅</span>Proben</button>
   <button class="bnav-item" data-page="termine" onclick="bnav('termine')"><span class="bnav-ic">📆</span>Termine</button>
   <button class="bnav-item" data-page="__more__" onclick="openMoreSheet()"><span class="bnav-ic">☰</span>Mehr</button>
 </nav>
@@ -2723,6 +2715,7 @@ function applyAdminMode(){
 
 // PAGE
 function showPage(id,tab){
+  if(id==='proben'){ terminFilter='proben'; showPage('termine',tab); setTerminTab('anstehend'); return; } // Proben sind jetzt Teil der Termine-Seite
   if(id==='organigramm'){ showPage('mitglieder', tab); setMitgliederTab('organigramm'); return; } // Organigramm ist jetzt Unter-Reiter der Mitglieder
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.mtab').forEach(t=>t.classList.remove('active'));
@@ -2730,8 +2723,7 @@ function showPage(id,tab){
   if(tab) tab.classList.add('active');
   if(id==='start') renderStart();
   if(id==='statistik'){ renderStatistik(); if(document.getElementById('av-anwesenheit')?.style.display!=='none') renderAnwesenheitPage(); }
-  if(id==='proben'){renderProben();renderSongPicker();}
-  if(id==='termine') renderTermine();
+  if(id==='termine'){ renderProben(); renderSongPicker(); }
   if(id==='umfragen'){ renderUmfragen(); if(!document.querySelector('#tf-optionen .tf-opt')) resetTfForm(); renderTerminfindung(); }
   if(id==='mitglieder') renderMitglieder();
   if(id==='konsole'){ renderKonsole(); const _ka=document.querySelector('#p-konsole .km.active'); konsoleShowGroup(_ka?_ka.getAttribute('data-g'):'chor'); }
@@ -2743,7 +2735,7 @@ function showPage(id,tab){
 }
 
 // ===== UNTERE TAB-LEISTE (mobil) =====
-const BNAV_PRIMARY=['start','lieder','proben','termine'];
+const BNAV_PRIMARY=['start','lieder','termine'];
 function syncBottomNav(id){
   document.querySelectorAll('.bnav-item').forEach(b=>{
     const p=b.getAttribute('data-page');
@@ -4934,10 +4926,16 @@ function localToday(){
   const d=new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+// Proben stehen jetzt auf der Termine-Seite (gemeinsame Liste mit Filter Alle / Proben / Auftritte).
+// renderProben baut nur noch die Probe-Karten (window._probeItems) und lässt renderTermine die gemeinsame Liste zeichnen.
+function _probeCard(color,badge,inner,extra){
+  return `<div class="termin-card" style="border-left-color:${color};${extra||''}"><span class="t-badge" style="background:${color}">${badge}</span>${inner}</div>`;
+}
 function renderProben(){
-  if(!D)return;
+  if(!D){ renderTermine(); return; }
   const allS=D.seasons.flatMap(s=>s.songs||[]);
   const today=localToday();
+  const longDate=iso=>new Date(iso+'T12:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
 
   // Alle Proben aus BEIDEN Quellen zusammenführen, Quelle merken (für korrektes Löschen)
   const _doneIds=new Set((D.proben||[]).map(p=>p.id));
@@ -4946,64 +4944,50 @@ function renderProben(){
     ...((D.proben)||[]).map(p=>({...p,_src:'proben'}))
   ];
   // Einordnung NACH DATUM, nicht nach Quelle:
-  const upcoming=alle.filter(p=>p.datum>=today).sort((a,b)=>a.datum.localeCompare(b.datum));
-  const vergangen=alle.filter(p=>p.datum<today).sort((a,b)=>b.datum.localeCompare(a.datum));
+  const upcoming=alle.filter(p=>p.datum>=today);
+  const vergangen=alle.filter(p=>p.datum<today);
 
   // ===== GEPLANTE PROBEN (heute & zukünftig) =====
-  const planEl=document.getElementById('plan-list');
-  if(planEl){
-    if(!upcoming.length) planEl.innerHTML='<div class="empty" style="padding:16px">Keine Proben geplant.</div>';
-    else planEl.innerHTML=upcoming.map(p=>{
-      const songs=(p.songIds||[]).map(id=>{const s=allS.find(x=>x.id===id);return s?s.name:'?'}).join(', ');
-      const isGeplant=p._src==='plan';
-      if(p.abgesagt){
-        return`<div class="plan-item" style="background:#fdf2f2;border-left-color:#e74c3c"><div style="font-weight:700;color:#c0392b;margin-bottom:2px">❌ ${fmt(p.datum)} – Probe fällt aus</div>${p.abgesagt.grund?`<div style="font-size:.84rem;color:#922b21">Grund: ${esc(p.abgesagt.grund)}</div>`:''}${uiEdit('proben')?`<div class="act-row"><button class="btn btn-sm" style="background:#d5f5e3;color:#1a7a40" onclick="reinstateProbe('${p.id}',${isGeplant})">↩ Findet doch statt</button><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',${isGeplant})">🗑️ Löschen</button></div>`:''}</div>`;
-      }
-      return`<div class="plan-item"><div style="font-weight:600;color:#1e8449;margin-bottom:2px">🎹 ${fmt(p.datum)}</div>${p.ort?`<div style="font-size:.8rem;color:#c0620f;font-weight:600">📍 ${esc(p.ort)}</div>`:''}${songs?`<div style="font-size:.8rem;color:#555">🎵 ${esc(songs)}</div>`:''}${p.notiz?`<div style="font-size:.8rem;color:#888;font-style:italic">💬 ${esc(p.notiz)}</div>`:''}${buildProbeAttendance(p)}${uiEdit('proben')?`<div class="act-row"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editProbe('${p.id}',${isGeplant})">✏️ Bearbeiten</button><button class="btn btn-sm" style="background:#fdecea;color:#c0392b" onclick="cancelProbe('${p.id}',${isGeplant})">❌ Absagen</button><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',${isGeplant})">🗑️ Löschen</button></div>`:''}</div>`;
-    }).join('');
-  }
+  const plan=upcoming.map(p=>{
+    const songs=(p.songIds||[]).map(id=>{const s=allS.find(x=>x.id===id);return s?s.name:'?'}).join(', ');
+    const isGeplant=p._src==='plan';
+    if(p.abgesagt){
+      return {d:p.datum,html:_probeCard('#e74c3c','❌ Probe fällt aus',`<div class="t-title">${esc(longDate(p.datum))}</div>${p.abgesagt.grund?`<div style="font-size:.84rem;color:#922b21">Grund: ${esc(p.abgesagt.grund)}</div>`:''}${uiEdit('proben')?`<div class="act-row"><button class="btn btn-sm" style="background:#d5f5e3;color:#1a7a40" onclick="reinstateProbe('${p.id}',${isGeplant})">↩ Findet doch statt</button><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',${isGeplant})">🗑️ Löschen</button></div>`:''}`,'background:#fdf2f2')};
+    }
+    return {d:p.datum,html:_probeCard('#1e8449','🎹 Probe',`<div class="t-title">${esc(longDate(p.datum))}</div>${p.ort?`<div style="font-size:.8rem;color:#c0620f;font-weight:600">📍 ${esc(p.ort)}</div>`:''}${songs?`<div style="font-size:.8rem;color:#555;margin-top:2px">🎵 ${esc(songs)}</div>`:''}${p.notiz?`<div style="font-size:.8rem;color:#888;font-style:italic">💬 ${esc(p.notiz)}</div>`:''}${buildProbeAttendance(p)}${uiEdit('proben')?`<div class="act-row"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editProbe('${p.id}',${isGeplant})">✏️ Bearbeiten</button><button class="btn btn-sm" style="background:#fdecea;color:#c0392b" onclick="cancelProbe('${p.id}',${isGeplant})">❌ Absagen</button><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',${isGeplant})">🗑️ Löschen</button></div>`:''}`)};
+  });
 
   // ===== PROBENVERLAUF (vergangen) =====
-  const verlEl=document.getElementById('verlauf-list');
-  if(verlEl){
-    if(!vergangen.length){verlEl.innerHTML='<div class="empty" style="padding:16px">Noch keine Proben erfasst.</div>';}
-    else {
-      const _wasOpen=!!(document.getElementById('verlauf-aeltere')&&document.getElementById('verlauf-aeltere').open);
-      const _vi=vergangen.map(p=>{
-        const names=(p.songIds||[]).map(id=>{const s=allS.find(x=>x.id===id);return s?s.name:'?'}).join(', ');
-        // Geplante Probe, deren Datum vorbei ist, aber nie erfasst wurde
-        if(p._src==='plan'){
-          return`<div class="probe-item" style="border-left-color:#f39c12;background:#fffbf0;opacity:.8">
-            <div style="font-size:.72rem;font-weight:700;color:#f39c12;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Geplant (nicht erfasst)</div>
-            <div class="probe-date">📋 ${fmt(p.datum)}</div>
-            ${p.ort?`<div style="font-size:.8rem;color:#c0620f;font-weight:600">📍 ${esc(p.ort)}</div>`:''}
-            ${names?`<div class="probe-songs">🎵 ${esc(names)}</div>`:''}
-            ${p.notiz?`<div class="probe-notes">💬 ${esc(p.notiz)}</div>`:''}
-            ${uiEdit('proben')?`<div class="act-row"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editProbe('${p.id}',true)">✏️ Bearbeiten</button><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',true)">🗑️ Löschen</button></div>`:''}
-          </div>`;
-        }
-        const hw=p.hausaufgaben||{};
-        const hwHtml=Object.entries(hw).filter(([,v])=>v).map(([g,t])=>`<div style="font-size:.76rem;margin-top:2px"><strong>${esc(g)}:</strong> ${esc(t)}</div>`).join('');
-        return`<div class="probe-item">
-          <div class="probe-date">📅 ${fmt(p.datum)}</div>
-          ${p.ort?`<div style="font-size:.8rem;color:#c0620f;font-weight:600">📍 ${esc(p.ort)}</div>`:''}
-          <div class="probe-songs">🎵 ${esc(names)}</div>
-          ${p.notiz?`<div class="probe-notes">💬 ${esc(p.notiz)}</div>`:''}
-          ${hwHtml?`<div style="background:#fff8e7;border-radius:5px;padding:6px 8px;margin-top:6px;font-size:.78rem;color:#7d6608"><strong>📝 Hausaufgaben:</strong>${hwHtml}</div>`:''}
-          ${uiEdit('proben')?`<div class="act-row">
-            <button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editProbe('${p.id}',false)">✏️ Bearbeiten</button>
-            <button class="btn btn-sm" style="background:#f39c12;color:white" onclick="editHausaufgaben('${p.id}')">📝 HA</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',false)">🗑️ Löschen</button>
-          </div>`:''}
-        </div>`;
-      });
-      // Die letzten 5 stehen offen da, ältere sind eingeklappt – sonst wird die Seite endlos lang
-      verlEl.innerHTML=_vi.slice(0,5).join('')+(_vi.length>5?`<details id="verlauf-aeltere" class="t-coll" style="margin-top:8px"${_wasOpen?' open':''}><summary style="cursor:pointer;font-size:.85rem;font-weight:700;color:var(--primary);padding:6px 0">Ältere Proben anzeigen (${_vi.length-5})</summary>${_vi.slice(5).join('')}</details>`:'');
+  const verlauf=vergangen.map(p=>{
+    const names=(p.songIds||[]).map(id=>{const s=allS.find(x=>x.id===id);return s?s.name:'?'}).join(', ');
+    // Geplante Probe, deren Datum vorbei ist, aber nie erfasst wurde
+    if(p._src==='plan'){
+      return {d:p.datum,html:_probeCard('#f39c12','📋 Probe (nicht erfasst)',`<div class="t-title">${esc(longDate(p.datum))}</div>
+        ${p.ort?`<div style="font-size:.8rem;color:#c0620f;font-weight:600">📍 ${esc(p.ort)}</div>`:''}
+        ${names?`<div class="probe-songs">🎵 ${esc(names)}</div>`:''}
+        ${p.notiz?`<div class="probe-notes">💬 ${esc(p.notiz)}</div>`:''}
+        ${uiEdit('proben')?`<div class="act-row"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editProbe('${p.id}',true)">✏️ Bearbeiten</button><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',true)">🗑️ Löschen</button></div>`:''}`,'opacity:.75')};
     }
-  }
+    const hw=p.hausaufgaben||{};
+    const hwHtml=Object.entries(hw).filter(([,v])=>v).map(([g,t])=>`<div style="font-size:.76rem;margin-top:2px"><strong>${esc(g)}:</strong> ${esc(t)}</div>`).join('');
+    return {d:p.datum,html:_probeCard('#1e8449','🎹 Probe',`<div class="t-title">${esc(longDate(p.datum))}</div>
+      ${p.ort?`<div style="font-size:.8rem;color:#c0620f;font-weight:600">📍 ${esc(p.ort)}</div>`:''}
+      <div class="probe-songs">🎵 ${esc(names)}</div>
+      ${p.notiz?`<div class="probe-notes">💬 ${esc(p.notiz)}</div>`:''}
+      ${hwHtml?`<div style="background:#fff8e7;border-radius:5px;padding:6px 8px;margin-top:6px;font-size:.78rem;color:#7d6608"><strong>📝 Hausaufgaben:</strong>${hwHtml}</div>`:''}
+      ${uiEdit('proben')?`<div class="act-row">
+        <button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editProbe('${p.id}',false)">✏️ Bearbeiten</button>
+        <button class="btn btn-sm" style="background:#f39c12;color:white" onclick="editHausaufgaben('${p.id}')">📝 HA</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',false)">🗑️ Löschen</button>
+      </div>`:''}`,'opacity:.8')};
+  });
+  window._probeItems={plan,verlauf};
+  renderTermine();
 }
 
-// TERMINE
+// TERMINE (inkl. Proben)
+let terminFilter='alle'; // 'alle' | 'proben' | 'auftritte'
+function setTerminFilter(f){ terminFilter=f; renderTermine(); }
 function setTerminTab(v){
   aktiveTerminTab=v;
   ['anstehend','kalender','vergangen','geburtstage'].forEach(id=>{
@@ -5012,18 +4996,31 @@ function setTerminTab(v){
     const b=document.getElementById('t-btn-'+id);
     if(b) b.className='stab'+(v===id?' active':'');
   });
+  const _tf=document.getElementById('t-filter'); if(_tf) _tf.style.display=(v==='anstehend'||v==='vergangen')?'flex':'none';
   if(v==='kalender') renderKalender();
   if(v==='geburtstage') renderGeburtstage();
 }
 function renderTermine(){
   const today=new Date().toISOString().split('T')[0];
+  const isP=t=>t.typ==='probe';
+  const fP=terminFilter==='proben', fA=terminFilter==='auftritte';
+  ['alle','proben','auftritte'].forEach(k=>{ const b=document.getElementById('tfl-'+k); if(b) b.className='stab'+(terminFilter===k?' active':''); });
   const sorted=[...termine].sort((a,b)=>a.datum.localeCompare(b.datum));
-  const upcoming=sorted.filter(t=>(t.datum_ende||t.datum)>=today);
-  const past=sorted.filter(t=>(t.datum_ende||t.datum)<today);
+  const keepT=t=>fP?isP(t):(fA?!isP(t):true);
+  const upcoming=sorted.filter(t=>(t.datum_ende||t.datum)>=today&&keepT(t));
+  const past=sorted.filter(t=>(t.datum_ende||t.datum)<today&&keepT(t));
+  const pi=window._probeItems||{plan:[],verlauf:[]};
   const upEl=document.getElementById('t-anstehend');
   const pastEl=document.getElementById('t-vergangen');
-  if(upEl) upEl.innerHTML=upcoming.length?upcoming.map(t=>terminHtml(t)).join(''):'<div class="empty">Keine bevorstehenden Termine.</div>';
-  if(pastEl) pastEl.innerHTML=past.length?[...past].reverse().map(t=>terminHtml(t,true)).join(''):'<div class="empty">Keine vergangenen Termine.</div>';
+  // Gemeinsame Liste: Termine + Proben nach Datum (Proben zuerst, wenn am selben Tag)
+  const upItems=[...upcoming.map(t=>({d:t.datum,k:1,html:terminHtml(t)})),...(fA?[]:pi.plan.map(x=>({d:x.d,k:0,html:x.html})))].sort((a,b)=>a.d.localeCompare(b.d)||a.k-b.k);
+  if(upEl) upEl.innerHTML=upItems.length?upItems.map(x=>x.html).join(''):'<div class="empty">'+(fP?'Keine Proben geplant.':(fA?'Keine bevorstehenden Termine.':'Nichts geplant.'))+'</div>';
+  const pastItems=[...past.map(t=>({d:t.datum_ende||t.datum,html:terminHtml(t,true)})),...(fA?[]:pi.verlauf.map(x=>({d:x.d,html:x.html})))].sort((a,b)=>b.d.localeCompare(a.d));
+  // Die jüngsten 6 stehen offen da, ältere sind eingeklappt – sonst wird die Seite endlos lang
+  const _wasOpen=!!(document.getElementById('verlauf-aeltere')&&document.getElementById('verlauf-aeltere').open);
+  if(pastEl) pastEl.innerHTML=pastItems.length
+    ? pastItems.slice(0,6).map(x=>x.html).join('')+(pastItems.length>6?`<details id="verlauf-aeltere" class="t-coll" style="margin-top:8px"${_wasOpen?' open':''}><summary style="cursor:pointer;font-size:.85rem;font-weight:700;color:var(--primary);padding:6px 0">Ältere anzeigen (${pastItems.length-6})</summary>${pastItems.slice(6).map(x=>x.html).join('')}</details>`:'')
+    : '<div class="empty">'+(fP?'Noch keine Proben erfasst.':'Keine vergangenen Einträge.')+'</div>';
 }
 // ===== Termin-Rückmeldungen: jede Person genau EINMAL (Entdopplung über alle Namens-Varianten) =====
 const SATB_VOICES=['Sopran','Alt','Tenor','Bass'];
