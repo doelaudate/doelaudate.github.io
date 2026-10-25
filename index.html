@@ -280,7 +280,16 @@ html.dark img, html.dark video, html.dark .no-invert{ filter: invert(1) hue-rota
 .plakate-dist-tip::before{display:none!important}
 .satb-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .satb-cell{flex:1;min-width:82px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
-.satb-name{font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+/* Termin-Karte: Kurzinfo-Zeile, die alles Weitere aufklappt */
+.t-more{margin-top:8px}
+.t-more-sum{display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:#fafbfc;user-select:none}
+.t-more-sum::-webkit-details-marker{display:none}
+.tm-chips{flex:1;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.8rem;font-weight:600;color:var(--navy);min-width:0}
+.tm-c{white-space:nowrap}
+.t-more[open]>.t-more-sum{border-color:var(--primary)}
+.t-more[open]>.t-more-sum .rb-chev{transform:rotate(180deg)}
+.t-more-body{padding-top:2px}
+.satb-name{font-size:.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
 .satb-nums{font-size:.84rem;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
 
 /* ===== HANDY-OPTIMIERUNG ===== */
@@ -5174,12 +5183,28 @@ function terminHtml(t,past=false){
     <div class="t-meta">📅 ${dateStr}${t.uhrzeit?' &nbsp;🕐 '+esc(t.uhrzeit):''}${t.frist&&!past&&!infoOnly?` &nbsp;<span style="color:${t.frist<localToday()?'#e74c3c':'#7d6608'}">⏳ bis ${fmt(t.frist)}${t.frist<localToday()?' (abgelaufen)':''}</span>`:''}</div>
     ${(!past&&!infoOnly)?`<div class="vote-row" id="vrow-${t.id}">${buildVoteRow(t)}</div>`:''}
     ${infoOnly&&t.beschreibung?`<div style="font-size:.85rem;color:#555;margin:2px 0 4px">${esc(t.beschreibung)}</div>`:''}
-    ${setlisteHtml(t)}
-    ${ablaufplanBlock(t)}
-    ${checklisteBlock(t)}
-    ${!past?fahrtenBlock(t):''}
-    ${!past?aufgabenBlock(t):''}
-    ${showRueck?rueckmeldungenHtml(t, bd):''}
+    ${terminMoreOpen(t,past,infoOnly,bd,showRueck)}
+  </div>`;
+}
+// Alles unter der Zu-/Absage steht hinter EINER Zeile mit Kurzinfo (Rückmeldungen, Fahrten, Ablauf …) – Antippen klappt alles auf
+const _tmOpenSet=new Set();
+function _tmOpen(id,on){ if(on) _tmOpenSet.add(id); else _tmOpenSet.delete(id); }
+function terminMoreOpen(t,past,infoOnly,bd,showRueck){
+  const chips=[];
+  if(showRueck) chips.push(`<span class="tm-c"><span style="color:#22a559">✅ ${bd.ja.length}</span> <span style="color:#f39c12">❓ ${bd.vl.length}</span> <span style="color:#e74c3c">❌ ${bd.nein.length}</span>${bd.notVoted.length?` <span style="color:#999">· ${bd.notVoted.length} offen</span>`:''}</span>`);
+  if(!past&&fahrtenAn(t)){
+    const bs=fahrtEntries(t.id).filter(e=>e.typ==='biete'); const fr=bs.reduce((s,e)=>s+Math.max(0,(parseInt(e.plaetze)||0)-fahrtPassengers(e).length),0);
+    chips.push(`<span class="tm-c">🚗 ${bs.length?fr+(fr===1?' Platz frei':' Plätze frei'):'Fahrgemeinschaft'}</span>`);
+  }
+  const ck=t.checkliste||{};
+  if(normSetliste(t.setliste).length) chips.push('<span class="tm-c">🎵 Setliste</span>');
+  if(Array.isArray(t.ablaufplan)&&t.ablaufplan.length) chips.push('<span class="tm-c">🕐 Ablauf</span>');
+  if(ck.treffpunkt||ck.treffzeit||ck.kleidung||ck.mappe||(Array.isArray(ck.extra)&&ck.extra.length)) chips.push('<span class="tm-c">📋 Checkliste</span>');
+  if(!past&&t.aufgaben===true) chips.push('<span class="tm-c">🧰 Aufgaben</span>');
+  if(!chips.length) chips.push('<span class="tm-c">ℹ️ Details</span>');
+  const inner=[setlisteHtml(t),ablaufplanBlock(t),checklisteBlock(t),!past?fahrtenBlock(t):'',!past?aufgabenBlock(t):'',showRueck?rueckmeldungenHtml(t,bd):''].join('').replace(/<details class="t-coll">/g,'<details class="t-coll" open>');
+  return `<details class="t-more"${_tmOpenSet.has(t.id)?' open':''} ontoggle="_tmOpen('${esc(t.id)}',this.open)"><summary class="t-more-sum"><span class="tm-chips">${chips.join('')}</span><span class="rb-chev">▾</span></summary><div class="t-more-body">
+    ${inner}
     <details class="t-coll"><summary>ℹ️ Details${t.beschreibung?' & Beschreibung':''}</summary><div>
       ${t.beschreibung?`<div style="font-size:.84rem;color:#555;margin-bottom:8px">${esc(t.beschreibung)}</div>`:''}
       ${t.frist&&!past?`<div style="font-size:.78rem;color:#7d6608;margin-bottom:8px">⏳ Rückmeldefrist: <strong>${fmt(t.frist)}</strong></div>`:''}
@@ -5192,7 +5217,7 @@ function terminHtml(t,past=false){
         `:''}
       </div>
     </div></details>
-  </div>`;
+  </div></details>`;
 }
 // Stabiler Schlüssel zum SPEICHERN von Stimmen: Benutzername (ändert sich nie).
 // Die ANZEIGE läuft über prettyName(), daher schlägt eine Anzeigenamen-Änderung automatisch durch.
