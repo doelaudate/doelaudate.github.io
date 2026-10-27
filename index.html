@@ -3229,7 +3229,8 @@ function renderLieder(){
   const el=document.getElementById('lieder-list');if(!el)return;
   if(!songs.length){el.innerHTML='<div class="empty">'+(liederView==='archiv'?'Im Archiv nichts gefunden.':(q?'Kein Lied in der laufenden Saison gefunden.':'Keine Lieder vorhanden.'))+'</div>'+archHint;return;}
   let html=liederView==='archiv'?'<div style="font-size:.8rem;color:var(--muted);margin:0 2px 10px">🗄️ Ältere Saisons und archivierte Lieder, neueste zuerst. Zum Wiederverwenden: Lied in eine laufende Saison verschieben (↔️).</div>':uebenSummaryHtml();
-  const _heftBtn=liederheftButtonHtml(songs); // steht unter der Liste, nicht davor
+  html+=liederheftButtonHtml(songs); // gleich oben bei der Liste (unten am Listenende fand man ihn nicht)
+  const _heftBtn='';
   // Admin: ganze Saison ins Archiv / zurück (nur wenn eine konkrete, echte Saison gewählt ist — nicht bei
   // den virtuellen Sammel-Tabs "Alle"/"Aktuell", die keine einzelne Saison sind)
   if(admin && aktiveSaison!=='__all__' && aktiveSaison!=='__current__'){
@@ -3323,7 +3324,7 @@ function liederheftButtonHtml(songs){
   const seen=new Set();
   songs.forEach(s=>{ if(s&&s.pdf&&!s.archived&&!seen.has(s.pdf)){ seen.add(s.pdf); _heftIds.push(s.id); } });
   if(!_heftIds.length) return '';
-  return `<div style="margin:16px 0 4px"><button class="btn btn-sm" style="background:#1b3a6b;color:#fff" onclick="makeLiederheft()">📖 Liederheft als PDF (${_heftIds.length} Lieder)</button> <span id="heft-msg" style="font-size:.78rem;color:#888;margin-left:6px"></span></div>`;
+  return `<div style="margin:0 0 10px"><button class="btn btn-sm" style="background:#1b3a6b;color:#fff" onclick="makeLiederheft()">📖 Liederheft als PDF (${_heftIds.length} Lieder)</button> <span id="heft-msg" style="font-size:.78rem;color:#888;margin-left:6px"></span></div>`;
 }
 async function makeLiederheft(){
   if(_heftBusy || !_heftIds.length) return;
@@ -3794,6 +3795,17 @@ async function saveProbe(){
   showToast('Probe(n) gespeichert','ok');
 }
 
+// Serie bereinigen: diese geplante Probe und alle späteren geplanten Proben löschen (erfasste Proben bleiben unangetastet)
+async function deleteProbeSeries(id){
+  if(!hasPermission('proben')) return;
+  const p=probenplan.find(x=>x.id===id); if(!p) return;
+  const betroffen=probenplan.filter(x=>x.datum>=p.datum);
+  if(!confirm('Diese Probe ('+fmt(p.datum)+') und alle späteren GEPLANTEN Proben löschen?\n\n'+betroffen.length+' Probe'+(betroffen.length===1?'':'n')+' werden entfernt. Bereits erfasste Proben bleiben erhalten.')) return;
+  probenplan=probenplan.filter(x=>x.datum<p.datum);
+  await dbFetch(DB+'/probenplan.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(probenplan)});
+  renderProben(); renderLieder();
+  showToast(betroffen.length+' Probe(n) gelöscht','ok');
+}
 async function deleteProbe(id,geplant=false){
   if(!confirm('Probe löschen?'))return;
   if(geplant){
@@ -5011,7 +5023,7 @@ function renderProben(){
     if(p.abgesagt){
       return {d:p.datum,html:_probeCard('#e74c3c','❌ Probe fällt aus',`<div class="t-title">${esc(longDate(p.datum))}</div>${p.abgesagt.grund?`<div style="font-size:.84rem;color:#922b21">Grund: ${esc(p.abgesagt.grund)}</div>`:''}${uiEdit('proben')?`<div class="act-row"><button class="btn btn-sm" style="background:#d5f5e3;color:#1a7a40" onclick="reinstateProbe('${p.id}',${isGeplant})">↩ Findet doch statt</button><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',${isGeplant})">🗑️ Löschen</button></div>`:''}`,'background:#fdf2f2')};
     }
-    return {d:p.datum,html:_probeCard('#1e8449','🎹 Probe',`<div class="t-title">${esc(longDate(p.datum))}</div>${p.ort?`<div style="font-size:.8rem;color:#c0620f;font-weight:600">📍 ${esc(p.ort)}</div>`:''}${songs?`<div style="font-size:.8rem;color:#555;margin-top:2px">🎵 ${esc(songs)}</div>`:''}${p.notiz?`<div style="font-size:.8rem;color:#888;font-style:italic">💬 ${esc(p.notiz)}</div>`:''}${buildProbeAttendance(p)}${uiEdit('proben')?`<div class="act-row"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editProbe('${p.id}',${isGeplant})">✏️ Bearbeiten</button><button class="btn btn-sm" style="background:#fdecea;color:#c0392b" onclick="cancelProbe('${p.id}',${isGeplant})">❌ Absagen</button><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',${isGeplant})">🗑️ Löschen</button></div>`:''}`)};
+    return {d:p.datum,html:_probeCard('#1e8449','🎹 Probe',`<div class="t-title">${esc(longDate(p.datum))}</div>${p.ort?`<div style="font-size:.8rem;color:#c0620f;font-weight:600">📍 ${esc(p.ort)}</div>`:''}${songs?`<div style="font-size:.8rem;color:#555;margin-top:2px">🎵 ${esc(songs)}</div>`:''}${p.notiz?`<div style="font-size:.8rem;color:#888;font-style:italic">💬 ${esc(p.notiz)}</div>`:''}${buildProbeAttendance(p)}${uiEdit('proben')?`<div class="act-row"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editProbe('${p.id}',${isGeplant})">✏️ Bearbeiten</button><button class="btn btn-sm" style="background:#fdecea;color:#c0392b" onclick="cancelProbe('${p.id}',${isGeplant})">❌ Absagen</button><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}',${isGeplant})">🗑️ Löschen</button>${isGeplant?`<button class="btn btn-sm" style="background:#fff;border:1px solid #e74c3c;color:#c0392b" onclick="deleteProbeSeries('${p.id}')">🗑️ Ab hier alle</button>`:''}</div>`:''}`)};
   });
 
   // ===== PROBENVERLAUF (vergangen) =====
