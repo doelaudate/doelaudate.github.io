@@ -281,6 +281,33 @@ html.dark img, html.dark video, html.dark .no-invert{ filter: invert(1) hue-rota
 .satb-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .satb-cell{flex:1;min-width:82px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
 /* Termine/Lieder: Reiter in einer wischbaren Zeile; auf dem Handy ohne äußere Karte (Karte-in-Karte entfällt) */
+.plk-head{margin-bottom:12px}
+.plk-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.plk-top .btn{white-space:nowrap;flex-shrink:0}
+.plk-sub{font-size:.84rem;color:#555;font-weight:600;margin-top:2px}
+.plk-tiles{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-top:10px;padding-bottom:2px}
+.plk-tiles::-webkit-scrollbar{display:none}
+.plk-tile{flex:0 0 auto;min-width:100px;padding:8px 11px;border:1.5px solid var(--line);border-radius:12px;background:#fff;cursor:pointer;text-align:left;font-family:inherit;box-shadow:none}
+.plk-tile.on{border-color:var(--primary);background:#eef4fc}
+.plk-tile b{display:block;font-size:.82rem;color:var(--navy);white-space:nowrap}
+.plk-tile small{font-size:.72rem;color:var(--muted)}
+.plk-bar{height:5px;border-radius:3px;background:#e6ebf2;margin-top:5px;overflow:hidden}
+.plk-bar i{display:block;height:100%;background:#27ae60}
+.plk-seg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 0 10px}
+.plk-seg::-webkit-scrollbar{display:none}
+.plk-seg .stab{flex:0 0 auto;white-space:nowrap}
+.plk-row{background:#fff;border:1px solid var(--line);border-left:4px solid #f39c12;border-radius:10px;margin-bottom:6px;overflow:hidden}
+.plk-row.done{border-left-color:#27ae60;background:#f7fbf8}
+.plk-line{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;min-height:54px}
+.plk-t{flex:1;min-width:0}
+.plk-t b{display:block;font-size:.9rem;color:var(--navy);line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plk-t small{display:block;font-size:.76rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plk-claim{flex:0 0 auto;border:none;background:#27ae60;color:#fff;border-radius:10px;padding:0 12px;min-height:38px;font-size:.8rem;font-weight:700;cursor:pointer;box-shadow:none}
+.plk-who{flex:0 0 auto;font-size:.78rem;color:#1a7a40;font-weight:700;max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plk-det{display:none;padding:0 11px 11px;font-size:.82rem;color:#555}
+.plk-row.open .plk-det{display:block}
+.plk-det .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.plk-grp{font-size:.72rem;font-weight:700;color:#8a97a8;text-transform:uppercase;letter-spacing:.05em;margin:12px 2px 5px;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .plk-item{display:flex;flex-direction:column;align-items:stretch;gap:6px;border-left:4px solid #f39c12;padding:9px 11px;margin-bottom:7px;background:#fffdf5;border-radius:0 8px 8px 0}
 .plk-side{width:100%}
 .plk-side .btn{flex:1;min-height:38px}
@@ -1126,18 +1153,16 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
 </div>
 
 <div class="page" id="p-plakate">
-  <div class="card plk-head" style="margin-bottom:12px">
-    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap">
-      <span class="card-title" style="margin-bottom:0">📋 Plakat-Standorte</span>
-      <span id="plakate-stats" style="font-size:.84rem;color:#555;font-weight:600"></span>
-    </div>
-    <div id="plakate-progress" style="display:none;background:#eef1f5;border-radius:6px;height:8px;overflow:hidden;margin:8px 0 6px"><div id="plakate-progress-fill" style="height:100%;width:0%;background:#27ae60;border-radius:6px;transition:width .3s"></div></div>
-    <div style="font-size:.8rem;color:#666;margin:6px 0 10px">Tippe bei einem Standort auf <strong>„Übernehmen“</strong>, wenn du dort ein Plakat aufhängst. Fehler korrigieren (✏️) oder löschen (✕) darf jede*r.</div>
-    <div class="plk-actions">
+  <div class="card plk-head">
+    <div class="plk-top">
+      <div style="min-width:0">
+        <div class="card-title" style="margin:0">🏷️ Plakate</div>
+        <div id="plakate-stats" class="plk-sub"></div>
+      </div>
       <button class="btn btn-sm btn-primary" onclick="plkOpenAdd()">＋ Standort</button>
-      <button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="plkShowMap()">🗺️ Karte</button>
-      <input type="text" id="plk-search" class="search-box" placeholder="🔍 Suchen…" oninput="renderPlakate()" style="flex:1;min-width:120px;margin:0">
     </div>
+    <div id="plakate-progress" style="display:none;background:#eef1f5;border-radius:6px;height:8px;overflow:hidden;margin:10px 0 4px"><div id="plakate-progress-fill" style="height:100%;width:0%;background:#27ae60;border-radius:6px;transition:width .3s"></div></div>
+    <div id="plk-tiles" class="plk-tiles"></div>
   </div>
   <details class="card k-form-wrap" id="plk-add" style="margin-bottom:12px">
     <summary style="cursor:pointer;font-weight:700;color:#1b3a6b;font-size:.92rem;user-select:none">＋ Neuen Standort hinzufügen</summary>
@@ -1162,10 +1187,11 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
       <button class="btn btn-primary" onclick="addPlakat()">＋ Standort hinzufügen</button>
     </div>
   </details>
-  <div class="card">
-    <div id="plakate-list"></div>
-  </div>
-  <div class="card" style="margin-bottom:12px">
+  <div id="plk-seg" class="plk-seg"></div>
+  <div id="plk-search-row" style="margin-bottom:10px"><input type="text" id="plk-search" class="search-box" placeholder="🔍 Standort oder Adresse suchen…" oninput="renderPlakate()" style="margin:0"></div>
+  <div id="plakate-list"></div>
+  <div style="font-size:.78rem;color:#888;margin:2px 2px 12px">Tippe einen Standort an für Details. „Übernehmen“, wenn du dort ein Plakat aufhängst. Die Liste pflegen alle gemeinsam: Fehler korrigieren oder löschen darf jede*r.</div>
+  <div class="card" id="plk-map-card" style="margin-bottom:12px;display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <span class="card-title" style="margin-bottom:0">🗺️ Karte</span>
       <button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="togglePlakateKarte()" id="plakate-karte-toggle-btn">Karte anzeigen</button>
@@ -7433,10 +7459,22 @@ function plkToggleEdit(key){ const e=document.getElementById('plk-edit-'+key); i
 // Kopfkarte: „＋ Standort“ klappt das Formular auf, „🗺️ Karte“ blendet die Karte ein und springt dorthin
 function plkOpenAdd(){ const d=document.getElementById('plk-add'); if(!d) return; d.open=true; try{ d.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} const i=document.getElementById('pl-ort'); if(i) setTimeout(()=>i.focus(),300); }
 async function plkShowMap(){
+  // Karte als eigene Ansicht: Segment umschalten, Karte laden, dorthin scrollen
+  if(typeof plkView!=='undefined' && plkView!=='karte'){ plkView='karte'; renderPlakate(); }
   const m=document.getElementById('plakate-map');
   if(m&&m.style.display==='none') await togglePlakateKarte();
-  const c=document.getElementById('plakate-map'); if(c){ try{ c.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }
+  const c=document.getElementById('plk-map-card'); if(c){ try{ c.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }
 }
+// ===== PLAKATE: Übersicht (Ortschafts-Kacheln) + Ansicht Offen / Übernommen / Meine / Karte + schlanke Zeilen =====
+let plkView='offen', plkOrt='';
+function plkIsMine(p){
+  const mn=getUserVoteName(); if(!mn||!p.von) return false;
+  const a=_norm(p.von);
+  return a===_norm(mn) || a===_norm(prettyName(mn)||'');
+}
+function setPlkView(v){ plkView=v; renderPlakate(); if(v==='karte') plkShowMap(); }
+function setPlkOrt(o){ plkOrt=(plkOrt===o)?'':o; if(plkView==='karte') plkView='offen'; renderPlakate(); }
+function plkToggleRow(k){ const r=document.getElementById('plk-r-'+k); if(r) r.classList.toggle('open'); }
 function renderPlakate(){
   const el=document.getElementById('plakate-list');
   if(!el)return;
@@ -7448,78 +7486,88 @@ function renderPlakate(){
   if(vs && !vs.childElementCount) vs.innerHTML=PLAKAT_VORSCHLAEGE.map(v=>`<button type="button" onclick="plVorschlag('${esc(v)}')" style="background:#eef3fa;color:#1b3a6b;border:1.5px solid transparent;border-radius:16px;padding:4px 11px;font-size:.78rem;cursor:pointer;font-family:inherit">${esc(v)}</button>`).join('');
   const stats=document.getElementById('plakate-stats');
   const total=plakate.length, taken=plakate.filter(p=>p.von).length;
-  if(stats) stats.textContent = total ? (taken+' von '+total+' übernommen') : '';
-  // Fortschrittsbalken
+  if(stats) stats.textContent = total ? (taken+' von '+total+' übernommen · '+(total-taken)+' offen') : 'Noch keine Standorte';
   const prog=document.getElementById('plakate-progress'), fill=document.getElementById('plakate-progress-fill');
   if(prog&&fill){ prog.style.display=total?'':'none'; fill.style.width=total?Math.round(taken/total*100)+'%':'0%'; }
+  const tilesEl=document.getElementById('plk-tiles'), segEl=document.getElementById('plk-seg'), srch=document.getElementById('plk-search-row'), mapCard=document.getElementById('plk-map-card');
   if(!plakate.length){
     el.innerHTML='<div class="empty" style="padding:24px">Noch keine Plakat-Standorte angelegt.</div>';
+    if(tilesEl) tilesEl.innerHTML=''; if(segEl) segEl.innerHTML=''; if(srch) srch.style.display='none'; if(mapCard) mapCard.style.display='none';
     const rc=document.getElementById('plakate-ranking-card'); if(rc) rc.style.display='none';
     return;
   }
-  const _q=((document.getElementById('plk-search')||{}).value||'').trim().toLowerCase();
-  const _hit=p=>!_q||[p.ort,p.adresse,p.ortschaft,p.notiz,p.von].some(x=>String(x||'').toLowerCase().includes(_q));
   const myName=getUserVoteName();
-  const karte=(p,distKm)=>{
-    const done=!!p.von;
-    const maps=navLinkFor(p);
-    // Bearbeiten/Löschen: hinter „⋯“, damit die Liste ruhig bleibt (die Liste pflegen weiterhin alle gemeinsam)
-    const del=canManage?`<button class="plk-dots" aria-label="Bearbeiten oder löschen" onclick="plkToggleEdit('${p._key}')">⋯</button>`:'';
-    const editRow=canManage?`<div class="plk-edit" id="plk-edit-${p._key}" style="display:none"><button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editPlakat('${p._key}')">✏️ Bearbeiten</button><button class="btn btn-danger btn-sm" onclick="deletePlakat('${p._key}')">✕ Löschen</button></div>`:'';
-    // Aktion rechts: eingeloggt = nur Button; Gast = Namensfeld + Button
-    const action=done
-      ? `<button class="btn btn-sm btn-gray" style="font-size:.72rem;flex-shrink:0" onclick="releasePlakat('${p._key}')">↩ freigeben</button>`
-      : (myName
-        ? `<button class="btn btn-sm btn-success" style="font-size:.78rem;flex-shrink:0" onclick="claimPlakat('${p._key}')">✋ Übernehmen</button>`
-        : `<span style="display:flex;gap:5px;align-items:center;flex-shrink:0"><input class="fl-input" id="pl-name-${p._key}" placeholder="Dein Name" style="width:110px;padding:5px 8px;font-size:.8rem;margin:0"><button class="btn btn-sm btn-success" style="font-size:.78rem" onclick="claimPlakat('${p._key}')">✋</button></span>`);
-    const distBadge = distKm!=null ? `<span style="background:#eef3fa;color:#1d4e96;font-size:.72rem;font-weight:700;padding:1px 8px;border-radius:10px;margin-left:6px">📍 ~${distKm.toFixed(1)} km</span>` : '';
-    // Zuordnungs-Hilfe: wer wohnt am nächsten? (nur bei offenen Standorten mit Koordinaten, hilft beim gezielten Zuteilen)
-    let nearMembers='';
-    // Wer wo wohnt, sieht nur der Admin im Bearbeiten-Modus (Zuteilungs-Hilfe) – nicht alle Mitglieder
+  // --- Kacheln je Ortschaft: Fortschritt auf einen Blick; Tippen filtert die Liste ---
+  const g={}; plakate.forEach(p=>{ const k=p.ortschaft||'Sonstiges'; (g[k]=g[k]||[]).push(p); });
+  const orte=[...PLAKAT_ORTSCHAFTEN.filter(o=>g[o]), ...Object.keys(g).filter(x=>!PLAKAT_ORTSCHAFTEN.includes(x)).sort()];
+  if(tilesEl) tilesEl.innerHTML=orte.map(o=>{ const t=g[o].length, d=g[o].filter(p=>p.von).length; const full=d===t;
+    return `<button class="plk-tile${plkOrt===o?' on':''}" onclick="setPlkOrt('${esc(o).replace(/'/g,'&#39;')}')"><b>${esc(o)}</b><small>${full?'✅ ':''}${d} / ${t}</small><div class="plk-bar"><i style="width:${Math.round(d/t*100)}%${full?';background:#1a7a40':''}"></i></div></button>`; }).join('');
+  // --- Ansicht: Offen / Übernommen / Meine / Karte ---
+  const mine=plakate.filter(plkIsMine);
+  const seg=[['offen','Offen ('+(total-taken)+')'],['fertig','Übernommen ('+taken+')']];
+  if(myName) seg.push(['meine','Meine ('+mine.length+')']);
+  seg.push(['karte','🗺️ Karte']);
+  if(!seg.some(s=>s[0]===plkView)) plkView='offen';
+  if(segEl) segEl.innerHTML=seg.map(([k,l])=>`<button class="stab stab-s${plkView===k?' active':''}" onclick="setPlkView('${k}')">${l}</button>`).join('');
+  if(srch) srch.style.display=(plkView==='karte')?'none':'';
+  if(mapCard) mapCard.style.display=(plkView==='karte')?'':'none';
+  el.style.display=(plkView==='karte')?'none':'';
+  // --- Zeilen ---
+  const _q=((document.getElementById('plk-search')||{}).value||'').trim().toLowerCase();
+  const _hit=p=>(!plkOrt||(p.ortschaft||'Sonstiges')===plkOrt)&&(!_q||[p.ort,p.adresse,p.ortschaft,p.notiz,p.von].some(x=>String(x||'').toLowerCase().includes(_q)));
+  const row=(p,distKm)=>{
+    const done=!!p.von, key=p._key, maps=navLinkFor(p);
+    const sub=[p.adresse||'', distKm!=null?'~'+distKm.toFixed(1)+' km':'', p.anzahl?p.anzahl+'×':''].filter(Boolean).join(' · ');
+    const claim = done
+      ? `<span class="plk-who">✅ ${esc(prettyName(p.von)||p.von)}</span>`
+      : (myName ? `<button class="plk-claim" onclick="event.stopPropagation();claimPlakat('${key}')">✋ Übernehmen</button>` : `<button class="plk-claim" onclick="event.stopPropagation();plkToggleRow('${key}')">✋ Übernehmen</button>`);
+    let near='';
     if(!done && canPin() && editMode && typeof p.lat==='number' && typeof p.lng==='number'){
-      const near=nearestMembersToPoint(p.lat,p.lng,3);
-      if(near.length) nearMembers=`<div style="font-size:.72rem;color:#a06020;margin-top:3px">🏠 in der Nähe: ${near.map(x=>esc(prettyName(x.m.username)||memberName(x.m))+' ('+x.dist.toFixed(1)+' km)').join(', ')}</div>`;
+      const nm=nearestMembersToPoint(p.lat,p.lng,3);
+      if(nm.length) near=`<div style="color:#a06020;margin-top:4px">🏠 in der Nähe: ${nm.map(x=>esc(prettyName(x.m.username)||memberName(x.m))+' ('+x.dist.toFixed(1)+' km)').join(', ')}</div>`;
     }
-    return `<div class="plk-item${done?' done':''}">
-      <div class="plk-main">
-        <div class="plk-name">${esc(p.ort)}${distBadge}${p.anzahl?`<span class="plk-cnt"> · ${esc(p.anzahl)}×</span>`:''}</div>
-        ${done?`<div style="font-size:.78rem;color:#1a7a40;margin-top:1px">✅ ${esc(p.von)}</div>`:''}
-        ${(p.adresse||maps)?`<div class="plk-addr">${p.adresse?esc(p.adresse)+' ':''}${maps}</div>`:''}
-        ${p.notiz?`<div class="plk-note">💬 ${esc(p.notiz)}</div>`:''}
-        ${nearMembers}
-      </div>
-      <div class="plk-side">${action}${del}</div>
-      ${editRow}
-    </div>`;
+    const guest=(!myName&&!done)?`<div style="display:flex;gap:6px;margin-top:8px"><input class="fl-input" id="pl-name-${key}" placeholder="Dein Name" style="margin:0;flex:1"><button class="btn btn-sm btn-success" onclick="claimPlakat('${key}')">✋ Eintragen</button></div>`:'';
+    const acts=`<div class="acts">${done?`<button class="btn btn-sm btn-gray" onclick="releasePlakat('${key}')">↩ Freigeben</button>`:''}${canManage?`<button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" onclick="editPlakat('${key}')">✏️ Bearbeiten</button><button class="btn btn-danger btn-sm" onclick="deletePlakat('${key}')">✕ Löschen</button>`:''}</div>`;
+    return `<div class="plk-row${done?' done':''}" id="plk-r-${key}">
+      <div class="plk-line" onclick="plkToggleRow('${key}')"><div class="plk-t"><b>${esc(p.ort)}</b>${sub?`<small>${esc(sub)}</small>`:''}</div>${claim}</div>
+      <div class="plk-det">
+        ${p.adresse?`<div>📍 ${esc(p.adresse)}</div>`:''}${maps?`<div style="margin-top:2px">${maps}</div>`:''}
+        ${p.ortschaft?`<div style="margin-top:2px">🏘️ ${esc(p.ortschaft)}</div>`:''}
+        ${p.notiz?`<div style="margin-top:2px;font-style:italic;color:#888">💬 ${esc(p.notiz)}</div>`:''}
+        ${done?`<div style="margin-top:2px;color:#1a7a40">✅ Übernommen von <b>${esc(prettyName(p.von)||p.von)}</b></div>`:''}
+        ${near}${guest}${acts}
+      </div></div>`;
   };
-  // Oben: Offen / Übernommen — darunter jeweils nach Ortschaft unterteilt
-  const nachOrtschaft=list=>{
-    const g={}; list.forEach(p=>{ const k=p.ortschaft||'Sonstiges'; (g[k]=g[k]||[]).push(p); });
-    const order=[...PLAKAT_ORTSCHAFTEN.filter(o=>g[o]), ...Object.keys(g).filter(x=>!PLAKAT_ORTSCHAFTEN.includes(x)).sort()];
-    return order.map(o=>`<div style="font-size:.74rem;font-weight:700;color:#8a97a8;margin:9px 0 4px">📍 ${esc(o)} (${g[o].length})</div>`+g[o].map(p=>karte(p)).join('')).join('');
+  const gruppen=list=>{
+    const gg={}; list.forEach(p=>{ const k=p.ortschaft||'Sonstiges'; (gg[k]=gg[k]||[]).push(p); });
+    const ord=[...PLAKAT_ORTSCHAFTEN.filter(o=>gg[o]), ...Object.keys(gg).filter(x=>!PLAKAT_ORTSCHAFTEN.includes(x)).sort()];
+    const showHead=ord.length>1 || !plkOrt;
+    return ord.map(o=>(showHead?`<div class="plk-grp"><span>${esc(o)} (${gg[o].length})</span></div>`:'')+gg[o].sort((a,b)=>String(a.ort).localeCompare(String(b.ort),'de')).map(p=>row(p)).join('')).join('');
   };
-  const offen=plakate.filter(p=>!p.von&&_hit(p)), fertig=plakate.filter(p=>p.von&&_hit(p));
   let html='';
-  // „In deiner Nähe" — nur wenn eigener Wohnort bekannt & mind. 1 Treffer, ganz oben vor der Ortschafts-Gliederung
-  const nearby=nearestOpenPlakate(5);
-  if(nearby.length){
-    const routeBtn = nearby.length>1 ? `<button class="btn btn-sm" style="background:#eef3fa;color:#1b3a6b;font-size:.72rem;padding:3px 10px;flex-shrink:0" onclick="openPlakateRoute()">🗺️ Route planen (${nearby.length})</button>` : '';
-    html+=`<div class="section-label" style="color:#1d4e96;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><span>📍 In deiner Nähe</span>${routeBtn}</div>`+nearby.map(x=>karte(x.p,x.dist)).join('');
-  }
-  if(offen.length){
-    html+=`<div class="section-label" style="color:#b9770e">🟠 Noch zu verteilen (${offen.length})</div>`+nachOrtschaft(offen);
-  } else if(total){
-    html+=`<div style="background:#d5f5e3;color:#1a7a40;border-radius:8px;padding:10px 14px;font-size:.88rem;font-weight:600;margin-bottom:10px">🎉 Alle Standorte sind übernommen!</div>`;
-  }
-  if(fertig.length){
-    html+=`<details class="t-coll" style="margin-top:10px"><summary>✅ Übernommen (${fertig.length})</summary><div style="padding-top:4px">${nachOrtschaft(fertig)}</div></details>`;
+  if(plkView==='offen'){
+    let list=plakate.filter(p=>!p.von&&_hit(p));
+    // „In deiner Nähe“ nur ohne Filter: die nächsten offenen Standorte zum eigenen Wohnort, mit Route
+    const nb=(!plkOrt&&!_q)?nearestOpenPlakate(5):[];
+    if(nb.length){
+      const rb=nb.length>1?`<button class="btn btn-sm" style="background:#eef3fa;color:#1b3a6b;padding:3px 10px" onclick="openPlakateRoute()">🧭 Route (${nb.length})</button>`:'';
+      html+=`<div class="plk-grp" style="color:#1d4e96"><span>📍 In deiner Nähe</span>${rb}</div>`+nb.map(x=>row(x.p,x.dist)).join('');
+      const ids=new Set(nb.map(x=>x.p._key)); list=list.filter(p=>!ids.has(p._key));
+    }
+    html+= list.length ? gruppen(list) : (nb.length?'':(total-taken===0?'<div style="background:#d5f5e3;color:#1a7a40;border-radius:10px;padding:12px 14px;font-weight:700">🎉 Alle Standorte sind übernommen!</div>':'<div class="empty">Keine passenden Standorte.</div>'));
+  } else if(plkView==='fertig'){
+    const list=plakate.filter(p=>p.von&&_hit(p));
+    html=list.length?gruppen(list):'<div class="empty">Noch nichts übernommen.</div>';
+  } else if(plkView==='meine'){
+    const list=plakate.filter(p=>plkIsMine(p)&&_hit(p));
+    html=list.length?gruppen(list):'<div class="empty">Du hast noch keinen Standort übernommen.</div>';
   }
   el.innerHTML=html;
   // 🏆 Verteiler-Statistik: Standorte (und Plakat-Anzahl, falls erfasst) pro Person
   const rankCard=document.getElementById('plakate-ranking-card'), rankEl=document.getElementById('plakate-ranking');
   if(rankCard && rankEl){
     const rank={};
-    fertig.forEach(p=>{
+    plakate.filter(p=>p.von).forEach(p=>{
       const n=prettyName(p.von)||p.von;
       if(!rank[n]) rank[n]={standorte:0, stueck:0};
       rank[n].standorte++;
