@@ -3987,6 +3987,7 @@ async function loadProbenstatus(){ const d=await dbGet('probenstatus',{}); if(d!
 // Läuft bei jedem App-Start eines angemeldeten Nutzers; dedupliziert über die Proben-ID.
 async function migrateVergangeneProben(){
   if(!currentUser || !D) return;
+  if(!canUseEditMode()) return; // schreibt in Chordaten – nur Leitung (Mitglieder dürfen dort nicht schreiben)
   const today=localToday();
   const past=(probenplan||[]).filter(p=>p.datum<today);
   if(!past.length) return;
