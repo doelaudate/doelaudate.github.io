@@ -491,18 +491,22 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
    EINSTELLUNGEN + HANDY-FEINSCHLIFF (2026-10)
    ============================================================ */
 /* Einstellungen: Profilkopf, Reiter, Zeilen mit Schaltern */
-.set-hero{display:flex;gap:14px;align-items:center;max-width:520px}
+.set-hero{display:flex;gap:14px;align-items:center;max-width:640px}
 .set-avatar{flex:0 0 56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#1b3a6b,#2563b5);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;letter-spacing:.02em}
 .set-name{font-weight:800;font-size:1.1rem;color:var(--navy);line-height:1.2}
 .set-sub{font-size:.8rem;color:var(--muted);margin-top:2px;word-break:break-all}
 .set-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
 .set-chip{background:var(--primary-50);color:var(--primary-dark);border-radius:10px;padding:2px 9px;font-size:.7rem;font-weight:700}
 .set-chip.adm{background:#fdecea;color:#c0392b}
-.set-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-bottom:12px;max-width:520px;padding-bottom:2px}
-.set-tabs::-webkit-scrollbar{display:none}
+/* Einstellungen: am PC umbrechende Reiter (nichts abgeschnitten), am Handy wischbare Zeile */
+.set-tabs{flex-wrap:wrap;margin-bottom:12px;max-width:640px;padding-bottom:2px}
 .set-tabs .stab{white-space:nowrap;flex-shrink:0}
-.set-pane{display:none;max-width:520px}.set-pane.active{display:block}
-.set-pane .card{max-width:520px}
+@media(max-width:640px){
+  .set-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .set-tabs::-webkit-scrollbar{display:none}
+}
+.set-pane{display:none;max-width:640px}.set-pane.active{display:block}
+.set-pane .card{max-width:640px}
 .set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
 .set-row:first-of-type{border-top:none}
 .set-row .set-lbl{font-size:.9rem;font-weight:600;color:var(--ink)}
