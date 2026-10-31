@@ -541,9 +541,14 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 .stats-line{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin:0 2px 12px}
 .arch-btn{padding:6px 12px;font-size:.78rem;flex-shrink:0}
 .stats-line b{color:var(--navy)}
-#saison-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-bottom:10px}
-#saison-tabs::-webkit-scrollbar{display:none}
-#saison-tabs .stab{flex:0 0 auto;white-space:nowrap}
+/* Saison-Reiter: am PC umbrechen (nichts abgeschnitten), nur am Handy als wischbare Zeile */
+#saison-tabs{flex-wrap:wrap;margin-bottom:10px}
+#saison-tabs .stab{white-space:nowrap}
+@media(max-width:640px){
+  #saison-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  #saison-tabs::-webkit-scrollbar{display:none}
+  #saison-tabs .stab{flex:0 0 auto}
+}
 .stab-arch{margin-left:auto}
 .song-actions a,.song-actions button{min-width:38px;min-height:38px;display:inline-flex;align-items:center;justify-content:center;font-size:1.15rem!important;border-radius:10px;text-decoration:none;background:#f3f6fa!important;border:none;margin:0;padding:0!important}
 .ueb-pill{border-radius:14px;padding:5px 11px;font-size:.78rem;cursor:pointer;font-weight:600}
