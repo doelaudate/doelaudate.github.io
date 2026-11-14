@@ -5070,7 +5070,41 @@ function renderStatistik(){
     if(vItems.length) html+=`<div class="card" style="margin-top:12px"><div class="card-title">🎤 Anwesenheit pro Stimmgruppe</div>${_statBars(vItems,'#e67e22')}</div>`;
   }
 
+  html+=altersStatistikHtml();
   el.innerHTML=html;
+}
+
+// Alter im Chor: nur Zahlen und Altersgruppen (keine Namen), nur aktive Mitglieder mit Geburtsdatum
+function memberAge(m){
+  const p=String(m.geburtstag||'').split('.');
+  if(p.length<3) return null;
+  const d=parseInt(p[0]), mo=parseInt(p[1]); let y=parseInt(p[2]);
+  if(isNaN(d)||isNaN(mo)||isNaN(y)) return null;
+  const now=new Date();
+  if(y<100) y=(y<=now.getFullYear()%100)?2000+y:1900+y;
+  let age=now.getFullYear()-y;
+  if(now.getMonth()+1<mo || (now.getMonth()+1===mo && now.getDate()<d)) age--;
+  return (age>=0&&age<110)?age:null;
+}
+function altersStatistikHtml(){
+  const aktiv=(mitglieder||[]).filter(m=>!isPausedNow(m));
+  const list=aktiv.map(m=>({m,age:memberAge(m)})).filter(x=>x.age!=null);
+  if(list.length<3) return '';
+  const ages=list.map(x=>x.age).sort((a,b)=>a-b);
+  const avg=ages.reduce((s,a)=>s+a,0)/ages.length;
+  const mid=ages.length%2?ages[(ages.length-1)/2]:(ages[ages.length/2-1]+ages[ages.length/2])/2;
+  const tile=(n,l,c)=>`<div class="stat"><div class="stat-n" style="color:${c}">${n}</div><div class="stat-l">${l}</div></div>`;
+  const groups=[['unter 30',0,29],['30–39',30,39],['40–49',40,49],['50–59',50,59],['60–69',60,69],['70–79',70,79],['80 und älter',80,200]];
+  const gItems=groups.map(([l,a,b])=>{ const n=ages.filter(x=>x>=a&&x<=b).length; return {label:l,value:n,sub:n+' ('+Math.round(n/ages.length*100)+' %)'}; });
+  const vItems=['Sopran','Alt','Tenor','Bass'].map(v=>{ const as=list.filter(x=>x.m.stimme===v).map(x=>x.age); if(as.length<2) return null; const a=as.reduce((s,x)=>s+x,0)/as.length; return {label:v,value:Math.round(a),sub:'Ø '+a.toFixed(1).replace('.',',')+' Jahre ('+as.length+')'}; }).filter(Boolean);
+  const fmt1=n=>(Math.round(n*10)/10).toFixed(1).replace('.',',');
+  return `<div class="card" style="margin-top:12px"><div class="card-title">🎂 Alter im Chor</div>
+    <div style="font-size:.78rem;color:#888;margin:-6px 0 10px">Aktive Mitglieder mit Geburtsdatum: ${list.length} von ${aktiv.length}. Es werden nur Zahlen gezeigt, keine Namen.</div>
+    <div class="stats">${tile(fmt1(avg),'Ø Alter','#2563b5')}${tile(fmt1(mid),'Median','#27ae60')}${tile(ages[0],'Jüngste*r','#8e44ad')}${tile(ages[ages.length-1],'Älteste*r','#e67e22')}</div>
+    <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#999;margin:6px 0 8px">Altersgruppen</div>
+    ${_statBars(gItems,'#2563b5')}
+    ${vItems.length?`<div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#999;margin:12px 0 8px">Ø Alter je Stimme</div>${_statBars(vItems,'#8e44ad')}`:''}
+  </div>`;
 }
 
 function localToday(){
