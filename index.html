@@ -281,6 +281,22 @@ html.dark img, html.dark video, html.dark .no-invert{ filter: invert(1) hue-rota
 .satb-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .satb-cell{flex:1;min-width:82px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
 /* Termine/Lieder: Reiter in einer wischbaren Zeile; auf dem Handy ohne äußere Karte (Karte-in-Karte entfällt) */
+.m-row{border-bottom:1px solid var(--line)}
+.m-row:last-child{border-bottom:0}
+.m-line{display:flex;align-items:center;gap:10px;padding:9px 2px;min-height:56px;cursor:pointer}
+.m-line .mitglied-avatar{flex-shrink:0}
+.m-t{flex:1;min-width:0}
+.m-t b{display:block;font-size:.92rem;color:var(--navy);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-t small{display:inline-block;margin-top:2px;padding:1px 8px;border-radius:8px;font-size:.72rem;font-weight:600;color:#333}
+.m-call{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:50%;background:#e8f6ee;font-size:1.15rem;text-decoration:none}
+.m-chev{color:#9aa7b4;font-size:1rem;transition:transform .15s;flex-shrink:0}
+.m-row.open .m-chev{transform:rotate(180deg)}
+.m-det{display:none;padding:0 2px 12px 52px;font-size:.84rem;color:#555}
+.m-row.open .m-det{display:block}
+.m-acts{display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
+.m-act{display:flex;align-items:center;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#f7f9fc;color:var(--navy);text-decoration:none;font-weight:600;overflow-wrap:anywhere;min-height:42px}
+.m-line2{margin-top:3px}
+.m-adm{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .plk-head{margin-bottom:12px}
 .plk-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .plk-top .btn{white-space:nowrap;flex-shrink:0}
@@ -1098,11 +1114,12 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
     <div style="font-size:.72rem;color:#999;margin:-4px 0 8px 2px">Ohne Benutzername kann später kein Login-Konto für dieses Mitglied erstellt werden.</div>
     <button class="btn btn-primary" onclick="addMitglied()">＋ Mitglied hinzufügen</button>
   </div>
-  <div class="card">
+  <div class="card t-shell">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
       <span class="card-title" style="margin-bottom:0">👥 Mitglieder <span id="m-count" style="color:#aaa;font-weight:400;font-size:.85rem"></span></span>
     </div>
     <input type="text" class="search-box" id="m-search" placeholder="🔍 Suchen nach Name, E-Mail, Telefon…" oninput="renderMitglieder()">
+    <div id="m-filter" class="t-tabs" style="margin:10px 0 12px"></div>
     <div id="mitglieder-list"></div>
   </div>
   </div><!-- /mv-mitglieder -->
@@ -5621,35 +5638,58 @@ function kalVor(dir){kalMonat+=dir;if(kalMonat>11){kalMonat=0;kalJahr++;}if(kalM
 function kalClick(iso){kalSel=kalSel===iso?null:iso;renderKalender();}
 
 // MITGLIEDER
+// ===== MITGLIEDER: schlanke Zeilen (Name, Stimme, Anrufen), Details zum Aufklappen, Filter nach Stimme =====
+let mFilter='alle';
+function setMFilter(f){ mFilter=f; renderMitglieder(); }
+function mToggle(key){ const r=document.getElementById('m-r-'+key); if(r) r.classList.toggle('open'); }
+function _mVoiceOf(m){ const s=String(m.stimme||'').toLowerCase(); return ['sopran','alt','tenor','bass'].includes(s)?s:'ohne'; }
 function renderMitglieder(){
   const q=(document.getElementById('m-search')?.value||'').toLowerCase();
-  const filtered=mitglieder.filter(m=>{
+  const matchQ=m=>{
     const s=(m.vorname+' '+m.nachname+(canSeeMemberField('email',m)?' '+m.email:'')+(canSeeMemberField('handy',m)?' '+m.handy+' '+m.telefon:'')).toLowerCase();
     return s.includes(q);
-  }).sort((a,b)=>a.nachname.localeCompare(b.nachname));
-  const cnt=document.getElementById('m-count');
+  };
+  // Filter-Leiste (Stimme) mit Zahlen – die Zahlen beziehen sich auf die aktiven Mitglieder
+  const aktiveAlle=mitglieder.filter(m=>!isPausedNow(m));
+  const cnt={alle:aktiveAlle.length,sopran:0,alt:0,tenor:0,bass:0,ohne:0};
+  aktiveAlle.forEach(m=>{ cnt[_mVoiceOf(m)]++; });
+  const fb=document.getElementById('m-filter');
+  if(fb) fb.innerHTML=[['alle','Alle'],['sopran','Sopran'],['alt','Alt'],['tenor','Tenor'],['bass','Bass'],['ohne','Ohne Stimme']]
+    .filter(([k])=>k==='alle'||cnt[k]>0||mFilter===k)
+    .map(([k,l])=>`<button class="stab stab-s${mFilter===k?' active':''}" onclick="setMFilter('${k}')">${l} (${cnt[k]})</button>`).join('');
+  const filtered=mitglieder.filter(m=>matchQ(m)&&(mFilter==='alle'||_mVoiceOf(m)===mFilter)).sort((a,b)=>a.nachname.localeCompare(b.nachname));
+  const cntEl=document.getElementById('m-count');
   const _np=filtered.filter(isPausedNow).length;
-  if(cnt) cnt.textContent='('+(filtered.length-_np)+' von '+mitglieder.filter(m=>!isPausedNow(m)).length+(_np?' · ⏸ '+_np+' länger abwesend':'')+')';
+  if(cntEl) cntEl.textContent='('+(filtered.length-_np)+' von '+aktiveAlle.length+(_np?' · ⏸ '+_np+' länger abwesend':'')+')';
   const el=document.getElementById('mitglieder-list');if(!el)return;
   if(!filtered.length){el.innerHTML='<div class="empty">Keine Treffer.</div>';return;}
+  const colors=['#2563b5','#27ae60','#8e44ad','#e67e22','#c0392b','#16a085'];
+  const voiceBg={sopran:'#fdebd0',alt:'#d6eaf8',tenor:'#d5f5e3',bass:'#f9ebea'};
+  const tel=v=>String(v||'').replace(/[^+\d]/g,'');
   const _cardOf=m=>{
+    const key=String(m.nr||m.id);
     const initials=(m.vorname.charAt(0)+(m.nachname.charAt(0)||'')).toUpperCase();
-    const colors=['#2563b5','#27ae60','#8e44ad','#e67e22','#c0392b','#16a085'];
     const color=colors[(m.vorname.charCodeAt(0)||0)%colors.length];
-    return`<div class="mitglied-card">
-      <div class="mitglied-avatar" style="background:${color}">${initials}</div>
-      <div class="mitglied-info">
-        <div class="mitglied-name">${esc(m.vorname)} ${esc(m.nachname)}${isPausedNow(m)?(()=>{ const p=memberPauseAt(m,localToday()); return ` <span class="pause-chip">⏸ seit ${fmt(p.von)}${p.grund?' · '+esc(p.grund):''}</span>`; })():''}</div>
-        <div class="mitglied-detail">
-          ${m.stimme?`<span style="background:${{sopran:'#fdebd0',alt:'#d6eaf8',tenor:'#d5f5e3',bass:'#f9ebea'}[m.stimme.toLowerCase()]||'#f0f0f0'};color:#333;padding:1px 8px;border-radius:8px;font-size:.72rem;font-weight:600;margin-right:5px">${esc(m.stimme)}</span>`:''}
-          ${m.handy&&canSeeMemberField('handy',m)?`📱 <a href="tel:${m.handy}">${esc(m.handy)}</a> `:''}
-          ${m.telefon&&canSeeMemberField('handy',m)?`☎️ <a href="tel:${m.telefon}">${esc(m.telefon)}</a> `:''}
-          ${m.email&&canSeeMemberField('email',m)?`✉️ <a href="mailto:${m.email}">${esc(m.email)}</a> `:''}
-        </div>
-        ${(m.adresse||m.plz)&&canSeeMemberField('adresse',m)?`<div class="mitglied-detail">📍 ${esc(m.adresse||'')} ${esc(m.plz||'')}</div>`:''}
-        ${m.geburtstag&&canSeeMemberField('geburtstag',m)?`<div class="mitglied-detail">🎂 ${esc(m.geburtstag)}</div>`:''}
+    const seeH=canSeeMemberField('handy',m), seeE=canSeeMemberField('email',m);
+    const pause=isPausedNow(m)?(()=>{ const p=memberPauseAt(m,localToday()); return `<div style="margin-top:2px"><span class="pause-chip">⏸ seit ${fmt(p.von)}${p.grund?' · '+esc(p.grund):''}</span></div>`; })():'';
+    const call=(m.handy&&seeH)?`<a class="m-call" href="tel:${tel(m.handy)}" onclick="event.stopPropagation()" aria-label="${esc(m.vorname)} anrufen">📞</a>`:'';
+    const acts=[
+      (m.handy&&seeH)?`<a class="m-act" href="tel:${tel(m.handy)}">📱 ${esc(m.handy)}</a>`:'',
+      (m.telefon&&seeH)?`<a class="m-act" href="tel:${tel(m.telefon)}">☎️ ${esc(m.telefon)}</a>`:'',
+      (m.email&&seeE)?`<a class="m-act" href="mailto:${esc(m.email)}">✉️ ${esc(m.email)}</a>`:''
+    ].filter(Boolean).join('');
+    const adr=((m.adresse||m.plz)&&canSeeMemberField('adresse',m))?`<div class="m-line2">📍 ${esc(m.adresse||'')} ${esc(m.plz||'')}</div>`:'';
+    const geb=(m.geburtstag&&canSeeMemberField('geburtstag',m))?`<div class="m-line2">🎂 ${esc(m.geburtstag)}</div>`:'';
+    const admin=(uiEdit('mitglieder')||(currentUserProfile&&currentUserProfile.isAdmin&&m.username))?`<div class="m-adm">${uiEdit('mitglieder')?`<button class="btn btn-gray btn-sm" onclick="quickPause('${memberKey(m)}')">${isPausedNow(m)?'▶ Wieder aktiv':'⏸ Länger abwesend'}</button><button class="btn btn-gray btn-sm" onclick="openEditMitglied('${key}')">✏️ Bearbeiten</button><button class="btn btn-danger btn-sm" onclick="deleteMitglied('${key}')">✕ Löschen</button>`:''}${(currentUserProfile&&currentUserProfile.isAdmin&&m.username)?`<button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" title="Passwort auf Benutzername zurücksetzen" onclick="adminResetPassword('${esc(m.username)}')">🔑 Passwort</button>`:''}</div>`:'';
+    const hasDetails=acts||adr||geb||admin;
+    const sub=[m.stimme?esc(m.stimme):'', m.stimmfuehrer?'🎚️':''].filter(Boolean).join(' · ');
+    return `<div class="m-row" id="m-r-${key}">
+      <div class="m-line"${hasDetails?` onclick="mToggle('${key}')"`:''}>
+        <div class="mitglied-avatar" style="background:${color}">${initials}</div>
+        <div class="m-t"><b>${esc(m.vorname)} ${esc(m.nachname)}</b>${sub?`<small style="background:${voiceBg[String(m.stimme||'').toLowerCase()]||'#f0f0f0'}">${sub}</small>`:''}${pause}</div>
+        ${call}${hasDetails?'<span class="m-chev">▾</span>':''}
       </div>
-      ${(uiEdit('mitglieder')||(currentUserProfile&&currentUserProfile.isAdmin&&m.username))?`<div style="display:flex;flex-direction:column;gap:4px">${uiEdit('mitglieder')?`<button class="btn btn-gray btn-sm" title="${isPausedNow(m)?'Wieder aktiv':'Länger abwesend setzen'}" onclick="quickPause('${memberKey(m)}')">${isPausedNow(m)?'▶':'⏸'}</button>`:''}${uiEdit('mitglieder')?`<button class="btn btn-gray btn-sm" onclick="openEditMitglied('${m.nr||m.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="deleteMitglied('${m.nr||m.id}')">✕</button>`:''}${(currentUserProfile&&currentUserProfile.isAdmin&&m.username)?`<button class="btn btn-sm" style="background:#eef1f5;color:#1d4e96" title="Passwort auf Benutzername zurücksetzen" onclick="adminResetPassword('${esc(m.username)}')">🔑</button>`:''}</div>`:''}
+      ${hasDetails?`<div class="m-det">${acts?`<div class="m-acts">${acts}</div>`:''}${adr}${geb}${admin}</div>`:''}
     </div>`;
   };
   const _akt=filtered.filter(m=>!isPausedNow(m)), _pau=filtered.filter(isPausedNow);
