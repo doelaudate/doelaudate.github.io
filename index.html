@@ -2990,7 +2990,7 @@ function renderStart(){
   // 🎂 Geburtstage der nächsten 7 Tage
   const _m3=html.length;
   const gToday=new Date(); gToday.setHours(0,0,0,0);
-  const gebs=(mitglieder||[]).filter(m=>m.geburtstag).map(m=>{
+  const gebs=(contactsLocked()?[]:(mitglieder||[])).filter(m=>m.geburtstag).map(m=>{
     const parts=String(m.geburtstag).split('.'); if(parts.length<2) return null;
     const d=parseInt(parts[0]), mo=parseInt(parts[1])-1;
     if(isNaN(d)||isNaN(mo)) return null;
@@ -4675,7 +4675,24 @@ function applyModules(){
   if(!moduleOn('organigramm')){ const ov=document.getElementById('mv-organigramm'); if(ov && ov.style.display!=='none') setMitgliederTab('mitglieder'); }
 }
 // Darf das angemeldete Mitglied dieses Feld bei Mitglied m sehen? (Leitung/Mitglieder-Recht und eigener Eintrag: immer)
+// Datenschutz: Neue Mitglieder sehen die Kontaktdaten der anderen (Handy, Telefon, E-Mail, Adresse, Geburtstag) erst
+// 30 Tage nach ihrem Beitritt. Beitrittsdatum = „beigetreten“ im eigenen Mitgliedseintrag, sonst Anlegedatum des Kontos.
+// Admins und Mitglieder mit Einzelrechten sind ausgenommen. (Anzeige-Sperre in der App, keine Sperre in der Datenbank.)
+const KONTAKT_SPERRE_TAGE=30;
+function kontaktdatenGesperrtBis(){
+  if(!currentUser||!currentUserProfile) return '';
+  if(adminMode||currentUserProfile.isAdmin||(Array.isArray(currentUserProfile.permissions)&&currentUserProfile.permissions.length)) return '';
+  const i=myMemberIndex(); const me=i>=0?mitglieder[i]:null;
+  let b=(me&&me.beigetreten)||''; if(!b&&currentUserProfile.erstellt) b=String(currentUserProfile.erstellt).slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(b)) return '';
+  const d=new Date(b+'T12:00:00'); d.setDate(d.getDate()+KONTAKT_SPERRE_TAGE);
+  const until=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  return until>localToday()?until:'';
+}
+function contactsLocked(){ return !!kontaktdatenGesperrtBis(); }
 function canSeeMemberField(f,m){
+  if(m && m.uid && currentUser && m.uid===currentUser.uid) return true; // eigene Daten immer
+  if(contactsLocked()) return false;
   if(regel('sichtbar_'+f,true)!==false) return true;
   if(adminMode || (currentUserProfile&&currentUserProfile.isAdmin) || hasPermission('mitglieder')) return true;
   return !!(m && m.uid && currentUser && m.uid===currentUser.uid);
@@ -5727,7 +5744,9 @@ function renderMitglieder(){
     </div>`;
   };
   const _akt=filtered.filter(m=>!isPausedNow(m)), _pau=filtered.filter(isPausedNow);
-  el.innerHTML=_akt.map(_cardOf).join('')+(_pau.length?`<details class="pause-box" ${q?'open':''}><summary>⏸ Länger abwesend (${_pau.length}) – zählen nicht bei Anwesenheit &amp; Rückmeldungen</summary>${_pau.map(_cardOf).join('')}</details>`:'');
+  const _lk=kontaktdatenGesperrtBis();
+  const _lkHtml=_lk?`<div style="background:#fff8e7;border:1px solid #f0dca0;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:.84rem;color:#7d6608">🔒 <strong>Aus Datenschutzgründen</strong> siehst du die Kontaktdaten der anderen Mitglieder (Telefon, E-Mail, Adresse, Geburtstag) erst ab dem <strong>${fmt(_lk)}</strong> – 30 Tage nach deinem Beitritt. Die Namen siehst du schon jetzt.</div>`:'';
+  el.innerHTML=_lkHtml+_akt.map(_cardOf).join('')+(_pau.length?`<details class="pause-box" ${q?'open':''}><summary>⏸ Länger abwesend (${_pau.length}) – zählen nicht bei Anwesenheit &amp; Rückmeldungen</summary>${_pau.map(_cardOf).join('')}</details>`:'');
 }
 
 // Benutzername-Vorschlag: Initialen + Geburtsdatum (TTMMJJ), wie beim ursprünglichen Verteilen (z.B. MW290498).
@@ -8123,6 +8142,7 @@ function renderGeburtstage(){
     return {...m, bdDate:bd, daysUntil:days};
   }
 
+  if(contactsLocked()){ el.innerHTML='<div class="empty">🔒 Die Geburtstage der anderen Mitglieder siehst du ab dem '+fmt(kontaktdatenGesperrtBis())+' (30 Tage nach deinem Beitritt, aus Datenschutzgründen).</div>'; return; }
   const all = mitglieder.filter(m=>m.geburtstag).map(bday).filter(Boolean);
 
   // Split: until next probe / after
