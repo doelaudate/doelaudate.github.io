@@ -474,6 +474,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .rb-chev{color:var(--primary);font-size:1rem;transition:transform .15s}
 .rb-card[open] .rb-chev{transform:rotate(180deg)}
 .rb-card[open] .rb-prev{display:none}
+#pinnwand-card .card{padding:10px 12px}
+#pinnwand-card .card-title{font-size:.9rem;margin-bottom:6px!important}
+#pinnwand-card .pin-note{padding:8px 10px}
 .pin-det>summary{cursor:pointer;list-style:none;font-size:.9rem;color:#333}
 .pin-det>summary::-webkit-details-marker{display:none}
 .pin-weiter{color:var(--primary);font-weight:700;white-space:nowrap}
@@ -9120,8 +9123,9 @@ function renderPinnwand(){
       ? `<details class="pin-det"><summary>${esc(_rest.split('\n').slice(0,2).join(' · ').slice(0,170))}… <span class="pin-weiter">Weiterlesen</span></summary><div style="white-space:pre-wrap;font-size:.9rem;color:#333;margin-top:8px">${esc(_rest)}</div><a href="#" onclick="this.closest('details').open=false;return false" style="display:inline-block;margin-top:8px;font-size:.82rem;color:var(--primary);font-weight:700;text-decoration:none">▴ Weniger anzeigen</a></details>`
       : `<div style="white-space:pre-wrap;font-size:.9rem;color:#333">${esc(_rest)}</div>`;
     return `<div class="pin-note">
-      ${_title?`<div style="font-weight:800;font-size:.98rem;color:#1b3a6b;margin-bottom:4px">${esc(_title)}</div>`:''}
-      ${_txt}
+      ${(e.pdf&&e.pdf.b64)
+        ? `<div style="display:flex;align-items:flex-start;gap:8px"><div style="flex:1;min-width:0">${_title?`<div style="font-weight:800;font-size:.92rem;color:#1b3a6b;line-height:1.25">${esc(_title)}</div>`:''}<div style="white-space:pre-wrap;font-size:.8rem;color:#555;margin-top:2px">${esc(_rest)}</div></div><button class="btn btn-sm" style="flex-shrink:0;background:#1b3a6b;color:#fff;padding:8px 11px" onclick="openPinPdf('${e._key}')" aria-label="${esc(e.pdf.label||'PDF ansehen')}">📄 PDF</button></div>`
+        : `${_title?`<div style="font-weight:800;font-size:.98rem;color:#1b3a6b;margin-bottom:4px">${esc(_title)}</div>`:''}${_txt}`}
       <div style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:.72rem;color:#a06020">${esc(prettyName(e.autor)||e.autor||'Chorleitung')} · ${e.ts?fmt(new Date(e.ts).toISOString().split('T')[0]):''}${del}</div>
       ${gelHtml}
     </div>`;
@@ -9135,6 +9139,16 @@ function renderPinnwand(){
   </div>`;
   // Still als „gelesen" markieren (nur eigene Kennung)
   if(myk){ entries.forEach(e=>{ if(!(e.gelesen&&e.gelesen[myk])) markPinnwandRead(e._key); }); }
+}
+// Ankündigung mit angehängter PDF (klein, als Base64 im Eintrag): beim Antippen als Blob in neuem Tab öffnen
+function openPinPdf(key){
+  const e=(pinnwand||{})[key]; if(!e||!e.pdf||!e.pdf.b64) return;
+  try{
+    const bin=atob(e.pdf.b64), arr=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+    const url=URL.createObjectURL(new Blob([arr],{type:'application/pdf'}));
+    const a=document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }catch(err){ showToast('PDF konnte nicht geöffnet werden','err'); }
 }
 function openPinnwandCompose(){
   const d=document.getElementById('pw-compose'); if(!d) return;
