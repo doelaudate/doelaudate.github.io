@@ -3769,8 +3769,9 @@ function renderSongPicker(){
   // Nur Saisons des laufenden Jahres (Sommer/Winter/beides) + Repertoire — bei der Probenplanung sollen
   // nicht dutzende Lieder aus alten Archiv-Saisons zur Auswahl stehen. Fallback auf alles, falls es
   // (noch) keine Saison für das aktuelle Jahr gibt.
-  const hasCurrentYear=D.seasons.some(isCurrentYearSeason);
-  const relevantSeasons=hasCurrentYear ? D.seasons.filter(s=>isCurrentYearSeason(s)||s.type==='repertoire') : D.seasons;
+  // Laufende Saisons nach dem Zeitraum aus Konsole → Saisons (seasonActive), nicht mehr nach dem Kalenderjahr
+  const _act=activeSeasonIds();
+  const relevantSeasons=D.seasons.filter(s=>_act.has(s.id));
   relevantSeasons.forEach(s=>{
     const aktiv=(s.songs||[]).filter(x=>!x.archived);
     if(!aktiv.length)return;
@@ -3958,15 +3959,16 @@ function buildSongPickerInto(containerEl, selectedIds){
   // Wie renderSongPicker: nur aktuelles Jahr + Repertoire — ABER eine ältere Saison bleibt trotzdem
   // sichtbar, wenn eines ihrer Lieder bei dieser Probe schon ausgewählt ist (sonst würde eine bereits
   // eingetragene Probe beim Bearbeiten scheinbar "Lieder verlieren").
-  const hasCurrentYear=D.seasons.some(isCurrentYearSeason);
+  const _act=activeSeasonIds();
   const relevantSeasons=D.seasons.filter(s=>
-    !hasCurrentYear || isCurrentYearSeason(s) || s.type==='repertoire' || (s.songs||[]).some(song=>sel.has(song.id))
+    _act.has(s.id) || (s.songs||[]).some(song=>sel.has(song.id))
   );
   relevantSeasons.forEach(s=>{
-    if(!(s.songs||[]).length) return;
+    const _songs=(s.songs||[]).filter(song=>(!song.archived)||sel.has(song.id));
+    if(!_songs.length) return;
     const ic={sommer:'☀️',weihnachten:'🎄',repertoire:'📚'}[s.type]||'🎵';
     containerEl.innerHTML+=`<div style="width:100%;font-size:.7rem;font-weight:700;text-transform:uppercase;color:#999;margin:5px 0 3px">${ic} ${esc(s.name)}</div>`;
-    s.songs.forEach(song=>{
+    _songs.forEach(song=>{
       const ck=sel.has(song.id);
       containerEl.innerHTML+=`<label style="display:inline-flex;align-items:center;gap:5px;background:${ck?'#d6eaf8':'#f0f4f8'};border-radius:20px;padding:4px 11px;cursor:pointer;border:1.5px solid ${ck?'#2563b5':'transparent'};font-size:.82rem;user-select:none;margin-bottom:3px">
         <input type="checkbox" value="${song.id}" ${ck?'checked':''} onchange="this.parentElement.style.background=this.checked?'#d6eaf8':'#f0f4f8';this.parentElement.style.borderColor=this.checked?'#2563b5':'transparent'">
