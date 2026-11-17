@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Stimmcoach — Weihnachtsläuten</title>
+<style>
+:root{--bg:#0e0c0a;--bg2:#181410;--bg3:#232018;--ink:#f0e8d8;--muted:#8a8070;--bd:#2e2922;
+  --S:#e8a060;--A:#5ec8a8;--T:#90a8e0;--B:#d09080;--acc:#e8a060}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);
+  min-height:100vh;max-width:540px;margin:0 auto;padding-bottom:7rem}
+.hdr{padding:1rem 1.1rem .7rem;border-bottom:1px solid var(--bd);position:sticky;top:0;
+  background:rgba(14,12,10,.97);backdrop-filter:blur(10px);z-index:50}
+.hdr h1{font-size:1.15rem;font-weight:600}
+.hdr .sub{font-size:.7rem;color:var(--muted);margin-top:2px}
+.mixer{padding:.9rem 1rem}
+.mlbl{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.7rem}
+.mrow{display:flex;align-items:center;gap:.55rem;margin-bottom:.7rem}
+.mbadge{width:2.1rem;height:2.1rem;border-radius:6px;flex-shrink:0;display:flex;align-items:center;
+  justify-content:center;font-size:.78rem;font-weight:700;color:#0e0c0a}
+.mbtns{display:flex;gap:.3rem;flex-shrink:0}
+.mbtn{width:2rem;height:2rem;border-radius:6px;border:1px solid var(--bd);background:var(--bg3);
+  color:var(--muted);font-size:.72rem;font-weight:600;cursor:pointer;transition:all .12s}
+.mbtn.on-m{background:#3a1a1a;color:#e06060;border-color:#5a2a2a}
+.mbtn.on-s{background:#1a3a2a;color:#50d090;border-color:#2a5a3a}
+.volwrap{flex:1;display:flex;align-items:center;gap:.5rem;min-width:0}
+input.vsl{flex:1;-webkit-appearance:none;appearance:none;height:4px;border-radius:100px;outline:none;background:var(--bd);cursor:pointer}
+input.vsl::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;cursor:pointer;background:var(--acc)}
+input.vsl::-moz-range-thumb{width:16px;height:16px;border-radius:50%;cursor:pointer;background:var(--acc);border:none}
+.vpct{font-size:.64rem;color:var(--muted);min-width:2.2rem;text-align:right}
+.transport{position:fixed;bottom:0;left:0;right:0;max-width:540px;margin:0 auto;background:var(--bg2);
+  border-top:1px solid var(--bd);padding:.7rem 1rem 1rem;z-index:60}
+.seekrow{display:flex;align-items:center;gap:.6rem;margin-bottom:.7rem}
+.time{font-size:.66rem;color:var(--muted);min-width:2.6rem}
+.tctrls{display:flex;align-items:center;justify-content:center;gap:.9rem}
+.tbtn{background:var(--bg3);border:1px solid var(--bd);color:var(--ink);border-radius:8px;
+  padding:.5rem .7rem;font-size:.85rem;cursor:pointer}
+.play{width:3.2rem;height:3.2rem;border-radius:50%;background:var(--acc);color:#0e0c0a;border:none;
+  font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.tempo{display:flex;align-items:center;gap:.4rem;font-size:.7rem;color:var(--muted)}
+.tempo select{background:var(--bg3);border:1px solid var(--bd);color:var(--ink);border-radius:6px;padding:.3rem .4rem;font-size:.72rem}
+.loopbtn.on{background:#1a3a2a;color:#50d090;border-color:#2a5a3a}
+.hint{font-size:.68rem;color:var(--muted);padding:0 1rem 1rem;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <h1>🎤 Weihnachtsläuten</h1>
+  <div class="sub">Entwurf: automatisch aus dem Notenblatt erkannt – bitte gegenhören und Fehler melden · Stimmcoach zum Üben</div>
+</div>
+
+<div class="mixer">
+  <div class="mlbl">Stimmen — laut/leise · M = stumm · S = solo</div>
+  <div id="mix"></div>
+</div>
+<div class="hint">Tipp: Stelle deine eigene Stimme laut und die anderen leise – oder „Solo" für nur deine Stimme. Mit „Tempo" kannst du langsamer üben.</div>
+
+<div class="transport">
+  <div class="seekrow">
+    <span class="time" id="cur">0:00</span>
+    <input class="vsl" id="seek" type="range" min="0" max="1000" value="0" style="flex:1">
+    <span class="time" id="dur">0:00</span>
+  </div>
+  <div class="tctrls">
+    <button class="tbtn loopbtn" id="loopBtn" title="Wiederholen">🔁</button>
+    <button class="tbtn" id="backBtn" title="Zum Anfang">⏮</button>
+    <button class="play" id="playBtn">▶</button>
+    <div class="tempo">Tempo
+      <select id="tempoSel">
+        <option value="0.5">50%</option><option value="0.6">60%</option>
+        <option value="0.75">75%</option><option value="0.9">90%</option>
+        <option value="1" selected>100%</option><option value="1.1">110%</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<script>
+window.SONG = {"title":"Weihnachtsläuten","subtitle":"Entwurf: automatisch aus dem Notenblatt erkannt – bitte gegenhören und Fehler melden","bpm":100,"duration":96.54,"voices":[{"key":"1","name":"Tenor","color":"#e8a060","notes":[{"m":56,"t":14.4,"d":0.294},{"m":51,"t":14.7,"d":0.294},{"m":56,"t":15,"d":0.588},{"m":60,"t":15.6,"d":0.588},{"m":58,"t":16.2,"d":0.294},{"m":56,"t":16.5,"d":0.294},{"m":58,"t":16.8,"d":0.587},{"m":58,"t":17.4,"d":0.588},{"m":56,"t":18,"d":0.294},{"m":51,"t":18.3,"d":0.294},{"m":56,"t":18.6,"d":0.588},{"m":60,"t":19.2,"d":0.587},{"m":58,"t":19.8,"d":0.294},{"m":56,"t":20.1,"d":0.294},{"m":58,"t":20.4,"d":0.587},{"m":58,"t":21,"d":0.587},{"m":60,"t":21.6,"d":0.294},{"m":61,"t":21.9,"d":0.294},{"m":63,"t":22.2,"d":0.587},{"m":56,"t":22.8,"d":0.587},{"m":61,"t":23.4,"d":0.294},{"m":60,"t":23.7,"d":0.294},{"m":58,"t":24,"d":0.587},{"m":58,"t":24.6,"d":0.587},{"m":60,"t":25.2,"d":0.294},{"m":61,"t":25.5,"d":0.294},{"m":63,"t":25.8,"d":0.587},{"m":56,"t":26.4,"d":0.587},{"m":60,"t":27,"d":0.294},{"m":58,"t":27.3,"d":0.294},{"m":56,"t":27.6,"d":0.587},{"m":56,"t":28.2,"d":0.587},{"m":60,"t":28.8,"d":0.587},{"m":58,"t":29.4,"d":1.176},{"m":63,"t":30.6,"d":0.587},{"m":61,"t":31.2,"d":1.176},{"m":60,"t":32.4,"d":0.587},{"m":56,"t":33,"d":0.587},{"m":58,"t":33.6,"d":0.587},{"m":51,"t":34.2,"d":1.176},{"m":56,"t":39.6,"d":0.294},{"m":51,"t":39.9,"d":0.294},{"m":56,"t":40.2,"d":0.588},{"m":60,"t":40.8,"d":0.588},{"m":58,"t":41.4,"d":0.294},{"m":56,"t":41.7,"d":0.294},{"m":58,"t":42,"d":0.587},{"m":58,"t":42.6,"d":0.587},{"m":56,"t":43.2,"d":0.294},{"m":51,"t":43.5,"d":0.294},{"m":56,"t":43.8,"d":0.588},{"m":60,"t":44.4,"d":0.588},{"m":58,"t":45,"d":0.294},{"m":56,"t":45.3,"d":0.294},{"m":58,"t":45.6,"d":0.587},{"m":58,"t":46.2,"d":0.588},{"m":60,"t":46.8,"d":0.294},{"m":61,"t":47.1,"d":0.294},{"m":63,"t":47.4,"d":0.588},{"m":56,"t":48,"d":0.587},{"m":61,"t":48.6,"d":0.294},{"m":60,"t":48.9,"d":0.294},{"m":58,"t":49.2,"d":0.588},{"m":58,"t":49.8,"d":0.588},{"m":60,"t":50.4,"d":0.294},{"m":61,"t":50.7,"d":0.294},{"m":63,"t":51,"d":0.587},{"m":56,"t":51.6,"d":0.587},{"m":60,"t":52.2,"d":0.294},{"m":58,"t":52.5,"d":0.294},{"m":56,"t":52.8,"d":0.588},{"m":56,"t":53.4,"d":0.588},{"m":60,"t":54,"d":0.587},{"m":58,"t":54.6,"d":1.176},{"m":63,"t":55.8,"d":0.588},{"m":61,"t":56.4,"d":1.176},{"m":60,"t":57.6,"d":0.588},{"m":56,"t":58.2,"d":0.588},{"m":58,"t":58.8,"d":0.588},{"m":51,"t":59.4,"d":1.176},{"m":56,"t":66,"d":0.294},{"m":51,"t":66.3,"d":0.294},{"m":56,"t":66.6,"d":0.588},{"m":60,"t":67.2,"d":0.587},{"m":58,"t":67.8,"d":0.294},{"m":56,"t":68.1,"d":0.294},{"m":58,"t":68.4,"d":0.588},{"m":58,"t":69,"d":0.588},{"m":56,"t":69.6,"d":0.294},{"m":51,"t":69.9,"d":0.294},{"m":56,"t":70.2,"d":0.587},{"m":60,"t":70.8,"d":0.588},{"m":58,"t":71.4,"d":0.294},{"m":56,"t":71.7,"d":0.294},{"m":58,"t":72,"d":0.588},{"m":58,"t":72.6,"d":0.588},{"m":60,"t":73.2,"d":0.294},{"m":61,"t":73.5,"d":0.294},{"m":63,"t":73.8,"d":0.588},{"m":56,"t":74.4,"d":0.588},{"m":61,"t":75,"d":0.294},{"m":60,"t":75.3,"d":0.294},{"m":58,"t":75.6,"d":1.176},{"m":60,"t":76.8,"d":0.294},{"m":61,"t":77.1,"d":0.294},{"m":63,"t":77.4,"d":0.588},{"m":56,"t":78,"d":0.587},{"m":60,"t":78.6,"d":0.294},{"m":58,"t":78.9,"d":0.294},{"m":56,"t":79.2,"d":1.176},{"m":60,"t":80.4,"d":0.588},{"m":58,"t":81,"d":1.176},{"m":63,"t":82.2,"d":0.587},{"m":61,"t":82.8,"d":1.176},{"m":60,"t":84,"d":0.587},{"m":56,"t":84.6,"d":0.587},{"m":58,"t":85.2,"d":0.587},{"m":51,"t":85.8,"d":1.176},{"m":60,"t":87.6,"d":0.587},{"m":56,"t":88.2,"d":0.587},{"m":58,"t":88.8,"d":0.587},{"m":51,"t":89.4,"d":1.176},{"m":60,"t":91.2,"d":0.587},{"m":56,"t":91.8,"d":0.587},{"m":58,"t":92.4,"d":0.588},{"m":60,"t":93,"d":0.587},{"m":63,"t":93.6,"d":2.94}]},{"key":"2","name":"Bariton","color":"#5ec8a8","notes":[{"m":56,"t":14.4,"d":0.294},{"m":51,"t":14.7,"d":0.294},{"m":56,"t":15,"d":0.588},{"m":60,"t":15.6,"d":0.588},{"m":58,"t":16.2,"d":0.294},{"m":56,"t":16.5,"d":0.294},{"m":53,"t":16.8,"d":0.587},{"m":55,"t":17.4,"d":0.588},{"m":56,"t":18,"d":0.294},{"m":51,"t":18.3,"d":0.294},{"m":56,"t":18.6,"d":0.588},{"m":60,"t":19.2,"d":0.587},{"m":58,"t":19.8,"d":0.294},{"m":56,"t":20.1,"d":0.294},{"m":53,"t":20.4,"d":0.587},{"m":55,"t":21,"d":0.587},{"m":56,"t":21.6,"d":0.294},{"m":58,"t":21.9,"d":0.294},{"m":60,"t":22.2,"d":0.587},{"m":56,"t":22.8,"d":0.587},{"m":53,"t":23.4,"d":0.294},{"m":56,"t":23.7,"d":0.294},{"m":55,"t":24,"d":0.587},{"m":55,"t":24.6,"d":0.587},{"m":56,"t":25.2,"d":0.294},{"m":58,"t":25.5,"d":0.294},{"m":60,"t":25.8,"d":0.587},{"m":56,"t":26.4,"d":0.587},{"m":51,"t":27,"d":0.294},{"m":51,"t":27.3,"d":0.294},{"m":51,"t":27.6,"d":0.587},{"m":51,"t":28.2,"d":0.587},{"m":56,"t":28.8,"d":0.587},{"m":56,"t":29.4,"d":1.176},{"m":56,"t":30.6,"d":0.587},{"m":53,"t":31.2,"d":1.176},{"m":51,"t":32.4,"d":0.587},{"m":53,"t":33,"d":0.587},{"m":49,"t":33.6,"d":0.587},{"m":48,"t":34.2,"d":1.176},{"m":51,"t":39.6,"d":1.176},{"m":56,"t":40.8,"d":0.588},{"m":53,"t":41.4,"d":1.764},{"m":51,"t":43.2,"d":1.176},{"m":56,"t":44.4,"d":0.588},{"m":53,"t":45,"d":1.764},{"m":56,"t":46.8,"d":0.294},{"m":58,"t":47.1,"d":0.294},{"m":60,"t":47.4,"d":0.588},{"m":56,"t":48,"d":0.587},{"m":53,"t":48.6,"d":0.294},{"m":56,"t":48.9,"d":0.294},{"m":55,"t":49.2,"d":0.588},{"m":55,"t":49.8,"d":0.588},{"m":56,"t":50.4,"d":0.294},{"m":58,"t":50.7,"d":0.294},{"m":60,"t":51,"d":0.587},{"m":56,"t":51.6,"d":0.587},{"m":51,"t":52.2,"d":0.294},{"m":51,"t":52.5,"d":0.294},{"m":51,"t":52.8,"d":0.588},{"m":51,"t":53.4,"d":0.588},{"m":56,"t":54,"d":0.587},{"m":56,"t":54.6,"d":1.176},{"m":56,"t":55.8,"d":0.588},{"m":53,"t":56.4,"d":1.176},{"m":51,"t":57.6,"d":0.588},{"m":53,"t":58.2,"d":0.588},{"m":49,"t":58.8,"d":0.588},{"m":48,"t":59.4,"d":1.176},{"m":56,"t":66,"d":0.294},{"m":51,"t":66.3,"d":0.294},{"m":56,"t":66.6,"d":0.588},{"m":60,"t":67.2,"d":0.587},{"m":58,"t":67.8,"d":0.294},{"m":56,"t":68.1,"d":0.294},{"m":53,"t":68.4,"d":0.588},{"m":55,"t":69,"d":0.588},{"m":56,"t":69.6,"d":0.294},{"m":51,"t":69.9,"d":0.294},{"m":56,"t":70.2,"d":0.587},{"m":60,"t":70.8,"d":0.588},{"m":58,"t":71.4,"d":0.294},{"m":56,"t":71.7,"d":0.294},{"m":53,"t":72,"d":0.588},{"m":55,"t":72.6,"d":0.588},{"m":56,"t":73.2,"d":0.294},{"m":58,"t":73.5,"d":0.294},{"m":60,"t":73.8,"d":0.588},{"m":56,"t":74.4,"d":0.588},{"m":53,"t":75,"d":0.294},{"m":56,"t":75.3,"d":0.294},{"m":55,"t":75.6,"d":1.176},{"m":56,"t":76.8,"d":0.294},{"m":58,"t":77.1,"d":0.294},{"m":60,"t":77.4,"d":0.588},{"m":56,"t":78,"d":0.587},{"m":51,"t":78.6,"d":0.294},{"m":51,"t":78.9,"d":0.294},{"m":51,"t":79.2,"d":1.176},{"m":56,"t":80.4,"d":0.588},{"m":56,"t":81,"d":1.176},{"m":56,"t":82.2,"d":0.587},{"m":53,"t":82.8,"d":1.176},{"m":51,"t":84,"d":0.587},{"m":53,"t":84.6,"d":0.587},{"m":49,"t":85.2,"d":0.587},{"m":48,"t":85.8,"d":1.176},{"m":51,"t":87.6,"d":0.587},{"m":53,"t":88.2,"d":0.587},{"m":49,"t":88.8,"d":0.587},{"m":48,"t":89.4,"d":1.176},{"m":51,"t":91.2,"d":0.587},{"m":53,"t":91.8,"d":0.587},{"m":55,"t":92.4,"d":0.588},{"m":56,"t":93,"d":0.587},{"m":60,"t":93.6,"d":2.94}]},{"key":"3","name":"Bass","color":"#d09080","notes":[{"m":56,"t":21.6,"d":0.294},{"m":56,"t":21.9,"d":0.294},{"m":56,"t":22.2,"d":0.587},{"m":48,"t":22.8,"d":0.587},{"m":49,"t":23.4,"d":0.294},{"m":53,"t":23.7,"d":0.294},{"m":51,"t":24,"d":0.587},{"m":51,"t":24.6,"d":0.587},{"m":56,"t":25.2,"d":0.294},{"m":56,"t":25.5,"d":0.294},{"m":56,"t":25.8,"d":0.587},{"m":48,"t":26.4,"d":0.587},{"m":51,"t":27,"d":0.294},{"m":49,"t":27.3,"d":0.294},{"m":48,"t":27.6,"d":0.587},{"m":48,"t":28.2,"d":0.587},{"m":51,"t":28.8,"d":0.587},{"m":51,"t":29.4,"d":0.587},{"m":49,"t":30,"d":0.587},{"m":48,"t":30.6,"d":0.587},{"m":46,"t":31.2,"d":0.587},{"m":51,"t":31.8,"d":0.587},{"m":44,"t":32.4,"d":1.176},{"m":43,"t":33.6,"d":0.587},{"m":44,"t":34.2,"d":1.176},{"m":48,"t":39.6,"d":1.176},{"m":51,"t":40.8,"d":0.588},{"m":49,"t":41.4,"d":1.764},{"m":48,"t":43.2,"d":1.176},{"m":51,"t":44.4,"d":0.588},{"m":50,"t":45,"d":1.764},{"m":56,"t":46.8,"d":0.294},{"m":56,"t":47.1,"d":0.294},{"m":56,"t":47.4,"d":0.588},{"m":48,"t":48,"d":0.587},{"m":49,"t":48.6,"d":0.294},{"m":53,"t":48.9,"d":0.294},{"m":51,"t":49.2,"d":0.588},{"m":51,"t":49.8,"d":0.588},{"m":56,"t":50.4,"d":0.294},{"m":56,"t":50.7,"d":0.294},{"m":56,"t":51,"d":0.587},{"m":48,"t":51.6,"d":0.587},{"m":51,"t":52.2,"d":0.294},{"m":49,"t":52.5,"d":0.294},{"m":48,"t":52.8,"d":0.588},{"m":48,"t":53.4,"d":0.588},{"m":51,"t":54,"d":0.587},{"m":51,"t":54.6,"d":0.587},{"m":49,"t":55.2,"d":0.588},{"m":48,"t":55.8,"d":0.588},{"m":46,"t":56.4,"d":0.588},{"m":51,"t":57,"d":0.587},{"m":44,"t":57.6,"d":1.176},{"m":43,"t":58.8,"d":0.588},{"m":44,"t":59.4,"d":1.176},{"m":56,"t":73.2,"d":0.294},{"m":56,"t":73.5,"d":0.294},{"m":56,"t":73.8,"d":0.588},{"m":48,"t":74.4,"d":0.588},{"m":49,"t":75,"d":0.294},{"m":53,"t":75.3,"d":0.294},{"m":51,"t":75.6,"d":1.176},{"m":56,"t":76.8,"d":0.294},{"m":56,"t":77.1,"d":0.294},{"m":56,"t":77.4,"d":0.588},{"m":48,"t":78,"d":0.587},{"m":51,"t":78.6,"d":0.294},{"m":49,"t":78.9,"d":0.294},{"m":48,"t":79.2,"d":1.176},{"m":51,"t":80.4,"d":0.588},{"m":51,"t":81,"d":0.587},{"m":49,"t":81.6,"d":0.587},{"m":48,"t":82.2,"d":0.587},{"m":46,"t":82.8,"d":0.587},{"m":51,"t":83.4,"d":0.588},{"m":44,"t":84,"d":1.176},{"m":43,"t":85.2,"d":0.587},{"m":44,"t":85.8,"d":1.176},{"m":44,"t":87.6,"d":1.176},{"m":43,"t":88.8,"d":0.587},{"m":44,"t":89.4,"d":1.176},{"m":44,"t":91.2,"d":0.587},{"m":48,"t":91.8,"d":0.587},{"m":49,"t":92.4,"d":0.588},{"m":51,"t":93,"d":0.587},{"m":56,"t":93.6,"d":2.94}]}]};
+// erwartet: window.SONG = { title, subtitle, bpm, duration, voices:[{key,name,color,notes:[{m,t,d}]}] }
+const SONG = window.SONG;
+const VC = {};
+SONG.voices.forEach(v=>{ VC[v.key]={...v, vol:0.85, muted:false, solo:false}; });
+
+let ctx=null, master=null, voiceGain={}, playing=false, scheduled=[], startCtxTime=0, startOffset=0, rafId=null, tempo=1, loop=false;
+const DUR = SONG.duration;
+
+function ensureCtx(){
+  if(ctx) return;
+  ctx = new (window.AudioContext||window.webkitAudioContext)();
+  master = ctx.createGain(); master.gain.value=0.9; master.connect(ctx.destination);
+  SONG.voices.forEach(v=>{ const g=ctx.createGain(); g.connect(master); voiceGain[v.key]=g; });
+  updateGains();
+}
+function anySolo(){ return SONG.voices.some(v=>VC[v.key].solo); }
+function effGain(key){
+  const v=VC[key]; const solo=anySolo();
+  let g = solo ? (v.solo?1:0) : (v.muted?0:1);
+  return g * v.vol;
+}
+function updateGains(){ if(!ctx) return; SONG.voices.forEach(v=>{ voiceGain[v.key].gain.setTargetAtTime(effGain(v.key), ctx.currentTime, 0.02); }); }
+
+function midiToFreq(m){ return 440*Math.pow(2,(m-69)/12); }
+// Chor-artiger Klang: Dreieck + leicht verstimmte Sinus
+function scheduleNote(key, midi, at, dur){
+  const g=voiceGain[key];
+  const o1=ctx.createOscillator(), o2=ctx.createOscillator(), ng=ctx.createGain();
+  o1.type='triangle'; o1.frequency.value=midiToFreq(midi);
+  o2.type='sine'; o2.frequency.value=midiToFreq(midi)*Math.pow(2,7/1200);
+  const o2g=ctx.createGain(); o2g.gain.value=0.4; o2.connect(o2g);
+  o1.connect(ng); o2g.connect(ng); ng.connect(g);
+  const a=0.05, r=0.12, peak=0.5;
+  ng.gain.setValueAtTime(0, at);
+  ng.gain.linearRampToValueAtTime(peak, at+a);
+  ng.gain.setValueAtTime(peak, Math.max(at+a, at+dur-r));
+  ng.gain.linearRampToValueAtTime(0, at+dur);
+  o1.start(at); o2.start(at); o1.stop(at+dur+0.05); o2.stop(at+dur+0.05);
+  scheduled.push(o1,o2);
+}
+function clearScheduled(){ scheduled.forEach(o=>{try{o.stop();}catch(e){}}); scheduled=[]; }
+
+function play(){
+  ensureCtx(); if(ctx.state==='suspended') ctx.resume();
+  playing=true; document.getElementById('playBtn').textContent='⏸';
+  startCtxTime=ctx.currentTime; // offset bleibt
+  const base=startOffset;
+  SONG.voices.forEach(v=>{
+    v.notes.forEach(n=>{
+      const tt=(n.t-base)/tempo;
+      if(n.t+ n.d < base) return; // schon vorbei
+      const at=startCtxTime+Math.max(0,tt);
+      const dur=n.d/tempo - Math.max(0, base-n.t)/tempo;
+      if(dur>0.02) scheduleNote(v.key, n.m, at, Math.max(0.05,dur));
+    });
+  });
+  updateGains();
+  tick();
+}
+function pause(){ playing=false; document.getElementById('playBtn').textContent='▶'; if(ctx) startOffset=currentTime(); clearScheduled(); cancelAnimationFrame(rafId); }
+function currentTime(){ if(!playing||!ctx) return startOffset; return startOffset+(ctx.currentTime-startCtxTime)*tempo; }
+function fmt(s){ s=Math.max(0,s); return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'); }
+function tick(){
+  const t=currentTime();
+  document.getElementById('cur').textContent=fmt(t);
+  document.getElementById('seek').value=Math.min(1000, (t/DUR)*1000);
+  if(t>=DUR){ if(loop){ seekTo(0); } else { pause(); seekTo(0); return; } }
+  rafId=requestAnimationFrame(tick);
+}
+function seekTo(sec){ const was=playing; if(was) pause(); startOffset=Math.max(0,Math.min(DUR,sec)); document.getElementById('cur').textContent=fmt(startOffset); document.getElementById('seek').value=(startOffset/DUR)*1000; if(was) play(); }
+
+// ===== UI =====
+function buildMixer(){
+  const el=document.getElementById('mix');
+  el.innerHTML=SONG.voices.map(v=>`
+    <div class="mrow">
+      <div class="mbadge" style="background:${v.color}">${v.key}</div>
+      <div class="mbtns">
+        <button class="mbtn" data-m="${v.key}">M</button>
+        <button class="mbtn" data-s="${v.key}">S</button>
+      </div>
+      <div class="volwrap">
+        <input class="vsl" type="range" min="0" max="100" value="85" data-v="${v.key}">
+        <span class="vpct" id="pct-${v.key}">85%</span>
+      </div>
+    </div>`).join('');
+  el.querySelectorAll('[data-v]').forEach(s=>s.oninput=e=>{ const k=e.target.dataset.v; VC[k].vol=e.target.value/100; document.getElementById('pct-'+k).textContent=e.target.value+'%'; updateGains(); });
+  el.querySelectorAll('[data-m]').forEach(b=>b.onclick=e=>{ const k=e.target.dataset.m; VC[k].muted=!VC[k].muted; e.target.classList.toggle('on-m',VC[k].muted); updateGains(); });
+  el.querySelectorAll('[data-s]').forEach(b=>b.onclick=e=>{ const k=e.target.dataset.s; VC[k].solo=!VC[k].solo; e.target.classList.toggle('on-s',VC[k].solo); updateGains(); });
+}
+buildMixer();
+document.getElementById('dur').textContent=fmt(DUR);
+document.getElementById('playBtn').onclick=()=>{ playing?pause():play(); };
+document.getElementById('backBtn').onclick=()=>seekTo(0);
+document.getElementById('loopBtn').onclick=e=>{ loop=!loop; e.target.classList.toggle('on',loop); };
+document.getElementById('seek').oninput=e=>{ seekTo((e.target.value/1000)*DUR); };
+document.getElementById('tempoSel').onchange=e=>{ const was=playing; if(was)pause(); tempo=parseFloat(e.target.value); if(was)play(); };
+</script>
+</body>
+</html>
