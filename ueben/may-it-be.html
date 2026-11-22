@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Stimmcoach — May It Be</title>
+<style>
+:root{--bg:#0e0c0a;--bg2:#181410;--bg3:#232018;--ink:#f0e8d8;--muted:#8a8070;--bd:#2e2922;
+  --S:#e8a060;--A:#5ec8a8;--T:#90a8e0;--B:#d09080;--acc:#e8a060}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);
+  min-height:100vh;max-width:540px;margin:0 auto;padding-bottom:7rem}
+.hdr{padding:1rem 1.1rem .7rem;border-bottom:1px solid var(--bd);position:sticky;top:0;
+  background:rgba(14,12,10,.97);backdrop-filter:blur(10px);z-index:50}
+.hdr h1{font-size:1.15rem;font-weight:600}
+.hdr .sub{font-size:.7rem;color:var(--muted);margin-top:2px}
+.mixer{padding:.9rem 1rem}
+.mlbl{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.7rem}
+.mrow{display:flex;align-items:center;gap:.55rem;margin-bottom:.7rem}
+.mbadge{width:2.1rem;height:2.1rem;border-radius:6px;flex-shrink:0;display:flex;align-items:center;
+  justify-content:center;font-size:.78rem;font-weight:700;color:#0e0c0a}
+.mbtns{display:flex;gap:.3rem;flex-shrink:0}
+.mbtn{width:2rem;height:2rem;border-radius:6px;border:1px solid var(--bd);background:var(--bg3);
+  color:var(--muted);font-size:.72rem;font-weight:600;cursor:pointer;transition:all .12s}
+.mbtn.on-m{background:#3a1a1a;color:#e06060;border-color:#5a2a2a}
+.mbtn.on-s{background:#1a3a2a;color:#50d090;border-color:#2a5a3a}
+.volwrap{flex:1;display:flex;align-items:center;gap:.5rem;min-width:0}
+input.vsl{flex:1;-webkit-appearance:none;appearance:none;height:4px;border-radius:100px;outline:none;background:var(--bd);cursor:pointer}
+input.vsl::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;cursor:pointer;background:var(--acc)}
+input.vsl::-moz-range-thumb{width:16px;height:16px;border-radius:50%;cursor:pointer;background:var(--acc);border:none}
+.vpct{font-size:.64rem;color:var(--muted);min-width:2.2rem;text-align:right}
+.transport{position:fixed;bottom:0;left:0;right:0;max-width:540px;margin:0 auto;background:var(--bg2);
+  border-top:1px solid var(--bd);padding:.7rem 1rem 1rem;z-index:60}
+.seekrow{display:flex;align-items:center;gap:.6rem;margin-bottom:.7rem}
+.time{font-size:.66rem;color:var(--muted);min-width:2.6rem}
+.tctrls{display:flex;align-items:center;justify-content:center;gap:.9rem}
+.tbtn{background:var(--bg3);border:1px solid var(--bd);color:var(--ink);border-radius:8px;
+  padding:.5rem .7rem;font-size:.85rem;cursor:pointer}
+.play{width:3.2rem;height:3.2rem;border-radius:50%;background:var(--acc);color:#0e0c0a;border:none;
+  font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.tempo{display:flex;align-items:center;gap:.4rem;font-size:.7rem;color:var(--muted)}
+.tempo select{background:var(--bg3);border:1px solid var(--bd);color:var(--ink);border-radius:6px;padding:.3rem .4rem;font-size:.72rem}
+.loopbtn.on{background:#1a3a2a;color:#50d090;border-color:#2a5a3a}
+.hint{font-size:.68rem;color:var(--muted);padding:0 1rem 1rem;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <h1>🎤 May It Be</h1>
+  <div class="sub">Entwurf: von Hand aus dem Notenblatt abgelesen (nur Chor) – bitte gegenhören · Stimmcoach zum Üben</div>
+</div>
+
+<div class="mixer">
+  <div class="mlbl">Stimmen — laut/leise · M = stumm · S = solo</div>
+  <div id="mix"></div>
+</div>
+<div class="hint">Tipp: Stelle deine eigene Stimme laut und die anderen leise – oder „Solo" für nur deine Stimme. Mit „Tempo" kannst du langsamer üben.</div>
+
+<div class="transport">
+  <div class="seekrow">
+    <span class="time" id="cur">0:00</span>
+    <input class="vsl" id="seek" type="range" min="0" max="1000" value="0" style="flex:1">
+    <span class="time" id="dur">0:00</span>
+  </div>
+  <div class="tctrls">
+    <button class="tbtn loopbtn" id="loopBtn" title="Wiederholen">🔁</button>
+    <button class="tbtn" id="backBtn" title="Zum Anfang">⏮</button>
+    <button class="play" id="playBtn">▶</button>
+    <div class="tempo">Tempo
+      <select id="tempoSel">
+        <option value="0.5">50%</option><option value="0.6">60%</option>
+        <option value="0.75">75%</option><option value="0.9">90%</option>
+        <option value="1" selected>100%</option><option value="1.1">110%</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<script>
+window.SONG = {"title":"May It Be","subtitle":"Entwurf: von Hand aus dem Notenblatt abgelesen (nur Chor) – bitte gegenhören","bpm":68,"duration":179.74,"voices":[{"key":"1","name":"Sopran","color":"#e8a060","notes":[{"m":57,"t":1.765,"d":0.419},{"m":59,"t":2.206,"d":0.419},{"m":59,"t":2.647,"d":0.419},{"m":61,"t":3.088,"d":0.838},{"m":59,"t":3.971,"d":0.419},{"m":61,"t":4.412,"d":0.419},{"m":64,"t":4.853,"d":0.419},{"m":66,"t":5.294,"d":1.257},{"m":66,"t":7.059,"d":0.21},{"m":69,"t":7.279,"d":0.629},{"m":64,"t":7.941,"d":1.257},{"m":61,"t":9.265,"d":0.419},{"m":57,"t":9.706,"d":0.419},{"m":61,"t":10.147,"d":0.419},{"m":59,"t":10.588,"d":1.257},{"m":57,"t":12.353,"d":0.419},{"m":59,"t":12.794,"d":0.419},{"m":59,"t":13.235,"d":0.419},{"m":61,"t":13.676,"d":0.838},{"m":59,"t":14.559,"d":0.419},{"m":61,"t":15,"d":0.419},{"m":64,"t":15.441,"d":0.419},{"m":66,"t":15.882,"d":1.257},{"m":66,"t":17.647,"d":0.21},{"m":69,"t":17.868,"d":0.629},{"m":61,"t":18.529,"d":0.21},{"m":64,"t":18.75,"d":1.048},{"m":61,"t":19.853,"d":0.419},{"m":57,"t":20.294,"d":0.419},{"m":59,"t":20.735,"d":0.419},{"m":59,"t":21.176,"d":1.257},{"m":59,"t":22.941,"d":0.419},{"m":64,"t":23.382,"d":0.419},{"m":64,"t":23.824,"d":0.21},{"m":66,"t":24.044,"d":1.048},{"m":64,"t":25.147,"d":0.419},{"m":66,"t":25.588,"d":0.419},{"m":69,"t":26.029,"d":0.419},{"m":64,"t":26.471,"d":1.676},{"m":61,"t":28.235,"d":0.419},{"m":64,"t":28.676,"d":0.419},{"m":66,"t":29.118,"d":1.257},{"m":64,"t":30.441,"d":0.21},{"m":61,"t":30.662,"d":0.21},{"m":59,"t":30.882,"d":0.419},{"m":61,"t":31.323,"d":0.419},{"m":61,"t":31.765,"d":0.419},{"m":64,"t":32.206,"d":1.257},{"m":64,"t":34.412,"d":1.676},{"m":64,"t":36.176,"d":0.838},{"m":69,"t":37.059,"d":1.676},{"m":64,"t":38.823,"d":0.838},{"m":69,"t":39.706,"d":1.676},{"m":71,"t":41.471,"d":0.838},{"m":69,"t":42.353,"d":0.838},{"m":68,"t":43.235,"d":0.838},{"m":68,"t":44.559,"d":0.419},{"m":69,"t":45,"d":1.676},{"m":64,"t":46.765,"d":0.838},{"m":64,"t":47.647,"d":0.838},{"m":62,"t":48.529,"d":0.838},{"m":61,"t":49.412,"d":0.838},{"m":62,"t":50.294,"d":1.676},{"m":64,"t":52.059,"d":0.838},{"m":64,"t":52.941,"d":1.676},{"m":61,"t":55.147,"d":0.419},{"m":64,"t":55.588,"d":1.676},{"m":64,"t":57.353,"d":0.838},{"m":69,"t":58.235,"d":1.676},{"m":64,"t":60,"d":0.838},{"m":69,"t":60.882,"d":1.676},{"m":71,"t":62.647,"d":0.838},{"m":69,"t":63.529,"d":0.838},{"m":68,"t":64.412,"d":0.838},{"m":68,"t":65.735,"d":0.419},{"m":69,"t":66.176,"d":1.676},{"m":64,"t":67.941,"d":0.838},{"m":66,"t":68.823,"d":1.676},{"m":64,"t":70.588,"d":0.419},{"m":62,"t":71.029,"d":0.419},{"m":64,"t":71.471,"d":1.676},{"m":64,"t":73.235,"d":0.838},{"m":61,"t":74.118,"d":2.515},{"m":57,"t":78.529,"d":0.419},{"m":59,"t":78.971,"d":0.419},{"m":59,"t":79.412,"d":0.419},{"m":61,"t":79.853,"d":0.838},{"m":59,"t":80.735,"d":0.419},{"m":61,"t":81.176,"d":0.419},{"m":64,"t":81.618,"d":0.419},{"m":66,"t":82.059,"d":1.257},{"m":66,"t":83.823,"d":0.21},{"m":69,"t":84.044,"d":0.629},{"m":64,"t":84.706,"d":1.257},{"m":61,"t":86.029,"d":0.419},{"m":57,"t":86.47,"d":0.419},{"m":59,"t":86.912,"d":1.257},{"m":57,"t":89.118,"d":0.419},{"m":59,"t":89.559,"d":0.419},{"m":59,"t":90,"d":0.419},{"m":61,"t":90.441,"d":0.838},{"m":59,"t":91.323,"d":0.419},{"m":61,"t":91.765,"d":0.419},{"m":64,"t":92.206,"d":0.419},{"m":66,"t":92.647,"d":1.257},{"m":66,"t":94.412,"d":0.21},{"m":69,"t":94.632,"d":0.629},{"m":61,"t":95.294,"d":0.21},{"m":64,"t":95.515,"d":1.048},{"m":61,"t":96.618,"d":0.419},{"m":57,"t":97.059,"d":0.419},{"m":59,"t":97.5,"d":0.419},{"m":59,"t":97.941,"d":1.257},{"m":61,"t":99.706,"d":0.419},{"m":64,"t":100.147,"d":0.419},{"m":66,"t":100.588,"d":1.257},{"m":64,"t":101.912,"d":0.419},{"m":66,"t":102.353,"d":0.419},{"m":69,"t":102.794,"d":0.419},{"m":64,"t":103.235,"d":1.676},{"m":61,"t":105,"d":0.419},{"m":64,"t":105.441,"d":0.419},{"m":66,"t":105.882,"d":1.257},{"m":64,"t":107.206,"d":0.419},{"m":66,"t":107.647,"d":0.419},{"m":69,"t":108.088,"d":0.419},{"m":69,"t":108.529,"d":2.515},{"m":64,"t":113.823,"d":1.676},{"m":64,"t":115.588,"d":0.838},{"m":69,"t":116.47,"d":1.676},{"m":64,"t":118.235,"d":0.838},{"m":69,"t":119.118,"d":1.676},{"m":71,"t":120.882,"d":0.838},{"m":69,"t":121.765,"d":0.838},{"m":68,"t":122.647,"d":0.838},{"m":68,"t":123.97,"d":0.419},{"m":69,"t":124.412,"d":1.676},{"m":64,"t":126.176,"d":0.838},{"m":64,"t":127.059,"d":0.838},{"m":62,"t":127.941,"d":0.838},{"m":61,"t":128.823,"d":0.838},{"m":62,"t":129.706,"d":1.676},{"m":64,"t":131.47,"d":0.838},{"m":64,"t":132.353,"d":1.676},{"m":61,"t":134.559,"d":0.419},{"m":64,"t":135,"d":1.676},{"m":64,"t":136.765,"d":0.838},{"m":69,"t":137.647,"d":1.676},{"m":64,"t":139.412,"d":0.838},{"m":69,"t":140.294,"d":1.676},{"m":71,"t":142.059,"d":0.838},{"m":69,"t":142.941,"d":0.838},{"m":68,"t":143.823,"d":0.838},{"m":68,"t":145.147,"d":0.419},{"m":69,"t":145.588,"d":1.676},{"m":64,"t":147.353,"d":0.838},{"m":66,"t":148.235,"d":1.676},{"m":64,"t":150,"d":0.419},{"m":62,"t":150.441,"d":0.419},{"m":62,"t":150.882,"d":1.676},{"m":64,"t":152.647,"d":0.838},{"m":64,"t":153.529,"d":4.191},{"m":68,"t":158.382,"d":0.419},{"m":69,"t":158.823,"d":1.676},{"m":64,"t":160.588,"d":0.838},{"m":66,"t":161.47,"d":1.676},{"m":64,"t":163.235,"d":0.419},{"m":62,"t":163.676,"d":0.419},{"m":64,"t":164.117,"d":2.515},{"m":64,"t":166.765,"d":1.676},{"m":66,"t":169.412,"d":5.029},{"m":64,"t":174.706,"d":5.029}]},{"key":"2","name":"Alt","color":"#5ec8a8","notes":[{"m":57,"t":1.765,"d":0.419},{"m":59,"t":2.206,"d":0.419},{"m":59,"t":2.647,"d":0.419},{"m":61,"t":3.088,"d":0.838},{"m":59,"t":3.971,"d":0.419},{"m":61,"t":4.412,"d":0.419},{"m":61,"t":4.853,"d":0.419},{"m":62,"t":5.294,"d":1.257},{"m":62,"t":7.059,"d":0.21},{"m":66,"t":7.279,"d":0.629},{"m":61,"t":7.941,"d":1.257},{"m":61,"t":9.265,"d":0.419},{"m":57,"t":9.706,"d":0.419},{"m":57,"t":10.147,"d":0.419},{"m":56,"t":10.588,"d":1.257},{"m":57,"t":12.353,"d":0.419},{"m":59,"t":12.794,"d":0.419},{"m":59,"t":13.235,"d":0.419},{"m":61,"t":13.676,"d":0.838},{"m":59,"t":14.559,"d":0.419},{"m":61,"t":15,"d":0.419},{"m":61,"t":15.441,"d":0.419},{"m":62,"t":15.882,"d":1.257},{"m":62,"t":17.647,"d":0.21},{"m":66,"t":17.868,"d":0.629},{"m":57,"t":18.529,"d":0.21},{"m":61,"t":18.75,"d":1.048},{"m":61,"t":19.853,"d":0.419},{"m":57,"t":20.294,"d":0.419},{"m":59,"t":20.735,"d":0.419},{"m":56,"t":21.176,"d":1.257},{"m":59,"t":22.941,"d":0.419},{"m":64,"t":23.382,"d":0.419},{"m":64,"t":23.824,"d":0.21},{"m":66,"t":24.044,"d":1.048},{"m":64,"t":25.147,"d":0.419},{"m":66,"t":25.588,"d":0.419},{"m":69,"t":26.029,"d":0.419},{"m":64,"t":26.471,"d":1.676},{"m":61,"t":28.235,"d":0.419},{"m":64,"t":28.676,"d":0.419},{"m":62,"t":29.118,"d":1.257},{"m":64,"t":30.441,"d":0.21},{"m":61,"t":30.662,"d":0.21},{"m":59,"t":30.882,"d":0.419},{"m":61,"t":31.323,"d":0.419},{"m":61,"t":31.765,"d":0.419},{"m":64,"t":32.206,"d":1.257},{"m":61,"t":34.412,"d":1.676},{"m":61,"t":36.176,"d":0.838},{"m":66,"t":37.059,"d":1.676},{"m":61,"t":38.823,"d":0.838},{"m":66,"t":39.706,"d":1.676},{"m":67,"t":41.471,"d":0.838},{"m":64,"t":42.353,"d":1.676},{"m":64,"t":44.559,"d":0.419},{"m":64,"t":45,"d":1.676},{"m":61,"t":46.765,"d":0.838},{"m":64,"t":47.647,"d":0.838},{"m":62,"t":48.529,"d":0.838},{"m":61,"t":49.412,"d":0.838},{"m":62,"t":50.294,"d":1.676},{"m":64,"t":52.059,"d":0.838},{"m":59,"t":52.941,"d":1.676},{"m":61,"t":55.147,"d":0.419},{"m":61,"t":55.588,"d":1.676},{"m":61,"t":57.353,"d":0.838},{"m":66,"t":58.235,"d":1.676},{"m":61,"t":60,"d":0.838},{"m":66,"t":60.882,"d":1.676},{"m":67,"t":62.647,"d":0.838},{"m":64,"t":63.529,"d":1.676},{"m":64,"t":65.735,"d":0.419},{"m":66,"t":66.176,"d":1.676},{"m":64,"t":67.941,"d":0.838},{"m":62,"t":68.823,"d":1.676},{"m":64,"t":70.588,"d":0.419},{"m":62,"t":71.029,"d":0.419},{"m":59,"t":71.471,"d":1.676},{"m":59,"t":73.235,"d":0.838},{"m":57,"t":74.118,"d":2.515},{"m":57,"t":78.529,"d":0.419},{"m":59,"t":78.971,"d":0.419},{"m":59,"t":79.412,"d":0.419},{"m":61,"t":79.853,"d":0.838},{"m":59,"t":80.735,"d":0.419},{"m":61,"t":81.176,"d":0.419},{"m":64,"t":81.618,"d":0.419},{"m":66,"t":82.059,"d":1.257},{"m":66,"t":83.823,"d":0.21},{"m":69,"t":84.044,"d":0.629},{"m":64,"t":84.706,"d":1.257},{"m":61,"t":86.029,"d":0.419},{"m":57,"t":86.47,"d":0.419},{"m":59,"t":86.912,"d":1.257},{"m":57,"t":89.118,"d":0.419},{"m":59,"t":89.559,"d":0.419},{"m":59,"t":90,"d":0.419},{"m":61,"t":90.441,"d":0.838},{"m":59,"t":91.323,"d":0.419},{"m":61,"t":91.765,"d":0.419},{"m":64,"t":92.206,"d":0.419},{"m":66,"t":92.647,"d":1.257},{"m":66,"t":94.412,"d":0.21},{"m":69,"t":94.632,"d":0.629},{"m":61,"t":95.294,"d":0.21},{"m":64,"t":95.515,"d":1.048},{"m":61,"t":96.618,"d":0.419},{"m":57,"t":97.059,"d":0.419},{"m":59,"t":97.5,"d":0.419},{"m":59,"t":97.941,"d":1.257},{"m":61,"t":99.706,"d":0.419},{"m":64,"t":100.147,"d":0.419},{"m":66,"t":100.588,"d":1.257},{"m":64,"t":101.912,"d":0.419},{"m":66,"t":102.353,"d":0.419},{"m":69,"t":102.794,"d":0.419},{"m":64,"t":103.235,"d":1.676},{"m":61,"t":105,"d":0.419},{"m":64,"t":105.441,"d":0.419},{"m":62,"t":105.882,"d":1.257},{"m":61,"t":107.206,"d":0.419},{"m":62,"t":107.647,"d":0.419},{"m":62,"t":108.088,"d":0.419},{"m":64,"t":108.529,"d":2.515},{"m":61,"t":113.823,"d":1.676},{"m":61,"t":115.588,"d":0.838},{"m":66,"t":116.47,"d":1.676},{"m":61,"t":118.235,"d":0.838},{"m":66,"t":119.118,"d":1.676},{"m":67,"t":120.882,"d":0.838},{"m":64,"t":121.765,"d":1.676},{"m":64,"t":123.97,"d":0.419},{"m":64,"t":124.412,"d":1.676},{"m":61,"t":126.176,"d":0.838},{"m":64,"t":127.059,"d":0.838},{"m":62,"t":127.941,"d":0.838},{"m":61,"t":128.823,"d":0.838},{"m":62,"t":129.706,"d":1.676},{"m":64,"t":131.47,"d":0.838},{"m":59,"t":132.353,"d":1.676},{"m":61,"t":134.559,"d":0.419},{"m":61,"t":135,"d":1.676},{"m":61,"t":136.765,"d":0.838},{"m":66,"t":137.647,"d":1.676},{"m":61,"t":139.412,"d":0.838},{"m":66,"t":140.294,"d":1.676},{"m":67,"t":142.059,"d":0.838},{"m":64,"t":142.941,"d":1.676},{"m":64,"t":145.147,"d":0.419},{"m":66,"t":145.588,"d":1.676},{"m":64,"t":147.353,"d":0.838},{"m":62,"t":148.235,"d":1.676},{"m":64,"t":150,"d":0.419},{"m":62,"t":150.441,"d":0.419},{"m":59,"t":150.882,"d":1.676},{"m":59,"t":152.647,"d":0.838},{"m":61,"t":153.529,"d":4.191},{"m":64,"t":158.382,"d":0.419},{"m":66,"t":158.823,"d":1.676},{"m":64,"t":160.588,"d":0.838},{"m":62,"t":161.47,"d":1.676},{"m":64,"t":163.235,"d":0.419},{"m":62,"t":163.676,"d":0.419},{"m":59,"t":164.117,"d":2.515},{"m":59,"t":166.765,"d":1.676},{"m":66,"t":169.412,"d":5.029},{"m":61,"t":174.706,"d":5.029}]},{"key":"3","name":"Tenor","color":"#90a8e0","notes":[{"m":57,"t":1.765,"d":0.419},{"m":56,"t":2.206,"d":0.419},{"m":57,"t":2.647,"d":2.515},{"m":57,"t":5.294,"d":1.257},{"m":52,"t":7.941,"d":2.515},{"m":52,"t":10.588,"d":1.257},{"m":57,"t":12.353,"d":0.419},{"m":56,"t":12.794,"d":0.419},{"m":57,"t":13.235,"d":2.515},{"m":57,"t":15.882,"d":1.257},{"m":52,"t":18.529,"d":2.515},{"m":52,"t":21.176,"d":1.257},{"m":57,"t":23.824,"d":4.191},{"m":57,"t":29.118,"d":2.515},{"m":59,"t":31.765,"d":0.419},{"m":57,"t":32.206,"d":1.257},{"m":57,"t":34.412,"d":1.676},{"m":57,"t":36.176,"d":0.838},{"m":61,"t":37.059,"d":1.676},{"m":57,"t":38.823,"d":0.838},{"m":57,"t":39.706,"d":1.676},{"m":59,"t":41.471,"d":0.838},{"m":59,"t":42.353,"d":1.676},{"m":59,"t":44.559,"d":0.419},{"m":61,"t":45,"d":1.676},{"m":57,"t":46.765,"d":0.838},{"m":57,"t":47.647,"d":0.838},{"m":54,"t":48.529,"d":0.838},{"m":52,"t":49.412,"d":0.838},{"m":54,"t":50.294,"d":1.676},{"m":57,"t":52.059,"d":0.838},{"m":57,"t":52.941,"d":0.838},{"m":56,"t":53.823,"d":0.838},{"m":57,"t":55.147,"d":0.419},{"m":57,"t":55.588,"d":1.676},{"m":57,"t":57.353,"d":0.838},{"m":61,"t":58.235,"d":1.676},{"m":57,"t":60,"d":0.838},{"m":57,"t":60.882,"d":1.676},{"m":59,"t":62.647,"d":0.838},{"m":59,"t":63.529,"d":1.676},{"m":59,"t":65.735,"d":0.419},{"m":61,"t":66.176,"d":1.676},{"m":61,"t":67.941,"d":0.838},{"m":57,"t":68.823,"d":1.676},{"m":57,"t":70.588,"d":0.838},{"m":57,"t":71.471,"d":1.676},{"m":56,"t":73.235,"d":0.838},{"m":57,"t":74.118,"d":2.515},{"m":57,"t":78.529,"d":0.419},{"m":56,"t":78.971,"d":0.419},{"m":56,"t":79.412,"d":0.419},{"m":57,"t":79.853,"d":0.838},{"m":59,"t":80.735,"d":0.419},{"m":57,"t":81.176,"d":0.419},{"m":56,"t":81.618,"d":0.419},{"m":57,"t":82.059,"d":1.257},{"m":57,"t":83.823,"d":0.838},{"m":61,"t":84.706,"d":1.257},{"m":57,"t":86.029,"d":0.419},{"m":52,"t":86.47,"d":0.419},{"m":52,"t":86.912,"d":1.257},{"m":57,"t":89.118,"d":0.419},{"m":56,"t":89.559,"d":0.419},{"m":56,"t":90,"d":0.419},{"m":57,"t":90.441,"d":0.838},{"m":59,"t":91.323,"d":0.419},{"m":57,"t":91.765,"d":0.419},{"m":56,"t":92.206,"d":0.419},{"m":57,"t":92.647,"d":1.257},{"m":57,"t":94.412,"d":0.838},{"m":59,"t":95.294,"d":0.21},{"m":61,"t":95.515,"d":1.048},{"m":57,"t":96.618,"d":0.419},{"m":50,"t":97.059,"d":0.838},{"m":56,"t":97.941,"d":1.257},{"m":62,"t":100.588,"d":0.838},{"m":61,"t":101.47,"d":0.838},{"m":59,"t":102.353,"d":0.838},{"m":61,"t":103.235,"d":0.838},{"m":59,"t":104.118,"d":0.838},{"m":57,"t":105,"d":0.419},{"m":62,"t":105.882,"d":0.838},{"m":61,"t":106.765,"d":0.419},{"m":57,"t":107.206,"d":0.419},{"m":59,"t":107.647,"d":0.419},{"m":59,"t":108.088,"d":0.419},{"m":59,"t":108.529,"d":2.515},{"m":57,"t":113.823,"d":1.676},{"m":57,"t":115.588,"d":0.838},{"m":61,"t":116.47,"d":1.676},{"m":57,"t":118.235,"d":0.838},{"m":57,"t":119.118,"d":1.676},{"m":59,"t":120.882,"d":0.838},{"m":59,"t":121.765,"d":1.676},{"m":59,"t":123.97,"d":0.419},{"m":61,"t":124.412,"d":1.676},{"m":57,"t":126.176,"d":0.838},{"m":57,"t":127.059,"d":0.838},{"m":54,"t":127.941,"d":0.838},{"m":52,"t":128.823,"d":0.838},{"m":54,"t":129.706,"d":1.676},{"m":57,"t":131.47,"d":0.838},{"m":57,"t":132.353,"d":0.838},{"m":56,"t":133.235,"d":0.838},{"m":57,"t":134.559,"d":0.419},{"m":57,"t":135,"d":1.676},{"m":57,"t":136.765,"d":0.838},{"m":61,"t":137.647,"d":1.676},{"m":57,"t":139.412,"d":0.838},{"m":57,"t":140.294,"d":1.676},{"m":59,"t":142.059,"d":0.838},{"m":59,"t":142.941,"d":1.676},{"m":59,"t":145.147,"d":0.419},{"m":61,"t":145.588,"d":1.676},{"m":61,"t":147.353,"d":0.838},{"m":57,"t":148.235,"d":1.676},{"m":57,"t":150,"d":0.838},{"m":57,"t":150.882,"d":1.676},{"m":56,"t":152.647,"d":0.838},{"m":57,"t":153.529,"d":4.191},{"m":59,"t":158.382,"d":0.419},{"m":61,"t":158.823,"d":1.676},{"m":61,"t":160.588,"d":0.838},{"m":57,"t":161.47,"d":1.676},{"m":57,"t":163.235,"d":0.838},{"m":57,"t":164.117,"d":2.515},{"m":56,"t":166.765,"d":1.676},{"m":54,"t":169.412,"d":2.515},{"m":57,"t":172.059,"d":2.515},{"m":57,"t":174.706,"d":5.029}]},{"key":"4","name":"Bass","color":"#d09080","notes":[{"m":57,"t":1.765,"d":0.419},{"m":56,"t":2.206,"d":0.419},{"m":54,"t":2.647,"d":2.515},{"m":50,"t":5.294,"d":1.257},{"m":45,"t":7.941,"d":2.515},{"m":47,"t":10.588,"d":1.257},{"m":57,"t":12.353,"d":0.419},{"m":56,"t":12.794,"d":0.419},{"m":54,"t":13.235,"d":2.515},{"m":50,"t":15.882,"d":1.257},{"m":45,"t":18.529,"d":2.515},{"m":47,"t":21.176,"d":1.257},{"m":52,"t":23.824,"d":2.515},{"m":49,"t":26.471,"d":1.676},{"m":47,"t":29.118,"d":2.515},{"m":52,"t":31.765,"d":1.676},{"m":57,"t":34.412,"d":1.676},{"m":57,"t":36.176,"d":0.838},{"m":54,"t":37.059,"d":1.676},{"m":52,"t":38.823,"d":0.838},{"m":50,"t":39.706,"d":1.676},{"m":50,"t":41.471,"d":0.838},{"m":52,"t":42.353,"d":1.676},{"m":52,"t":44.559,"d":0.419},{"m":57,"t":45,"d":1.676},{"m":57,"t":46.765,"d":0.838},{"m":57,"t":47.647,"d":0.838},{"m":54,"t":48.529,"d":0.838},{"m":52,"t":49.412,"d":0.838},{"m":54,"t":50.294,"d":1.676},{"m":57,"t":52.059,"d":0.838},{"m":52,"t":52.941,"d":1.676},{"m":57,"t":55.147,"d":0.419},{"m":57,"t":55.588,"d":1.676},{"m":57,"t":57.353,"d":0.838},{"m":54,"t":58.235,"d":1.676},{"m":52,"t":60,"d":0.838},{"m":50,"t":60.882,"d":1.676},{"m":50,"t":62.647,"d":0.838},{"m":52,"t":63.529,"d":1.676},{"m":52,"t":65.735,"d":0.419},{"m":54,"t":66.176,"d":1.676},{"m":52,"t":67.941,"d":0.838},{"m":50,"t":68.823,"d":1.676},{"m":50,"t":70.588,"d":0.838},{"m":52,"t":71.471,"d":1.676},{"m":52,"t":73.235,"d":0.838},{"m":57,"t":74.118,"d":2.515},{"m":57,"t":78.529,"d":0.419},{"m":56,"t":78.971,"d":0.419},{"m":56,"t":79.412,"d":0.419},{"m":57,"t":79.853,"d":0.838},{"m":59,"t":80.735,"d":0.419},{"m":57,"t":81.176,"d":0.419},{"m":56,"t":81.618,"d":0.419},{"m":57,"t":82.059,"d":1.257},{"m":57,"t":83.823,"d":0.838},{"m":57,"t":84.706,"d":1.257},{"m":57,"t":86.029,"d":0.419},{"m":52,"t":86.47,"d":0.419},{"m":52,"t":86.912,"d":1.257},{"m":57,"t":89.118,"d":0.419},{"m":56,"t":89.559,"d":0.419},{"m":56,"t":90,"d":0.419},{"m":57,"t":90.441,"d":0.838},{"m":59,"t":91.323,"d":0.419},{"m":57,"t":91.765,"d":0.419},{"m":56,"t":92.206,"d":0.419},{"m":57,"t":92.647,"d":1.257},{"m":57,"t":94.412,"d":0.838},{"m":57,"t":95.294,"d":0.838},{"m":57,"t":96.176,"d":0.419},{"m":57,"t":96.618,"d":0.419},{"m":50,"t":97.059,"d":0.838},{"m":56,"t":97.941,"d":1.257},{"m":50,"t":100.588,"d":0.838},{"m":49,"t":101.47,"d":0.838},{"m":47,"t":102.353,"d":0.838},{"m":49,"t":103.235,"d":0.838},{"m":47,"t":104.118,"d":0.838},{"m":45,"t":105,"d":0.419},{"m":47,"t":105.882,"d":0.838},{"m":49,"t":106.765,"d":0.419},{"m":49,"t":107.206,"d":0.419},{"m":50,"t":107.647,"d":0.419},{"m":54,"t":108.088,"d":0.419},{"m":57,"t":108.529,"d":0.419},{"m":56,"t":108.97,"d":2.096},{"m":57,"t":113.823,"d":1.676},{"m":57,"t":115.588,"d":0.838},{"m":54,"t":116.47,"d":1.676},{"m":52,"t":118.235,"d":0.838},{"m":50,"t":119.118,"d":1.676},{"m":50,"t":120.882,"d":0.838},{"m":52,"t":121.765,"d":1.676},{"m":52,"t":123.97,"d":0.419},{"m":57,"t":124.412,"d":1.676},{"m":57,"t":126.176,"d":0.838},{"m":57,"t":127.059,"d":0.838},{"m":54,"t":127.941,"d":0.838},{"m":52,"t":128.823,"d":0.838},{"m":54,"t":129.706,"d":1.676},{"m":57,"t":131.47,"d":0.838},{"m":52,"t":132.353,"d":1.676},{"m":57,"t":134.559,"d":0.419},{"m":57,"t":135,"d":1.676},{"m":57,"t":136.765,"d":0.838},{"m":54,"t":137.647,"d":1.676},{"m":52,"t":139.412,"d":0.838},{"m":50,"t":140.294,"d":1.676},{"m":50,"t":142.059,"d":0.838},{"m":52,"t":142.941,"d":1.676},{"m":52,"t":145.147,"d":0.419},{"m":54,"t":145.588,"d":1.676},{"m":52,"t":147.353,"d":0.838},{"m":50,"t":148.235,"d":1.676},{"m":50,"t":150,"d":0.838},{"m":52,"t":150.882,"d":1.676},{"m":52,"t":152.647,"d":0.838},{"m":57,"t":153.529,"d":4.191},{"m":52,"t":158.382,"d":0.419},{"m":54,"t":158.823,"d":1.676},{"m":52,"t":160.588,"d":0.838},{"m":50,"t":161.47,"d":1.676},{"m":50,"t":163.235,"d":0.838},{"m":52,"t":164.117,"d":2.515},{"m":52,"t":166.765,"d":1.676},{"m":54,"t":169.412,"d":2.515},{"m":57,"t":172.059,"d":2.515},{"m":45,"t":174.706,"d":5.029}]}]};
+// erwartet: window.SONG = { title, subtitle, bpm, duration, voices:[{key,name,color,notes:[{m,t,d}]}] }
+const SONG = window.SONG;
+const VC = {};
+SONG.voices.forEach(v=>{ VC[v.key]={...v, vol:0.85, muted:false, solo:false}; });
+
+let ctx=null, master=null, voiceGain={}, playing=false, scheduled=[], startCtxTime=0, startOffset=0, rafId=null, tempo=1, loop=false;
+const DUR = SONG.duration;
+
+function ensureCtx(){
+  if(ctx) return;
+  ctx = new (window.AudioContext||window.webkitAudioContext)();
+  master = ctx.createGain(); master.gain.value=0.9; master.connect(ctx.destination);
+  SONG.voices.forEach(v=>{ const g=ctx.createGain(); g.connect(master); voiceGain[v.key]=g; });
+  updateGains();
+}
+function anySolo(){ return SONG.voices.some(v=>VC[v.key].solo); }
+function effGain(key){
+  const v=VC[key]; const solo=anySolo();
+  let g = solo ? (v.solo?1:0) : (v.muted?0:1);
+  return g * v.vol;
+}
+function updateGains(){ if(!ctx) return; SONG.voices.forEach(v=>{ voiceGain[v.key].gain.setTargetAtTime(effGain(v.key), ctx.currentTime, 0.02); }); }
+
+function midiToFreq(m){ return 440*Math.pow(2,(m-69)/12); }
+// Chor-artiger Klang: Dreieck + leicht verstimmte Sinus
+function scheduleNote(key, midi, at, dur){
+  const g=voiceGain[key];
+  const o1=ctx.createOscillator(), o2=ctx.createOscillator(), ng=ctx.createGain();
+  o1.type='triangle'; o1.frequency.value=midiToFreq(midi);
+  o2.type='sine'; o2.frequency.value=midiToFreq(midi)*Math.pow(2,7/1200);
+  const o2g=ctx.createGain(); o2g.gain.value=0.4; o2.connect(o2g);
+  o1.connect(ng); o2g.connect(ng); ng.connect(g);
+  const a=0.05, r=0.12, peak=0.5;
+  ng.gain.setValueAtTime(0, at);
+  ng.gain.linearRampToValueAtTime(peak, at+a);
+  ng.gain.setValueAtTime(peak, Math.max(at+a, at+dur-r));
+  ng.gain.linearRampToValueAtTime(0, at+dur);
+  o1.start(at); o2.start(at); o1.stop(at+dur+0.05); o2.stop(at+dur+0.05);
+  scheduled.push(o1,o2);
+}
+function clearScheduled(){ scheduled.forEach(o=>{try{o.stop();}catch(e){}}); scheduled=[]; }
+
+function play(){
+  ensureCtx(); if(ctx.state==='suspended') ctx.resume();
+  playing=true; document.getElementById('playBtn').textContent='⏸';
+  startCtxTime=ctx.currentTime; // offset bleibt
+  const base=startOffset;
+  SONG.voices.forEach(v=>{
+    v.notes.forEach(n=>{
+      const tt=(n.t-base)/tempo;
+      if(n.t+ n.d < base) return; // schon vorbei
+      const at=startCtxTime+Math.max(0,tt);
+      const dur=n.d/tempo - Math.max(0, base-n.t)/tempo;
+      if(dur>0.02) scheduleNote(v.key, n.m, at, Math.max(0.05,dur));
+    });
+  });
+  updateGains();
+  tick();
+}
+function pause(){ playing=false; document.getElementById('playBtn').textContent='▶'; if(ctx) startOffset=currentTime(); clearScheduled(); cancelAnimationFrame(rafId); }
+function currentTime(){ if(!playing||!ctx) return startOffset; return startOffset+(ctx.currentTime-startCtxTime)*tempo; }
+function fmt(s){ s=Math.max(0,s); return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'); }
+function tick(){
+  const t=currentTime();
+  document.getElementById('cur').textContent=fmt(t);
+  document.getElementById('seek').value=Math.min(1000, (t/DUR)*1000);
+  if(t>=DUR){ if(loop){ seekTo(0); } else { pause(); seekTo(0); return; } }
+  rafId=requestAnimationFrame(tick);
+}
+function seekTo(sec){ const was=playing; if(was) pause(); startOffset=Math.max(0,Math.min(DUR,sec)); document.getElementById('cur').textContent=fmt(startOffset); document.getElementById('seek').value=(startOffset/DUR)*1000; if(was) play(); }
+
+// ===== UI =====
+function buildMixer(){
+  const el=document.getElementById('mix');
+  el.innerHTML=SONG.voices.map(v=>`
+    <div class="mrow">
+      <div class="mbadge" style="background:${v.color}">${v.key}</div>
+      <div class="mbtns">
+        <button class="mbtn" data-m="${v.key}">M</button>
+        <button class="mbtn" data-s="${v.key}">S</button>
+      </div>
+      <div class="volwrap">
+        <input class="vsl" type="range" min="0" max="100" value="85" data-v="${v.key}">
+        <span class="vpct" id="pct-${v.key}">85%</span>
+      </div>
+    </div>`).join('');
+  el.querySelectorAll('[data-v]').forEach(s=>s.oninput=e=>{ const k=e.target.dataset.v; VC[k].vol=e.target.value/100; document.getElementById('pct-'+k).textContent=e.target.value+'%'; updateGains(); });
+  el.querySelectorAll('[data-m]').forEach(b=>b.onclick=e=>{ const k=e.target.dataset.m; VC[k].muted=!VC[k].muted; e.target.classList.toggle('on-m',VC[k].muted); updateGains(); });
+  el.querySelectorAll('[data-s]').forEach(b=>b.onclick=e=>{ const k=e.target.dataset.s; VC[k].solo=!VC[k].solo; e.target.classList.toggle('on-s',VC[k].solo); updateGains(); });
+}
+buildMixer();
+document.getElementById('dur').textContent=fmt(DUR);
+document.getElementById('playBtn').onclick=()=>{ playing?pause():play(); };
+document.getElementById('backBtn').onclick=()=>seekTo(0);
+document.getElementById('loopBtn').onclick=e=>{ loop=!loop; e.target.classList.toggle('on',loop); };
+document.getElementById('seek').oninput=e=>{ seekTo((e.target.value/1000)*DUR); };
+document.getElementById('tempoSel').onchange=e=>{ const was=playing; if(was)pause(); tempo=parseFloat(e.target.value); if(was)play(); };
+</script>
+</body>
+</html>
