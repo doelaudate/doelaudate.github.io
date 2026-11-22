@@ -1,0 +1,16 @@
+<!doctype html><meta charset="utf-8"><title>render</title><body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+const q=new URLSearchParams(location.search); const id=q.get('f'); const W=parseInt(q.get('w')||'3600');
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+(async()=>{
+  const pdf=await pdfjsLib.getDocument('/pdf/'+id+'.pdf').promise; const out=[];
+  for(let p=1;p<=pdf.numPages;p++){
+    const pg=await pdf.getPage(p); const v0=pg.getViewport({scale:1}); const vp=pg.getViewport({scale:W/v0.width});
+    const c=document.createElement('canvas'); c.width=Math.round(vp.width); c.height=Math.round(vp.height); const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height);
+    await pg.render({canvasContext:ctx,viewport:vp}).promise;
+    const blob=await new Promise(r=>c.toBlob(r,'image/png')); await fetch('/save/'+id+'_p'+p+'.png',{method:'POST',body:blob}); out.push(p+':'+c.width+'x'+c.height);
+  }
+  document.title='fertig '+out.join(',');
+})().catch(e=>document.title='FEHLER '+e.message);
+</script>

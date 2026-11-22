@@ -42,6 +42,19 @@ input.vsl::-moz-range-thumb{width:16px;height:16px;border-radius:50%;cursor:poin
 .tempo select{background:var(--bg3);border:1px solid var(--bd);color:var(--ink);border-radius:6px;padding:.3rem .4rem;font-size:.72rem}
 .loopbtn.on{background:#1a3a2a;color:#50d090;border-color:#2a5a3a}
 .hint{font-size:.68rem;color:var(--muted);padding:0 1rem 1rem;line-height:1.5}
+body.has-lyr{padding-bottom:12.5rem}
+.lyr{display:none;padding:.15rem 0 .65rem;border-bottom:1px solid var(--bd);margin-bottom:.6rem}
+body.has-lyr .lyr{display:block}
+.lyrtop{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.35rem}
+.lyrverse{font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.lyrtop select{background:var(--bg3);border:1px solid var(--bd);color:var(--ink);border-radius:6px;padding:.2rem .35rem;font-size:.68rem}
+.lyrline{font-size:1.18rem;line-height:1.45;min-height:1.7rem;font-weight:500}
+.lyrnext{font-size:.88rem;line-height:1.4;color:var(--muted);min-height:1.25rem;margin-top:.15rem}
+.lyrline .sy{transition:color .08s}
+.lyrline .sy.done{color:#b8ad98}
+.lyrline .sy.now{font-weight:700;text-decoration:underline;text-underline-offset:4px}
+.lyrline .sy.todo{color:#6f6658}
+.lyrline .hy,.lyrnext .hy{color:var(--muted);padding:0 .08em}
 </style>
 </head>
 <body>
@@ -57,6 +70,11 @@ input.vsl::-moz-range-thumb{width:16px;height:16px;border-radius:50%;cursor:poin
 <div class="hint">Tipp: Stelle deine eigene Stimme laut und die anderen leise – oder „Solo" für nur deine Stimme. Mit „Tempo" kannst du langsamer üben.</div>
 
 <div class="transport">
+  <div class="lyr" id="lyr">
+    <div class="lyrtop"><span class="lyrverse" id="lyrVerse"></span><label class="lyrverse">Text <select id="lyrSel"></select></label></div>
+    <div class="lyrline" id="lyrLine"></div>
+    <div class="lyrnext" id="lyrNext"></div>
+  </div>
   <div class="seekrow">
     <span class="time" id="cur">0:00</span>
     <input class="vsl" id="seek" type="range" min="0" max="1000" value="0" style="flex:1">
@@ -140,21 +158,70 @@ function play(){
 function pause(){ playing=false; document.getElementById('playBtn').textContent='▶'; if(ctx) startOffset=currentTime(); clearScheduled(); cancelAnimationFrame(rafId); }
 function currentTime(){ if(!playing||!ctx) return startOffset; return startOffset+(ctx.currentTime-startCtxTime)*tempo; }
 function fmt(s){ s=Math.max(0,s); return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'); }
+// ===== Liedtext (optional: voice.lyr = je Note [silbe, neueZeile, strophe] oder 0) =====
+const LYRV={}; let follow=null, lyrShown='';
+function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+SONG.voices.forEach(v=>{
+  if(!v.lyr) return;
+  const lines=[], map=new Array(v.notes.length).fill(null); let last=null;
+  v.lyr.forEach((s,i)=>{
+    if(!s) return;
+    const [w,br,vs]=s;
+    if(w==='_'){ map[i]=last; return; }
+    if(br||!lines.length) lines.push({vs, items:[]});
+    const L=lines.length-1, hy=w.endsWith('-');
+    lines[L].items.push({t:hy?w.slice(0,-1):w, hy});
+    last={l:L,k:lines[L].items.length-1}; map[i]=last;
+  });
+  LYRV[v.key]={lines,map,verses:Math.max(...lines.map(x=>x.vs))};
+});
+function lineHtml(line,cur){
+  return line.items.map((it,k)=>{
+    const cls=cur==null?'':(k<cur?'done':k===cur?'now':'todo');
+    return `<span class="sy ${cls}">${escH(it.t.replace(/_/g,' '))}</span>`+(it.hy?'<span class="hy">-</span>':(k<line.items.length-1?' ':''));
+  }).join('');
+}
+function noteIdxAt(notes,t){ let lo=0,hi=notes.length-1,r=-1; while(lo<=hi){const m=(lo+hi)>>1; if(notes[m].t<=t+0.03){r=m;lo=m+1;}else hi=m-1;} return r; }
+function showLyrics(t){
+  const L=follow&&LYRV[follow]; if(!L) return;
+  const v=VC[follow]; let i=noteIdxAt(v.notes,t), pos=null;
+  for(let j=i;j>=0&&!pos;j--) pos=L.map[j];               // letzte Silbe bis jetzt
+  if(!pos){ for(let j=Math.max(0,i);j<L.map.length&&!pos;j++) if(L.map[j]) pos={l:L.map[j].l,k:null}; } // vor dem Einsatz: kommende Zeile
+  if(!pos) return;
+  const key=follow+'|'+pos.l+'|'+pos.k; if(key===lyrShown) return; lyrShown=key;
+  const line=L.lines[pos.l], next=L.lines[pos.l+1];
+  document.getElementById('lyrLine').innerHTML=lineHtml(line,pos.k);
+  document.getElementById('lyrNext').innerHTML=next?lineHtml(next,null):'';
+  document.getElementById('lyrVerse').textContent=L.verses>1?('Strophe '+line.vs):'';
+  document.getElementById('lyrLine').querySelectorAll('.sy.now').forEach(e=>e.style.color=v.color);
+}
+function setFollow(k){ if(!LYRV[k]) return; follow=k; lyrShown=''; document.getElementById('lyrSel').value=k; showLyrics(currentTime()); }
+(function initLyrics(){
+  const ks=SONG.voices.filter(v=>LYRV[v.key]);
+  if(!ks.length) return;
+  document.body.classList.add('has-lyr');
+  const sel=document.getElementById('lyrSel');
+  sel.innerHTML=ks.map(v=>`<option value="${v.key}">${escH(v.name)}</option>`).join('');
+  sel.onchange=e=>setFollow(e.target.value);
+  setFollow(ks[0].key);
+})();
+
 function tick(){
   const t=currentTime();
+  showLyrics(t);
   document.getElementById('cur').textContent=fmt(t);
   document.getElementById('seek').value=Math.min(1000, (t/DUR)*1000);
   if(t>=DUR){ if(loop){ seekTo(0); } else { pause(); seekTo(0); return; } }
   rafId=requestAnimationFrame(tick);
 }
-function seekTo(sec){ const was=playing; if(was) pause(); startOffset=Math.max(0,Math.min(DUR,sec)); document.getElementById('cur').textContent=fmt(startOffset); document.getElementById('seek').value=(startOffset/DUR)*1000; if(was) play(); }
+function seekTo(sec){ const was=playing; if(was) pause(); startOffset=Math.max(0,Math.min(DUR,sec)); document.getElementById('cur').textContent=fmt(startOffset); document.getElementById('seek').value=(startOffset/DUR)*1000; if(typeof showLyrics==='function') showLyrics(startOffset); if(was) play(); }
 
 // ===== UI =====
 function buildMixer(){
   const el=document.getElementById('mix');
   el.innerHTML=SONG.voices.map(v=>`
     <div class="mrow">
-      <div class="mbadge" style="background:${v.color}">${v.key}</div>
+      <div class="mbadge" style="background:${v.color}" title="${v.name}">${v.key}</div>
       <div class="mbtns">
         <button class="mbtn" data-m="${v.key}">M</button>
         <button class="mbtn" data-s="${v.key}">S</button>
@@ -166,7 +233,7 @@ function buildMixer(){
     </div>`).join('');
   el.querySelectorAll('[data-v]').forEach(s=>s.oninput=e=>{ const k=e.target.dataset.v; VC[k].vol=e.target.value/100; document.getElementById('pct-'+k).textContent=e.target.value+'%'; updateGains(); });
   el.querySelectorAll('[data-m]').forEach(b=>b.onclick=e=>{ const k=e.target.dataset.m; VC[k].muted=!VC[k].muted; e.target.classList.toggle('on-m',VC[k].muted); updateGains(); });
-  el.querySelectorAll('[data-s]').forEach(b=>b.onclick=e=>{ const k=e.target.dataset.s; VC[k].solo=!VC[k].solo; e.target.classList.toggle('on-s',VC[k].solo); updateGains(); });
+  el.querySelectorAll('[data-s]').forEach(b=>b.onclick=e=>{ const k=e.target.dataset.s; VC[k].solo=!VC[k].solo; e.target.classList.toggle('on-s',VC[k].solo); updateGains(); if(VC[k].solo&&typeof setFollow==='function') setFollow(k); });
 }
 buildMixer();
 document.getElementById('dur').textContent=fmt(DUR);
