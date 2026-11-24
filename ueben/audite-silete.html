@@ -101,14 +101,23 @@ const SONG = window.SONG;
 const VC = {};
 SONG.voices.forEach(v=>{ VC[v.key]={...v, vol:0.85, muted:false, solo:false}; });
 
-let ctx=null, master=null, voiceGain={}, playing=false, scheduled=[], startCtxTime=0, startOffset=0, rafId=null, tempo=1, loop=false;
+let ctx=null, master=null, voiceGain={}, playing=false, scheduled=[], startCtxTime=0, startOffset=0, rafId=null, tempo=1, loop=false, timer=null, nextIdx={}, wave=null;
 const DUR = SONG.duration;
+const LOOKAHEAD = 1.2; // Noten nur ~1 s im Voraus anlegen (statt alle auf einmal)
 
 function ensureCtx(){
   if(ctx) return;
-  ctx = new (window.AudioContext||window.webkitAudioContext)();
-  master = ctx.createGain(); master.gain.value=0.9; master.connect(ctx.destination);
-  SONG.voices.forEach(v=>{ const g=ctx.createGain(); g.connect(master); voiceGain[v.key]=g; });
+  ctx = new (window.AudioContext||window.webkitAudioContext)({latencyHint:'playback'});
+  // sanfter Begrenzer am Ende: mehrere Stimmen zusammen uebersteuern nicht mehr (kein Knacken)
+  const lim=ctx.createDynamicsCompressor(); lim.threshold.value=-12; lim.knee.value=8; lim.ratio.value=8; lim.attack.value=0.003; lim.release.value=0.25;
+  master = ctx.createGain(); master.gain.value=0.8; master.connect(lim); lim.connect(ctx.destination);
+  // weicher Ton: Grundton + wenige, schnell schwaecher werdende Obertoene - ein einziger Oszillator, kein Schweben/Brummen
+  const re=new Float32Array([0,1,0.45,0.2,0.1,0.05,0.025]), im=new Float32Array(re.length);
+  wave=ctx.createPeriodicWave(re,im);
+  SONG.voices.forEach(v=>{
+    const g=ctx.createGain(), f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=3500; f.Q.value=0.5;
+    g.connect(f); f.connect(master); voiceGain[v.key]=g;
+  });
   updateGains();
 }
 function anySolo(){ return SONG.voices.some(v=>VC[v.key].solo); }
@@ -120,43 +129,57 @@ function effGain(key){
 function updateGains(){ if(!ctx) return; SONG.voices.forEach(v=>{ voiceGain[v.key].gain.setTargetAtTime(effGain(v.key), ctx.currentTime, 0.02); }); }
 
 function midiToFreq(m){ return 440*Math.pow(2,(m-69)/12); }
-// Chor-artiger Klang: Dreieck + leicht verstimmte Sinus
+// Klavierartiger Anschlag, danach gehalten (lange Noten bleiben hoerbar), weiches Ende - Huellkurve passt sich kurzen Noten an
 function scheduleNote(key, midi, at, dur){
-  const g=voiceGain[key];
-  const o1=ctx.createOscillator(), o2=ctx.createOscillator(), ng=ctx.createGain();
-  o1.type='triangle'; o1.frequency.value=midiToFreq(midi);
-  o2.type='sine'; o2.frequency.value=midiToFreq(midi)*Math.pow(2,7/1200);
-  const o2g=ctx.createGain(); o2g.gain.value=0.4; o2.connect(o2g);
-  o1.connect(ng); o2g.connect(ng); ng.connect(g);
-  const a=0.05, r=0.12, peak=0.5;
+  const o=ctx.createOscillator(), ng=ctx.createGain();
+  o.setPeriodicWave(wave); o.frequency.value=midiToFreq(midi);
+  o.connect(ng); ng.connect(voiceGain[key]);
+  const peak=0.26, hold=0.15, a=Math.min(0.012, dur*0.2), r=Math.min(0.09, dur*0.3), end=at+dur;
   ng.gain.setValueAtTime(0, at);
   ng.gain.linearRampToValueAtTime(peak, at+a);
-  ng.gain.setValueAtTime(peak, Math.max(at+a, at+dur-r));
-  ng.gain.linearRampToValueAtTime(0, at+dur);
-  o1.start(at); o2.start(at); o1.stop(at+dur+0.05); o2.stop(at+dur+0.05);
-  scheduled.push(o1,o2);
+  ng.gain.setTargetAtTime(hold, at+a, 0.3);
+  ng.gain.setTargetAtTime(0, end-r, r/3);
+  o.start(at); o.stop(end+r*2);
+  o.onended=()=>{ try{ ng.disconnect(); }catch(e){} };
+  scheduled.push({o, ng, end:end+r*2});
 }
-function clearScheduled(){ scheduled.forEach(o=>{try{o.stop();}catch(e){}}); scheduled=[]; }
+function fadeOutAll(){
+  const now=ctx.currentTime;
+  scheduled.forEach(s=>{ try{
+    if(s.ng.gain.cancelAndHoldAtTime) s.ng.gain.cancelAndHoldAtTime(now); else s.ng.gain.cancelScheduledValues(now);
+    s.ng.gain.setTargetAtTime(0, now, 0.012); s.o.stop(now+0.08);
+  }catch(e){} });
+  scheduled=[];
+}
+function firstIdx(notes, t){ let lo=0, hi=notes.length; while(lo<hi){ const m=(lo+hi)>>1; if(notes[m].t+notes[m].d<=t) lo=m+1; else hi=m; } return lo; }
+function schedule(){
+  if(!playing) return;
+  const now=ctx.currentTime, horizon=now+LOOKAHEAD;
+  SONG.voices.forEach(v=>{
+    let i=nextIdx[v.key];
+    while(i<v.notes.length){
+      const n=v.notes[i], at=startCtxTime+(n.t-startOffset)/tempo;
+      if(at>horizon) break;
+      const dur=(n.d-Math.max(0, startOffset-n.t))/tempo;   // Note hat evtl. vor dem Startpunkt begonnen
+      if(dur>0.03) scheduleNote(v.key, n.m, Math.max(at, now+0.005), dur);
+      i++;
+    }
+    nextIdx[v.key]=i;
+  });
+  scheduled=scheduled.filter(s=>s.end>now);
+}
 
 function play(){
   ensureCtx(); if(ctx.state==='suspended') ctx.resume();
   playing=true; document.getElementById('playBtn').textContent='⏸';
-  startCtxTime=ctx.currentTime; // offset bleibt
-  const base=startOffset;
-  SONG.voices.forEach(v=>{
-    v.notes.forEach(n=>{
-      const tt=(n.t-base)/tempo;
-      if(n.t+ n.d < base) return; // schon vorbei
-      const at=startCtxTime+Math.max(0,tt);
-      const dur=n.d/tempo - Math.max(0, base-n.t)/tempo;
-      if(dur>0.02) scheduleNote(v.key, n.m, at, Math.max(0.05,dur));
-    });
-  });
+  startCtxTime=ctx.currentTime+0.06; // offset bleibt
+  SONG.voices.forEach(v=>{ nextIdx[v.key]=firstIdx(v.notes, startOffset); });
+  schedule(); clearInterval(timer); timer=setInterval(schedule, 150);
   updateGains();
   tick();
 }
-function pause(){ playing=false; document.getElementById('playBtn').textContent='▶'; if(ctx) startOffset=currentTime(); clearScheduled(); cancelAnimationFrame(rafId); }
-function currentTime(){ if(!playing||!ctx) return startOffset; return startOffset+(ctx.currentTime-startCtxTime)*tempo; }
+function pause(){ if(ctx) startOffset=currentTime(); playing=false; document.getElementById('playBtn').textContent='▶'; clearInterval(timer); if(ctx) fadeOutAll(); cancelAnimationFrame(rafId); }
+function currentTime(){ if(!playing||!ctx) return startOffset; return startOffset+Math.max(0, ctx.currentTime-startCtxTime)*tempo; }
 function fmt(s){ s=Math.max(0,s); return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'); }
 // ===== Liedtext (optional: voice.lyr = je Note [silbe, neueZeile, strophe] oder 0) =====
 const LYRV={}; let follow=null, lyrShown='';
