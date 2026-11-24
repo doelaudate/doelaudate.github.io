@@ -700,7 +700,20 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   window._fbAuth = _auth;
   window._fbSignIn = (auth, email, pw) => auth.signInWithEmailAndPassword(email, pw);
   window._fbSignInCustom = (auth, token) => auth.signInWithCustomToken(token);
-  window._fbCreateUser = (auth, email, pw) => auth.createUserWithEmailAndPassword(email, pw);
+  // Konten legt seit 25.11.2026 NUR noch der Server an (usernameAuth, Aktion register/createaccount):
+  // Die freie Registrierung in Firebase Auth ist abgeschaltet, sonst könnte sich jeder mit dem
+  // öffentlichen Web-Key ein Konto anlegen. Der Server prüft vorher die Mitgliederliste.
+  window._serverCreateUser = async (payload) => {
+    const r = await fetch(window.USERNAME_AUTH_URL, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    const j = await r.json().catch(()=>({}));
+    if(!r.ok || !j.ok){ const e = new Error(j.error || 'server'); e.code = 'auth/' + (j.error || 'server'); throw e; }
+    return j.uid;
+  };
+  // Selbst-Registrierung: Server legt an, danach ganz normal anmelden (liefert wie früher ein "cred")
+  window._fbCreateUser = async (auth, email, pw) => {
+    await window._serverCreateUser({action:'register', email, password: pw});
+    return auth.signInWithEmailAndPassword(email, pw);
+  };
   window._fbSignOut = (auth) => auth.signOut();
   window._fbUpdatePassword = (user, pw) => user.updatePassword(pw);
   window._fbResetPassword = (auth, email) => auth.sendPasswordResetEmail(email);
@@ -710,14 +723,10 @@ html.dark a:focus-visible,html.dark button:focus-visible{outline-color:rgba(120,
   // als neuer Nutzer an — auf der Haupt-App würde das den Admin aus seiner eigenen Sitzung werfen.
   // Auf dieser separaten App-Instanz betrifft das niemanden; die Admin-Sitzung bleibt unberührt.
   window._fbCreateUserIsolated = async (email, pw) => {
-    const secondaryApp = firebase.initializeApp(FIREBASE_CFG, 'admin-create-'+Date.now());
-    try {
-      const cred = await secondaryApp.auth().createUserWithEmailAndPassword(email, pw);
-      return cred.user.uid;
-    } finally {
-      try{ await secondaryApp.auth().signOut(); }catch(_){}
-      try{ await secondaryApp.delete(); }catch(_){}
-    }
+    // Admin/Leitung legt ein Konto an – serverseitig, die eigene Sitzung bleibt unberührt
+    const u = window._fbAuth && window._fbAuth.currentUser;
+    const idToken = u ? await u.getIdToken() : '';
+    return window._serverCreateUser({action:'createaccount', email, password: pw, idToken});
   };
   // Server-Endpoint für Benutzername-Login/Reset (E-Mail bleibt serverseitig)
   window.USERNAME_AUTH_URL = 'https://europe-west1-chor-doelau.cloudfunctions.net/usernameAuth';
@@ -6499,6 +6508,10 @@ async function doRegister() {
     let msg = 'Fehler bei der Registrierung.';
     if(e.code==='auth/email-already-in-use') msg = 'Diese E-Mail ist bereits registriert. Bitte anmelden.';
     else if(e.code==='auth/invalid-email') msg = 'Ungültige E-Mail-Adresse.';
+    else if(e.code==='auth/notmember') msg = 'Diese E-Mail ist nicht in der Mitgliederliste. Bitte wende dich an die Chorleitung.';
+    else if(e.code==='auth/closed') msg = 'Die Selbst-Registrierung ist ausgeschaltet. Bitte wende dich an die Chorleitung.';
+    else if(e.code==='auth/hasaccount') msg = 'Für dich gibt es schon ein Konto. Bitte melde dich an (Benutzername von der Chorleitung).';
+    else if(e.code==='auth/weak-password') msg = 'Das Passwort ist zu kurz.';
     errEl.textContent = msg;
     if(btn){btn.textContent = 'Konto erstellen'; btn.disabled = false;}
   }
