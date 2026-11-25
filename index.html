@@ -8475,7 +8475,7 @@ function printSetliste(terminId, itemsOverride){
       .noprint{margin-bottom:18px}
       .noprint button{font-size:1rem;padding:8px 18px;border:0;border-radius:8px;background:#2563b5;color:#fff;cursor:pointer}
     </style></head><body>
-    <div class="noprint"><button onclick="window.print()">🖨️ Drucken</button></div>
+    <div class="noprint"><button onclick="window.print()">🖨️ Drucken</button> <button style="background:#eef1f5;color:#1d4e96" onclick="try{window.close()}catch(e){}setTimeout(function(){location.href='https://doelaudate.github.io/'},250)">✕ Schließen</button></div>
     <h1>${esc(t.titel||'Setliste')}</h1>
     <div class="date">📅 ${dateStr}${t.uhrzeit?' · '+esc(t.uhrzeit)+' Uhr':''}</div>
     <ul>${rows}</ul>

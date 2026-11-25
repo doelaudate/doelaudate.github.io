@@ -13,6 +13,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .hdr{padding:1rem 1.1rem .7rem;border-bottom:1px solid var(--bd);position:sticky;top:0;
   background:rgba(14,12,10,.97);backdrop-filter:blur(10px);z-index:50}
 .hdr h1{font-size:1.15rem;font-weight:600}
+.backapp{display:inline-flex;align-items:center;gap:.3rem;margin-bottom:.45rem;padding:.35rem .7rem;border:1px solid var(--bd);border-radius:999px;background:var(--bg3);color:var(--ink);font-size:.75rem;text-decoration:none}
 .hdr .sub{font-size:.7rem;color:var(--muted);margin-top:2px}
 .mixer{padding:.9rem 1rem}
 .mlbl{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.7rem}
@@ -33,7 +34,8 @@ input.vsl::-moz-range-thumb{width:16px;height:16px;border-radius:50%;cursor:poin
   border-top:1px solid var(--bd);padding:.7rem 1rem 1rem;z-index:60}
 .seekrow{display:flex;align-items:center;gap:.6rem;margin-bottom:.7rem}
 .time{font-size:.66rem;color:var(--muted);min-width:2.6rem}
-.tctrls{display:flex;align-items:center;justify-content:center;gap:.9rem}
+.tctrls{display:flex;align-items:center;justify-content:center;gap:.9rem;flex-wrap:wrap}
+.tctrls .play,.tctrls .tbtn{flex-shrink:0}
 .tbtn{background:var(--bg3);border:1px solid var(--bd);color:var(--ink);border-radius:8px;
   padding:.5rem .7rem;font-size:.85rem;cursor:pointer}
 .play{width:3.2rem;height:3.2rem;border-radius:50%;background:var(--acc);color:#0e0c0a;border:none;
@@ -59,6 +61,7 @@ body.has-lyr .lyr{display:block}
 </head>
 <body>
 <div class="hdr">
+  <a class="backapp" id="backApp" href="https://doelaudate.github.io/">← Zur Chor-App</a>
   <h1>🎤 Maria durch ein Dornwald ging</h1>
   <div class="sub">Von Hand aus dem Notenblatt abgelesen – bitte gegenhören · Stimmcoach zum Üben</div>
 </div>
@@ -294,6 +297,12 @@ document.getElementById('loopBtn').onclick=e=>{ loop=!loop; e.target.classList.t
 document.getElementById('seek').oninput=e=>{ seekTo((e.target.value/1000)*DUR); };
 if(HAS_AUDIO){ const mb=document.getElementById('modeBtn'); mb.style.display=''; mb.onclick=()=>setMode(MODE==='gesang'?'klavier':'gesang'); setMode('gesang');
   const h=document.querySelector('.hint'); if(h) h.textContent='Tipp: Stelle deine eigene Stimme laut und die anderen leise – oder „Solo" für nur deine Stimme. Mit „Tempo" langsamer üben; „🎤 Gesang / 🎹 Klavier" schaltet zwischen gesungenen Chorstimmen und Klavierton um.'; }
+// Zurueck zur Chor-App (wichtig auf dem iPhone: installierte App hat keine Zurueck-Taste)
+document.getElementById('backApp').onclick=e=>{
+  e.preventDefault(); if(playing) pause();
+  try{ if(window.opener && !window.opener.closed){ window.close(); } }catch(_){}
+  setTimeout(()=>{ if(history.length>1 && document.referrer.indexOf(location.origin)===0) history.back(); else location.href='https://doelaudate.github.io/'; }, 250);
+};
 document.getElementById('tempoSel').onchange=e=>{ const was=playing; if(was)pause(); tempo=parseFloat(e.target.value); if(was)play(); };
 </script>
 </body>

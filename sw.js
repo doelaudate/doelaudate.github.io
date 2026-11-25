@@ -1,4 +1,4 @@
-const CACHE = 'chor-doelau-v8';
+const CACHE = 'chor-doelau-v9';
 const OFFLINE_FILES = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png', '/logo.png'];
 // Firebase-SDK (fest versioniert, ändert sich nie): ohne diese Skripte startet die App offline gar nicht.
 const SDK_FILES = [
@@ -36,7 +36,10 @@ self.addEventListener('fetch', e => {
   // Nur eigene Domain aus dem Cache bedienen; Firebase/Identity/API immer direkt aus dem Netz.
   if (url.origin !== self.location.origin) return;
 
-  const isDocument = req.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('/index.html');
+  // Nur die App-Seite selbst als App ablegen - Uebe-Seiten (/ueben/...) o. Ae. duerfen den App-Cache nicht ueberschreiben
+  const isApp = url.pathname === '/' || url.pathname === '/index.html';
+  if (req.mode === 'navigate' && !isApp) { e.respondWith(fetch(req).catch(() => caches.match('/index.html'))); return; }
+  const isDocument = isApp;
   if (isDocument) {
     // Die App-Seite selbst: IMMER zuerst das Netz versuchen (neue Funktionen sofort sichtbar, kein Warten
     // auf den nächsten Öffnen-Zyklus). Nur bei fehlender Verbindung auf den Cache zurückfallen (Offline).
