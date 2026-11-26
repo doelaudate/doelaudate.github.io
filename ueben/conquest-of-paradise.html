@@ -130,10 +130,12 @@ function ensureCtx(){
 let HAS_AUDIO = !!(SONG.audio && SONG.voices.every(v=>SONG.audio[v.key]));
 let MODE = HAS_AUDIO ? 'gesang' : 'klavier';
 const AUD = {}; let audRef=null, audReady=false;
+// Aufnahmen von fremder Adresse (Firebase-Speicher der Mitgliederfassung) mit CORS laden - ohne gibt Web Audio nur Stille aus
+function xo(u){ try{ return new URL(u, location.href).origin!==location.origin; }catch(e){ return false; } }
 function ensureAudio(){
   ensureCtx(); if(audReady) return; audReady=true;
   SONG.voices.forEach(v=>{
-    const el=new Audio(); el.src=SONG.audio[v.key]; el.preload='auto';
+    const el=new Audio(); if(xo(SONG.audio[v.key])) el.crossOrigin='anonymous'; el.src=SONG.audio[v.key]; el.preload='auto';
     el.preservesPitch=true; el.mozPreservesPitch=true; el.webkitPreservesPitch=true;   // langsamer ueben ohne tiefere Stimme
     ctx.createMediaElementSource(el).connect(voiceGain[v.key]);
     AUD[v.key]=el; if(!audRef) audRef=el;
@@ -316,7 +318,7 @@ function applyMembers(d){
   if(!d) return; const was=playing; if(was) pause();
   if(Array.isArray(d.lyr)){ SONG.voices.forEach((v,i)=>{ if(d.lyr[i]) v.lyr=d.lyr[i]; }); buildLyr(); lyrShown=''; initLyrics(); }
   if(Array.isArray(d.audio) && d.audio.length===SONG.voices.length){
-    SONG.audio={}; SONG.voices.forEach((v,i)=>{ SONG.audio[v.key]=d.audio[i]; if(AUD[v.key]){ AUD[v.key].src=d.audio[i]; AUD[v.key].load(); } });
+    SONG.audio={}; SONG.voices.forEach((v,i)=>{ SONG.audio[v.key]=d.audio[i]; if(AUD[v.key]){ if(xo(d.audio[i])) AUD[v.key].crossOrigin='anonymous'; AUD[v.key].src=d.audio[i]; AUD[v.key].load(); } });
     if(!HAS_AUDIO){ HAS_AUDIO=true; const mb=document.getElementById('modeBtn'); mb.style.display=''; mb.onclick=()=>setMode(MODE==='gesang'?'klavier':'gesang'); }
     setMode('gesang');
   }
