@@ -3345,7 +3345,7 @@ function buildTbl(songs){
   const _mob=isMobileView();
   const _rows=songs.map(s=>{
     const openLink = s.pdf?`<a href="${esc(s.pdf)}" target="_blank" rel="noopener" style="text-decoration:none;font-size:1.15rem" title="Noten öffnen">📄</a>`:'';
-    const uebenLink = s.uebe?`<a href="${esc(s.uebe)}" target="_blank" rel="noopener" style="text-decoration:none;font-size:1.1rem" title="Stimmcoach – Üben">🎤</a>`:'';
+    const uebenLink = s.uebe?`<a href="${esc(s.uebe)}" ${((window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone)?'':'target="_blank" rel="noopener"'} style="text-decoration:none;font-size:1.1rem" title="Stimmcoach – Üben">🎤</a>`:'';
     const hasHoer = _hoerHasAny(s);
     const hoerMine = hasHoer && _hoerHasMine(s);
     const hoerBtn = (hasHoer||canEdit)?`<button onclick="openHoer('${s.id}')" style="background:${hoerMine?'#dbe8fb':'none'};border:none;${hoerMine?'border-radius:8px;':''}cursor:pointer;font-size:1.05rem;padding:0 ${hoerMine?'4px':'1px'}" title="${hoerMine?'Hörbeispiel für deine Stimme vorhanden':'Hörbeispiele &amp; Übungsvideos'}">🎧</button>`:'';

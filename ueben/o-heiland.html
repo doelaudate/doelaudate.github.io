@@ -329,11 +329,14 @@ function applyMembers(d){
   const load=src=>new Promise((ok,no)=>{ const sc=document.createElement('script'); sc.src=src; sc.onload=ok; sc.onerror=no; document.head.appendChild(sc); });
   load('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js').then(()=>load('https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js')).then(()=>{
     if(!firebase.apps.length) firebase.initializeApp(CFG);
-    const off=firebase.auth().onAuthStateChanged(async u=>{ off(); if(!u) return;
+    const off=firebase.auth().onAuthStateChanged(async u=>{ off(); if(!u){ memHint(); return; }
       try{ const tok=await u.getIdToken(); const r=await fetch(CFG.databaseURL+'/stimmcoach/'+encodeURIComponent(id)+'.json?auth='+tok); if(r.ok) applyMembers(await r.json()); }catch(e){}
     });
-  }).catch(()=>{});
+  }).catch(()=>memHint());
 })();
+// Nicht angemeldet und kein oeffentlicher Gesang: Hinweis statt stummer Seite
+function memHint(){ if(HAS_AUDIO) return; const b=document.getElementById('memBadge'); if(!b) return;
+  b.innerHTML='🔒 Gesang mit Liedtext nur für angemeldete Chormitglieder – bitte in der <a href="https://doelaudate.github.io/" style="color:inherit">Chor-App</a> anmelden und die Übe-Seite von dort öffnen. Ohne Anmeldung: Klavier.'; b.style.display=''; }
 document.getElementById('tempoSel').onchange=e=>{ const was=playing; if(was)pause(); tempo=parseFloat(e.target.value); if(was)play(); };
 </script>
 </body>
