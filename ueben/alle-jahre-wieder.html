@@ -139,6 +139,7 @@ function ensureAudio(){
     el.preservesPitch=true; el.mozPreservesPitch=true; el.webkitPreservesPitch=true;   // langsamer ueben ohne tiefere Stimme
     ctx.createMediaElementSource(el).connect(voiceGain[v.key]);
     AUD[v.key]=el; if(!audRef) audRef=el;
+    el.addEventListener('error',()=>{ const b=document.getElementById('memBadge'); if(b){ b.textContent='⚠️ Aufnahme „'+v.name+'“ lädt nicht (Fehler '+((el.error&&el.error.code)||'?')+'). Bitte Seite neu laden – sonst Martin Bescheid sagen. Klavier geht weiter (🎹).'; b.style.display=''; } });
     el.addEventListener('ended',()=>{ if(el===audRef && playing){ if(loop){ seekTo(0); } else { pause(); seekTo(0); } } });
   });
 }
@@ -332,13 +333,18 @@ function applyMembers(d){
   load('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js').then(()=>load('https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js')).then(()=>{
     if(!firebase.apps.length) firebase.initializeApp(CFG);
     const off=firebase.auth().onAuthStateChanged(async u=>{ off(); if(!u){ memHint(); return; }
-      try{ const tok=await u.getIdToken(); const r=await fetch(CFG.databaseURL+'/stimmcoach/'+encodeURIComponent(id)+'.json?auth='+tok); if(r.ok) applyMembers(await r.json()); }catch(e){}
+      try{ const tok=await u.getIdToken(); const r=await fetch(CFG.databaseURL+'/stimmcoach/'+encodeURIComponent(id)+'.json?auth='+tok, {cache:'no-store'});
+        if(!r.ok){ memStat('⚠️ Angemeldet, aber Mitgliederdaten nicht ladbar (Fehler '+r.status+')'); return; }
+        const d=await r.json(); if(d) applyMembers(d); else if(!HAS_AUDIO) memStat('Angemeldet – für dieses Lied gibt es noch keine Mitgliederfassung'); }
+      catch(e){ memStat('⚠️ Angemeldet, Mitgliederdaten-Fehler: '+(e&&e.message||e)); }
     });
-  }).catch(()=>memHint());
+  }).catch(()=>memStat('⚠️ Anmeldedienst nicht erreichbar – Klavier geht (🎹)'));
 })();
+// Statuszeile (Fehlersuche): Text + Stand der Seite
+function memStat(t){ const b=document.getElementById('memBadge'); if(!b) return; b.textContent=t+' · Seite vom '+document.lastModified.slice(0,16); b.style.display=''; }
 // Nicht angemeldet und kein oeffentlicher Gesang: Hinweis statt stummer Seite
 function memHint(){ if(HAS_AUDIO) return; const b=document.getElementById('memBadge'); if(!b) return;
-  b.innerHTML='🔒 Gesang mit Liedtext nur für angemeldete Chormitglieder – bitte in der <a href="https://doelaudate.github.io/" style="color:inherit">Chor-App</a> anmelden und die Übe-Seite von dort öffnen. Ohne Anmeldung: Klavier.'; b.style.display=''; }
+  b.innerHTML='🔒 Gesang mit Liedtext nur für angemeldete Chormitglieder – bitte in der <a href="https://doelaudate.github.io/" style="color:inherit">Chor-App</a> anmelden und die Übe-Seite von dort öffnen. Ohne Anmeldung: Klavier. · Seite vom '+document.lastModified.slice(0,16); b.style.display=''; }
 document.getElementById('tempoSel').onchange=e=>{ const was=playing; if(was)pause(); tempo=parseFloat(e.target.value); if(was)play(); };
 </script>
 </body>
