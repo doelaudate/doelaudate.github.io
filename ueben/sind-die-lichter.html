@@ -64,6 +64,7 @@ body.has-lyr .lyr{display:block}
   <a class="backapp" id="backApp" href="https://doelaudate.github.io/">← Zur Chor-App</a>
   <h1>🎤 Sind die Lichter angezündet</h1>
   <div class="sub">Entwurf: von Hand aus einem Foto abgelesen – bitte gegenhören · Stimmcoach zum Üben</div>
+  <div class="sub" id="memBadge" style="display:none">🔒 Mitgliederfassung mit Liedtext</div>
 </div>
 
 <div class="mixer">
@@ -126,7 +127,7 @@ function ensureCtx(){
   updateGains();
 }
 // ===== Gesangsaufnahmen (optional: SONG.audio = {Stimme: URL}) =====
-const HAS_AUDIO = !!(SONG.audio && SONG.voices.every(v=>SONG.audio[v.key]));
+let HAS_AUDIO = !!(SONG.audio && SONG.voices.every(v=>SONG.audio[v.key]));
 let MODE = HAS_AUDIO ? 'gesang' : 'klavier';
 const AUD = {}; let audRef=null, audReady=false;
 function ensureAudio(){
@@ -214,6 +215,7 @@ function fmt(s){ s=Math.max(0,s); return Math.floor(s/60)+':'+String(Math.floor(
 // ===== Liedtext (optional: voice.lyr = je Note [silbe, neueZeile, strophe] oder 0) =====
 const LYRV={}; let follow=null, lyrShown='';
 function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function buildLyr(){ Object.keys(LYRV).forEach(k=>delete LYRV[k]);
 SONG.voices.forEach(v=>{
   if(!v.lyr) return;
   const lines=[], map=new Array(v.notes.length).fill(null); let last=null;
@@ -228,6 +230,8 @@ SONG.voices.forEach(v=>{
   });
   LYRV[v.key]={lines,map,verses:Math.max(...lines.map(x=>x.vs))};
 });
+}
+buildLyr();
 function lineHtml(line,cur){
   return line.items.map((it,k)=>{
     const cls=cur==null?'':(k<cur?'done':k===cur?'now':'todo');
@@ -249,15 +253,16 @@ function showLyrics(t){
   document.getElementById('lyrLine').querySelectorAll('.sy.now').forEach(e=>e.style.color=v.color);
 }
 function setFollow(k){ if(!LYRV[k]) return; follow=k; lyrShown=''; document.getElementById('lyrSel').value=k; showLyrics(currentTime()); }
-(function initLyrics(){
+function initLyrics(){
   const ks=SONG.voices.filter(v=>LYRV[v.key]);
   if(!ks.length) return;
   document.body.classList.add('has-lyr');
   const sel=document.getElementById('lyrSel');
   sel.innerHTML=ks.map(v=>`<option value="${v.key}">${escH(v.name)}</option>`).join('');
   sel.onchange=e=>setFollow(e.target.value);
-  setFollow(ks[0].key);
-})();
+  setFollow(follow&&LYRV[follow]?follow:ks[0].key);
+}
+initLyrics();
 
 function tick(){
   if(MODE==='gesang') audioSync();
@@ -303,6 +308,32 @@ document.getElementById('backApp').onclick=e=>{
   try{ if(window.opener && !window.opener.closed){ window.close(); } }catch(_){}
   setTimeout(()=>{ if(history.length>1 && document.referrer.indexOf(location.origin)===0) history.back(); else location.href='https://doelaudate.github.io/'; }, 250);
 };
+
+// ===== Mitgliederfassung: Liedtext + Gesang mit Text NUR fuer angemeldete Chormitglieder =====
+// Oeffentlich bleibt die Seite ohne geschuetzten Text ("lu"). Ist man in der Chor-App angemeldet (gleiche Adresse,
+// gleiche Firebase-Anmeldung), kommen Text und Aufnahmen aus /stimmcoach/<id> (Lesen nur fuer Angemeldete).
+function applyMembers(d){
+  if(!d) return; const was=playing; if(was) pause();
+  if(Array.isArray(d.lyr)){ SONG.voices.forEach((v,i)=>{ if(d.lyr[i]) v.lyr=d.lyr[i]; }); buildLyr(); lyrShown=''; initLyrics(); }
+  if(Array.isArray(d.audio) && d.audio.length===SONG.voices.length){
+    SONG.audio={}; SONG.voices.forEach((v,i)=>{ SONG.audio[v.key]=d.audio[i]; if(AUD[v.key]){ AUD[v.key].src=d.audio[i]; AUD[v.key].load(); } });
+    if(!HAS_AUDIO){ HAS_AUDIO=true; const mb=document.getElementById('modeBtn'); mb.style.display=''; mb.onclick=()=>setMode(MODE==='gesang'?'klavier':'gesang'); }
+    setMode('gesang');
+  }
+  const b=document.getElementById('memBadge'); if(b) b.style.display='';
+  if(was) play();
+}
+(function(){
+  const id=decodeURIComponent((location.pathname.split('/').pop()||'').replace(/.html$/,'')); if(!id) return;
+  const CFG={apiKey:"AIzaSyDtiIn1UzexFOmjBgr12SAerbjw_n8_pLo",authDomain:"chor-doelau.firebaseapp.com",databaseURL:"https://chor-doelau-default-rtdb.europe-west1.firebasedatabase.app",projectId:"chor-doelau"};
+  const load=src=>new Promise((ok,no)=>{ const sc=document.createElement('script'); sc.src=src; sc.onload=ok; sc.onerror=no; document.head.appendChild(sc); });
+  load('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js').then(()=>load('https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js')).then(()=>{
+    if(!firebase.apps.length) firebase.initializeApp(CFG);
+    const off=firebase.auth().onAuthStateChanged(async u=>{ off(); if(!u) return;
+      try{ const tok=await u.getIdToken(); const r=await fetch(CFG.databaseURL+'/stimmcoach/'+encodeURIComponent(id)+'.json?auth='+tok); if(r.ok) applyMembers(await r.json()); }catch(e){}
+    });
+  }).catch(()=>{});
+})();
 document.getElementById('tempoSel').onchange=e=>{ const was=playing; if(was)pause(); tempo=parseFloat(e.target.value); if(was)play(); };
 </script>
 </body>
